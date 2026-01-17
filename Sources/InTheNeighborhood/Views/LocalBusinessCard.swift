@@ -42,6 +42,8 @@ struct LocalBusinessCard: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
+                        .accessibilityLabel("Call \(result.title)")
+                        .accessibilityHint("Opens phone dialer to call this business")
                     }
                     
                     if let location = result.location {
@@ -56,6 +58,8 @@ struct LocalBusinessCard: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
+                        .accessibilityLabel("Get directions to \(result.title)")
+                        .accessibilityHint("Opens Maps app with directions to this business")
                     }
                 }
             }
@@ -69,6 +73,9 @@ struct LocalBusinessCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(result.title)
+        .accessibilityValue(buildAccessibilityValue())
     }
     
     private func formatDistance(_ meters: Double) -> String {
@@ -84,5 +91,16 @@ struct LocalBusinessCard: View {
         let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: location.coordinate))
         mapItem.name = result.title
         mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
+    }
+    
+    private func buildAccessibilityValue() -> String {
+        var components: [String] = []
+        if let description = result.description {
+            components.append(description)
+        }
+        if let distance = result.distance {
+            components.append(formatDistance(distance))
+        }
+        return components.joined(separator: ", ")
     }
 }

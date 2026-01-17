@@ -5,29 +5,15 @@ options:
     iOS: "18.0"
   developmentLanguage: en
   xcodeVersion: "16.0"
+
+packages:
+  llama:
+    path: .
+    # Using local Package.swift which references ggml-org/llama.cpp b7658 xcframework
+
 configs:
   Debug: debug
   Release: release
-settings:
-  base:
-    SWIFT_VERSION: "6.0"
-    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
-    TARGETED_DEVICE_FAMILY: "1,2" # iPhone and iPad
-    PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.$(PRODUCT_NAME:rfc1034identifier)
-    SWIFT_OPTIMIZATION_LEVEL: "-Onone" # Debug only, Release will override
-    GCC_OPTIMIZATION_LEVEL: 0 # Debug only
-    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
-    SWIFT_COMPILATION_MODE: singlefile
-    CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: KA5A6NN3PD
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
-    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-  Release:
-    SWIFT_OPTIMIZATION_LEVEL: "-O"
-    GCC_OPTIMIZATION_LEVEL: s
-    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
-    SWIFT_COMPILATION_MODE: wholemodule
 
 schemes:
   InTheNeighborhood:
@@ -45,6 +31,7 @@ schemes:
         - SearchSourcesTests
         - LocationServicesTests
         - LLMIntegrationTests
+        - InTheNeighborhoodUITests
     archive:
       config: Release
 
@@ -53,8 +40,11 @@ targets:
   InTheNeighborhood:
     type: application
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Sources/InTheNeighborhood
+    resources:
+      - path: Sources/InTheNeighborhood/Resources/Localizable.strings
     dependencies:
       - target: MetasearchCore
       - target: SearchSources
@@ -67,8 +57,20 @@ targets:
         PRODUCT_MODULE_NAME: InTheNeighborhood
         EXECUTABLE_NAME: InTheNeighborhood
         INFOPLIST_FILE: Sources/InTheNeighborhood/Info.plist
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "6.0"
+        SWIFT_OBJC_INTEROP_MODE: objcxx
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: KA5A6NN3PD
         TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+      configs:
+        Debug:
+          SWIFT_OPTIMIZATION_LEVEL: -Onone
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) DEBUG
+        Release:
+          SWIFT_OPTIMIZATION_LEVEL: -O
     info:
       path: Sources/InTheNeighborhood/Info.plist
       properties:
@@ -95,16 +97,20 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         NSLocationWhenInUseUsageDescription: "In the Neighborhood uses your location to find nearby local merchants and calculate distances."
         NSLocationAlwaysAndWhenInUseUsageDescription: "In the Neighborhood uses your location to find nearby local merchants and calculate distances."
+        UIBackgroundModes:
+          - fetch
 
   # MetasearchCore Framework
   MetasearchCore:
     type: framework
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Sources/MetasearchCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.MetasearchCore
+        SWIFT_VERSION: "6.0"
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
 
@@ -112,6 +118,7 @@ targets:
   SearchSources:
     type: framework
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Sources/SearchSources
     dependencies:
@@ -120,6 +127,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.SearchSources
+        SWIFT_VERSION: "6.0"
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
 
@@ -127,6 +135,7 @@ targets:
   LocationServices:
     type: framework
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Sources/LocationServices
     dependencies:
@@ -135,6 +144,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.LocationServices
+        SWIFT_VERSION: "6.0"
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
 
@@ -142,13 +152,20 @@ targets:
   LLMIntegration:
     type: framework
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Sources/LLMIntegration
     dependencies:
       - target: MetasearchCore
+      - package: llama
+        product: LlamaFramework
+    frameworks:
+      - Accelerate.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.LLMIntegration
+        SWIFT_VERSION: "6.0"
+        SWIFT_OBJC_INTEROP_MODE: objcxx
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
 
@@ -156,6 +173,7 @@ targets:
   InTheNeighborhoodTests:
     type: bundle.unit-test
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Tests/InTheNeighborhoodTests
     dependencies:
@@ -163,13 +181,19 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.InTheNeighborhoodTests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_VERSION: "6.0"
+        SWIFT_OBJC_INTEROP_MODE: objcxx
         TEST_TARGET_NAME: InTheNeighborhood
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/In the Neighborhood.app/InTheNeighborhood
         GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: KA5A6NN3PD
 
   MetasearchCoreTests:
     type: bundle.unit-test
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Tests/MetasearchCoreTests
     dependencies:
@@ -177,11 +201,14 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.MetasearchCoreTests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
 
   SearchSourcesTests:
     type: bundle.unit-test
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Tests/SearchSourcesTests
     dependencies:
@@ -189,11 +216,14 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.SearchSourcesTests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
 
   LocationServicesTests:
     type: bundle.unit-test
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Tests/LocationServicesTests
     dependencies:
@@ -201,11 +231,14 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.LocationServicesTests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
 
   LLMIntegrationTests:
     type: bundle.unit-test
     platform: iOS
+    deploymentTarget: "18.0"
     sources:
       - path: Tests/LLMIntegrationTests
     dependencies:
@@ -213,4 +246,29 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.LLMIntegrationTests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_VERSION: "6.0"
+        SWIFT_OBJC_INTEROP_MODE: objcxx
         GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: KA5A6NN3PD
+
+  InTheNeighborhoodUITests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/InTheNeighborhoodUITests
+    dependencies:
+      - target: InTheNeighborhood
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.InTheNeighborhoodUITests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_VERSION: "6.0"
+        SWIFT_OBJC_INTEROP_MODE: objcxx
+        TEST_TARGET_NAME: InTheNeighborhood
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/In the Neighborhood.app/InTheNeighborhood
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: KA5A6NN3PD

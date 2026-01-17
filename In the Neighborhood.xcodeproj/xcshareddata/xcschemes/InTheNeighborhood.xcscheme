@@ -93,6 +93,17 @@
                ReferencedContainer = "container:In the Neighborhood.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9C5883039F47493F7E83D341"
+               BuildableName = "InTheNeighborhoodUITests.xctest"
+               BlueprintName = "InTheNeighborhoodUITests"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

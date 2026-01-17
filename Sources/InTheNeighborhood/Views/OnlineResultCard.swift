@@ -37,6 +37,8 @@ struct OnlineResultCard: View {
                             .foregroundColor(.white)
                             .cornerRadius(8)
                     }
+                    .accessibilityLabel("Open \(result.title)")
+                    .accessibilityHint("Opens this result in your browser")
                 }
             }
         }
@@ -44,6 +46,18 @@ struct OnlineResultCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(result.title)
+        .accessibilityValue(buildAccessibilityValue())
+    }
+    
+    private func buildAccessibilityValue() -> String {
+        var components: [String] = []
+        if let description = result.description {
+            components.append(description)
+        }
+        components.append(sourceLabel)
+        return components.joined(separator: ", ")
     }
     
     private var sourceLabel: String {

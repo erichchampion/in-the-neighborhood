@@ -9,6 +9,7 @@ struct ErrorView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
+                .accessibilityHidden(true)
             
             Text("Error")
                 .font(.headline)

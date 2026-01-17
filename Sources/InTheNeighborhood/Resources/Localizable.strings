@@ -1,0 +1,40 @@
+/* Search View */
+"Search for products" = "Search for products";
+"Search for products at local merchants and ethical online retailers" = "Search for products at local merchants and ethical online retailers";
+"No results found. Try a different search term." = "No results found. Try a different search term.";
+"In the Neighborhood" = "In the Neighborhood";
+"Settings" = "Settings";
+"Open app settings" = "Open app settings";
+
+/* Error View */
+"Error" = "Error";
+"Retry" = "Retry";
+
+/* Model Download View */
+"Downloading AI Model" = "Downloading AI Model";
+"This may take several minutes on first launch" = "This may take several minutes on first launch";
+"Cancel" = "Cancel";
+
+/* Settings View */
+"Deny List" = "Deny List";
+"Remove" = "Remove";
+"Add Domain" = "Add Domain";
+"Search Radius" = "Search Radius";
+"Radius" = "Radius";
+"Privacy" = "Privacy";
+"Clear Search History" = "Clear Search History";
+"Done" = "Done";
+
+/* Local Business Card */
+"Call" = "Call";
+"Directions" = "Directions";
+"Note: Call to check availability" = "Note: Call to check availability";
+
+/* Online Result Card */
+"Open" = "Open";
+"Local" = "Local";
+"Regional / Ethical Online" = "Regional / Ethical Online";
+"Online Option" = "Online Option";
+
+/* Loading View */
+"Searching..." = "Searching...";

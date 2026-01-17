@@ -4,6 +4,7 @@ import LLMIntegration
 
 public struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
+    @StateObject private var downloadManager = LLMModelDownloadManager.shared
     @State private var showSettings = false
     
     public init(
@@ -35,18 +36,34 @@ public struct SearchView: View {
                 
                 // Results
                 ZStack {
+                    // Model download overlay
+                    if downloadManager.downloadState == .downloading {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                        
+                        ModelDownloadView(
+                            downloadManager: downloadManager,
+                            onCancel: {
+                                downloadManager.cancelDownload()
+                            }
+                        )
+                        .padding()
+                    }
+                    
                     switch viewModel.state {
                     case .idle:
-                        EmptyStateView(message: "Search for products at local merchants and ethical online retailers")
+                        EmptyStateView(message: NSLocalizedString("Search for products at local merchants and ethical online retailers", comment: ""))
                         
                     case .loading:
                         LoadingView()
                         
                     case .loaded:
                         if viewModel.results.isEmpty {
-                            EmptyStateView(message: "No results found. Try a different search term.")
+                            EmptyStateView(message: NSLocalizedString("No results found. Try a different search term.", comment: ""))
                         } else {
                             ResultsView(results: viewModel.results)
+                                .accessibilityLabel("Search results")
+                                .accessibilityValue("\(viewModel.results.count) results found")
                         }
                         
                     case .error:
@@ -61,12 +78,14 @@ public struct SearchView: View {
                     }
                 }
             }
-            .navigationTitle("In the Neighborhood")
+            .navigationTitle(NSLocalizedString("In the Neighborhood", comment: ""))
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape.fill")
                     }
+                    .accessibilityLabel(NSLocalizedString("Settings", comment: ""))
+                    .accessibilityHint(NSLocalizedString("Open app settings", comment: ""))
                 }
             }
             .sheet(isPresented: $showSettings) {
@@ -88,6 +107,8 @@ struct SearchBarView: View {
             
             TextField("Search for products...", text: $searchText)
                 .textFieldStyle(.plain)
+                .accessibilityLabel("Search for products")
+                .accessibilityHint("Enter a search query to find products at local merchants and ethical online retailers")
                 .onSubmit {
                     onSearch()
                 }

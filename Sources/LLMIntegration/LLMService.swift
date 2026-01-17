@@ -10,4 +10,5 @@ public enum LLMServiceError: Error {
     case modelLoadFailed
     case inferenceFailed
     case timeout
+    case modelNotFound
 }

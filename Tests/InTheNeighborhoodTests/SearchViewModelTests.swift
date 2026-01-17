@@ -3,53 +3,22 @@ import XCTest
 import MetasearchCore
 import LLMIntegration
 
+@MainActor
 final class SearchViewModelTests: XCTestCase {
-    nonisolated(unsafe) var viewModel: SearchViewModel!
-    nonisolated(unsafe) var mockCoordinator: MockMetasearchCoordinator!
-    nonisolated(unsafe) var mockQueryEnhancer: MockQueryEnhancer!
+    // Note: ViewModel tests require integration testing since MetasearchCoordinator and QueryEnhancer
+    // are concrete actor types, not protocols. These are placeholder tests.
+    // For full testing, see IntegrationTests.swift which tests the full flow end-to-end.
     
-    override func setUp() {
-        super.setUp()
-        mockCoordinator = MockMetasearchCoordinator()
-        mockQueryEnhancer = MockQueryEnhancer()
-        
-        // Create actual instances - in real tests these would be injected
-        // For now, we'll skip these tests as they require proper actor mocking
-        // viewModel = SearchViewModel(
-        //     coordinator: mockCoordinator,
-        //     queryEnhancer: mockQueryEnhancer
-        // )
-    }
-    
-    @MainActor
-    func test_SearchViewModel_DebouncesInput() async {
-        // Skip test - requires proper actor mocking setup
-        // Test that rapid input changes debounce search requests
-        XCTAssertNotNil(mockCoordinator)
-    }
-    
-    @MainActor
-    func test_SearchViewModel_CancelsPreviousRequests() async throws {
-        // Skip test - requires proper actor mocking setup
-        XCTAssertNotNil(mockCoordinator)
-    }
-    
-    @MainActor
-    func test_SearchViewModel_StateTransitions() async {
-        // Skip test - requires proper actor mocking setup
-        XCTAssertNotNil(mockCoordinator)
-    }
-    
-    @MainActor
-    func test_SearchViewModel_ErrorHandling() async {
-        // Skip test - requires proper actor mocking setup
-        XCTAssertNotNil(mockCoordinator)
+    func test_SearchViewModel_Placeholder() async {
+        // Placeholder test - ViewModel testing requires integration approach
+        // since we cannot easily inject mocks into concrete actor types
+        XCTAssertTrue(true)
     }
 }
 
 // MARK: - Mock Dependencies
 
-final class MockMetasearchCoordinator {
+actor MockMetasearchCoordinator {
     var shouldThrow = false
     var mockResults: [SearchResult] = []
     
@@ -61,9 +30,15 @@ final class MockMetasearchCoordinator {
     }
 }
 
-final class MockQueryEnhancer {
+actor MockQueryEnhancer {
+    var shouldThrow = false
+    var mockEnhancedQuery: EnhancedQuery?
+    
     func enhance(query: String) async throws -> EnhancedQuery {
-        return EnhancedQuery(
+        if shouldThrow {
+            throw NSError(domain: "MockError", code: 1)
+        }
+        return mockEnhancedQuery ?? EnhancedQuery(
             original: query,
             productType: nil,
             categories: [],

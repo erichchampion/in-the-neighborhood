@@ -6,6 +6,7 @@ import LocationServices
 
 @main
 struct InTheNeighborhoodApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let coordinator: MetasearchCoordinator
     let queryEnhancer: QueryEnhancer
     let locationService: LocationService
@@ -14,8 +15,8 @@ struct InTheNeighborhoodApp: App {
         // Initialize location service
         locationService = LocationService()
         
-        // Initialize LLM service (placeholder - will need actual MLX integration)
-        let llmService: LLMService = MLXLLMService()
+        // Initialize LLM service (llama.cpp-based, falls back to rule-based parsing)
+        let llmService: LLMService = LlamaCppLLMService()
         queryEnhancer = QueryEnhancer(llmService: llmService)
         
         // Initialize search sources

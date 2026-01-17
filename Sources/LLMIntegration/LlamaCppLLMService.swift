@@ -1,46 +1,45 @@
 import Foundation
 import MetasearchCore
 
-/// MLX-based LLM service implementation for on-device query enhancement
-/// This is a placeholder implementation that will need actual MLX Swift integration
-public actor MLXLLMService: LLMService {
+/// llama.cpp-based LLM service implementation for on-device query enhancement
+/// Falls back to rule-based parsing when model is not available
+public actor LlamaCppLLMService: LLMService {
     private var modelLoaded = false
-    private let modelPath: String?
+    private var useLLM = false  // Set to true when llama.cpp integration is complete
     
-    public init(modelPath: String? = nil) {
-        self.modelPath = modelPath
+    public init() {
+        // Check if model is available and trigger download if needed
+        Task {
+            if !LLMModelDownloadManager.shared.isModelAvailable() {
+                LoggingService.shared.info(
+                    "Model not found, triggering download",
+                    category: "LlamaCppLLMService"
+                )
+                try? await LLMModelDownloadManager.shared.startDownloadIfNeeded()
+            } else {
+                // Model available, but llama.cpp integration not complete yet
+                // Will use rule-based parsing until integration is done
+                LoggingService.shared.info(
+                    "Model available but llama.cpp integration pending, using rule-based parsing",
+                    category: "LlamaCppLLMService"
+                )
+            }
+        }
     }
     
     public func enhanceQuery(_ query: String) async throws -> EnhancedQuery {
-        // Ensure model is loaded (lazy loading)
-        try await ensureModelLoaded()
+        // TODO: When llama.cpp integration is complete, implement:
+        // 1. Load model if not loaded
+        // 2. Build query enhancement prompt
+        // 3. Call llama.cpp generation
+        // 4. Parse JSON response to EnhancedQuery
         
-        // TODO: Implement actual MLX inference
-        // For now, return a basic parsing implementation
+        // For now, use rule-based parsing as fallback
         return try parseQuery(query)
     }
     
-    private func ensureModelLoaded() async throws {
-        if modelLoaded {
-            return
-        }
-        
-        // TODO: Load MLX model here
-        // This would typically involve:
-        // 1. Loading the Mistral 3B model from bundle or disk
-        // 2. Initializing the MLX runtime
-        // 3. Verifying model is ready
-        
-        // Simulate model loading (will throw if not available)
-        if modelPath == nil {
-            throw LLMServiceError.modelUnavailable
-        }
-        
-        modelLoaded = true
-    }
-    
     private func parseQuery(_ query: String) throws -> EnhancedQuery {
-        // Basic rule-based parsing as fallback until MLX is integrated
+        // Basic rule-based parsing as fallback
         var productType: String?
         var categories: [String] = []
         var priceMax: Double?

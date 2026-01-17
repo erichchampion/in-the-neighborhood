@@ -11,7 +11,7 @@ final class IntegrationTests: XCTestCase {
     func test_EndToEndSearchFlow() async throws {
         // Setup
         let locationService = LocationService()
-        let llmService = MLXLLMService()
+        let llmService = LlamaCppLLMService()
         let _ = QueryEnhancer(llmService: llmService)
         
         let mapKitSource = MapKitSearchSource(locationService: locationService)
@@ -38,8 +38,8 @@ final class IntegrationTests: XCTestCase {
     func test_ErrorRecovery() async {
         // Test that app handles errors gracefully
         let _ = LocationService()
-        let _ = MLXLLMService()
-        let _ = QueryEnhancer(llmService: MLXLLMService())
+        let llmService = LlamaCppLLMService()
+        let _ = QueryEnhancer(llmService: llmService)
         
         let coordinator = MetasearchCoordinator(sources: [])
         

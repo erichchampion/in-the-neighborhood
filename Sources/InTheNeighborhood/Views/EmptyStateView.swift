@@ -8,6 +8,7 @@ struct EmptyStateView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
             
             Text(message)
                 .font(.subheadline)
