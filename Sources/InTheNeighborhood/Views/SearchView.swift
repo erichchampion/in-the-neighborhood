@@ -36,20 +36,6 @@ public struct SearchView: View {
                 
                 // Results
                 ZStack {
-                    // Model download overlay
-                    if downloadManager.downloadState == .downloading {
-                        Color.black.opacity(0.3)
-                            .ignoresSafeArea()
-                        
-                        ModelDownloadView(
-                            downloadManager: downloadManager,
-                            onCancel: {
-                                downloadManager.cancelDownload()
-                            }
-                        )
-                        .padding()
-                    }
-                    
                     switch viewModel.state {
                     case .idle:
                         EmptyStateView(message: NSLocalizedString("Search for products at local merchants and ethical online retailers", comment: ""))
@@ -75,6 +61,22 @@ public struct SearchView: View {
                                 }
                             }
                         )
+                    }
+                    
+                    // Model download overlay - appears on top
+                    if downloadManager.downloadState == .downloading {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                            .zIndex(1)
+                        
+                        ModelDownloadView(
+                            downloadManager: downloadManager,
+                            onCancel: {
+                                downloadManager.cancelDownload()
+                            }
+                        )
+                        .padding()
+                        .zIndex(2)
                     }
                 }
             }
