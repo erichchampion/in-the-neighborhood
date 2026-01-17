@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "1600"
+   version = "1.3">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "60CBEB9ED28C5EA94EFEFFD4"
+               BuildableName = "In the Neighborhood.app"
+               BlueprintName = "InTheNeighborhood"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      codeCoverageEnabled = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "60CBEB9ED28C5EA94EFEFFD4"
+            BuildableName = "In the Neighborhood.app"
+            BlueprintName = "InTheNeighborhood"
+            ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "4A2B220C0C184DE9DAED629E"
+               BuildableName = "InTheNeighborhoodTests.xctest"
+               BlueprintName = "InTheNeighborhoodTests"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "923671068C96310950111A8D"
+               BuildableName = "MetasearchCoreTests.xctest"
+               BlueprintName = "MetasearchCoreTests"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "2B8102322861DCE5D2799204"
+               BuildableName = "SearchSourcesTests.xctest"
+               BlueprintName = "SearchSourcesTests"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "625DD5A1DD8003291E1F7120"
+               BuildableName = "LocationServicesTests.xctest"
+               BlueprintName = "LocationServicesTests"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "00E07656E72BB48EE46802C2"
+               BuildableName = "LLMIntegrationTests.xctest"
+               BlueprintName = "LLMIntegrationTests"
+               ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "60CBEB9ED28C5EA94EFEFFD4"
+            BuildableName = "In the Neighborhood.app"
+            BlueprintName = "InTheNeighborhood"
+            ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "60CBEB9ED28C5EA94EFEFFD4"
+            BuildableName = "In the Neighborhood.app"
+            BlueprintName = "InTheNeighborhood"
+            ReferencedContainer = "container:In the Neighborhood.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>
