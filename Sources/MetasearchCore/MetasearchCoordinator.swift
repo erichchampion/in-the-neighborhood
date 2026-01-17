@@ -28,6 +28,7 @@ public actor MetasearchCoordinator {
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
         // Execute searches in parallel with timeout
+        // Each source is independent - failures are handled gracefully
         var allResults: [SearchResult] = []
         let sourcesToSearch = sources
         let queryToSearch = query
@@ -43,17 +44,21 @@ public actor MetasearchCoordinator {
                         }
                     } catch {
                         // Return empty results on timeout or error
+                        // This allows other sources to continue and return results
+                        // Partial failures are expected and handled gracefully
                         return []
                     }
                 }
             }
             
+            // Collect results from all sources, even if some failed
             for try await results in group {
                 allResults.append(contentsOf: results)
             }
         }
         
         // Aggregate, filter, and prioritize results
+        // Even if some sources failed, we return what we have
         var filteredResults = resultAggregator.filter(results: allResults, denyList: denyListFilter)
         filteredResults = resultAggregator.aggregate(results: filteredResults)
         filteredResults = resultPrioritizer.prioritize(results: filteredResults)

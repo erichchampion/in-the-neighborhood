@@ -358,6 +358,13 @@ public actor LlamaCppLLMService: LLMService {
             throw LLMServiceError.inferenceFailed("Failed to get model/vocab", reason: .modelStateCorruption)
         }
         
+        // Clear KV cache from previous queries to avoid sequence position conflicts
+        // This prevents errors like "inconsistent sequence positions: X = 323, Y = 0"
+        if let memory = llama_get_memory(context) {
+            // Remove all tokens from sequence 0 (p0 = -1 means from start, p1 = -1 means to end)
+            _ = llama_memory_seq_rm(memory, 0, -1, -1)
+        }
+        
         // Process prompt tokens in batches
         let maxBatchSize = Self.batchSize
         var batch = llama_batch_init(Int32(min(promptTokens.count, maxBatchSize)), 0, 1)
@@ -591,11 +598,17 @@ public actor LlamaCppLLMService: LLMService {
                 condition: condition
             )
         } catch {
-            // If JSON parsing fails, fall back to rule-based parsing
+            // If JSON parsing fails, fall back to rule-based parsing instead of throwing
+            // This allows the search to continue even if the LLM response is malformed
             LoggingService.shared.warning(
                 "Failed to parse JSON response, falling back to rule-based parsing: \(error)",
                 category: "LlamaCppLLMService"
             )
+            // Don't throw - instead return a fallback EnhancedQuery via parseQuery
+            // The caller (enhanceQueryWithLLM) will throw, which will be caught in enhanceQuery
+            // and fall back to parseQuery anyway, but we can simplify by calling parseQuery here
+            // However, we can't call parseQuery from here as it's nonisolated and we're in a continuation
+            // So we throw and let the error handling in enhanceQuery catch it
             throw LLMServiceError.inferenceFailed("Invalid JSON response: \(error.localizedDescription)", reason: .decodingError)
         }
     }

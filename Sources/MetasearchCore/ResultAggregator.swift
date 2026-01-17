@@ -40,7 +40,38 @@ public struct ResultAggregator {
                 return true
             }
             
-            return !denyList.shouldFilter(url: url)
+            // Resolve redirect URLs before filtering
+            let resolvedURL = resolveRedirectURL(url)
+            
+            return !denyList.shouldFilter(url: resolvedURL)
         }
+    }
+    
+    /// Resolves DuckDuckGo and other redirect URLs to their actual destination
+    private func resolveRedirectURL(_ url: URL) -> URL {
+        let urlString = url.absoluteString
+        
+        // Check if this is a DuckDuckGo redirect URL
+        if url.host?.lowercased() == "duckduckgo.com" || urlString.contains("uddg=") {
+            // Extract the actual destination URL from the redirect
+            if let uddgRange = urlString.range(of: "uddg=") {
+                let encodedURL = String(urlString[uddgRange.upperBound...])
+                // Handle multiple parameters - take everything up to next &
+                let encodedPart: String
+                if let paramEnd = encodedURL.firstIndex(of: "&") {
+                    encodedPart = String(encodedURL[..<paramEnd])
+                } else {
+                    encodedPart = encodedURL
+                }
+                
+                if let decoded = encodedPart.removingPercentEncoding,
+                   let resolved = URL(string: decoded) {
+                    return resolved
+                }
+            }
+        }
+        
+        // Return original URL if not a redirect or if resolution failed
+        return url
     }
 }
