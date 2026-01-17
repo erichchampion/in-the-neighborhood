@@ -50,6 +50,9 @@ targets:
       - target: SearchSources
       - target: LocationServices
       - target: LLMIntegration
+      # Explicitly add llama package dependency to ensure framework is embedded
+      - package: llama
+        product: LlamaFramework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood
@@ -254,7 +257,7 @@ targets:
         DEVELOPMENT_TEAM: KA5A6NN3PD
 
   InTheNeighborhoodUITests:
-    type: bundle.unit-test
+    type: bundle.ui-testing
     platform: iOS
     deploymentTarget: "18.0"
     sources:
@@ -266,9 +269,13 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.InTheNeighborhoodUITests
         PRODUCT_NAME: $(TARGET_NAME)
         SWIFT_VERSION: "6.0"
-        SWIFT_OBJC_INTEROP_MODE: objcxx
+        # Note: SWIFT_OBJC_INTEROP_MODE removed - UI test target doesn't need C++ interop
+        # and it was causing XCUIApplication() initialization to crash
+        # TEST_TARGET_NAME tells Xcode which app bundle to launch for UI tests
         TEST_TARGET_NAME: InTheNeighborhood
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/In the Neighborhood.app/InTheNeighborhood
+        # UI tests must NOT have TEST_HOST or BUNDLE_LOADER set - explicitly clear them
+        TEST_HOST: ""
+        BUNDLE_LOADER: ""
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: KA5A6NN3PD

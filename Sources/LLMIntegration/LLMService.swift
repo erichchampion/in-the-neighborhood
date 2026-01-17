@@ -7,8 +7,16 @@ public protocol LLMService: Sendable {
 
 public enum LLMServiceError: Error {
     case modelUnavailable
-    case modelLoadFailed
-    case inferenceFailed
-    case timeout
+    case modelLoadFailed(String)
+    case inferenceFailed(String, reason: InferenceFailureReason? = nil)
+    case invalidInput(String)
     case modelNotFound
+    case modelNotLoaded
+    case timeout
+    
+    public enum InferenceFailureReason: Sendable {
+        case transientFailure
+        case modelStateCorruption
+        case decodingError
+    }
 }

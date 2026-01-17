@@ -54,6 +54,7 @@
 		76335C0DB71D15B759A689DD /* LlamaFramework in Frameworks */ = {isa = PBXBuildFile; productRef = CEBA3DFCBAADC77949AD62F0 /* LlamaFramework */; };
 		7B4C9A9905A08010EAAB0260 /* MarketplaceSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068A3AD1BEB1FB0F2D430DDE /* MarketplaceSearchSource.swift */; };
 		7C7AF589232AF52A789E4A99 /* MapKitSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A87F3CF0D76981418B6C31A /* MapKitSearchSourceTests.swift */; };
+		7CA287F731B78EAE33CC33B5 /* LlamaCppLLMServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B5192341275AD0765A09 /* LlamaCppLLMServiceTests.swift */; };
 		828B7EF821BB64A9977A7AA9 /* ResultPrioritizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */; };
 		862FF399872D21611741B020 /* MetasearchCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 93A2459508E032CFDA7292CA /* MetasearchCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8A7A2FDB0366C3361790F42D /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */; };
@@ -84,6 +85,7 @@
 		D6F6CC1656059D859E30B60D /* MetasearchCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */; };
 		DCD673E10BAAC6E00F1CA380 /* LlamaCppLLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD93A7D0E8C5A64D3C2DAE74 /* LlamaCppLLMService.swift */; };
 		E03ECCB59B8FEBE8E70B068E /* SearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9957955B01A13F9142CA99FC /* SearchResult.swift */; };
+		E04140F1E6B4BF27369320BC /* LlamaFramework in Frameworks */ = {isa = PBXBuildFile; productRef = 68292BD103AEB50A8B2B13A9 /* LlamaFramework */; };
 		E18C3C3CA56A5655920C3575 /* MarketplaceSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */; };
 		E4755E3EE6E9811739844546 /* ModelDownloadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983077AC6B7A793DDF1C1B1C /* ModelDownloadView.swift */; };
 		E7807F07585CD3234A74315F /* ResultPrioritizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0F23568BE9E0358CB15D0E /* ResultPrioritizerTests.swift */; };
@@ -309,6 +311,7 @@
 		AAEAF72EEE94C22CD809FE14 /* LLMModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelCatalog.swift; sourceTree = "<group>"; };
 		AD93A7D0E8C5A64D3C2DAE74 /* LlamaCppLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppLLMService.swift; sourceTree = "<group>"; };
 		AF009B0DE246BD0A192579FB /* SearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSource.swift; sourceTree = "<group>"; };
+		B1C0B5192341275AD0765A09 /* LlamaCppLLMServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppLLMServiceTests.swift; sourceTree = "<group>"; };
 		B35531AE74D9E3459B280A03 /* MetasearchCoreTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MetasearchCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3AE375238FA05BB374B675E /* QueryEnhancerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEnhancerTests.swift; sourceTree = "<group>"; };
 		B678FE11A64305F3993DDCAB /* SettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManagerTests.swift; sourceTree = "<group>"; };
@@ -392,6 +395,7 @@
 				E821957C06B61909BDA32C8B /* SearchSources.framework in Frameworks */,
 				491C98D5294E69A2D08A51B4 /* LocationServices.framework in Frameworks */,
 				AA312F9A2566273C669A09B8 /* LLMIntegration.framework in Frameworks */,
+				E04140F1E6B4BF27369320BC /* LlamaFramework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -519,6 +523,7 @@
 		623ECAB50B20C910551D62E6 /* LLMIntegrationTests */ = {
 			isa = PBXGroup;
 			children = (
+				B1C0B5192341275AD0765A09 /* LlamaCppLLMServiceTests.swift */,
 				97913D4C275C91C58C462025 /* LLMServiceTests.swift */,
 				B3AE375238FA05BB374B675E /* QueryEnhancerTests.swift */,
 			);
@@ -814,6 +819,7 @@
 			);
 			name = InTheNeighborhood;
 			packageProductDependencies = (
+				68292BD103AEB50A8B2B13A9 /* LlamaFramework */,
 			);
 			productName = InTheNeighborhood;
 			productReference = 798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */;
@@ -894,7 +900,7 @@
 			);
 			productName = InTheNeighborhoodUITests;
 			productReference = C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		B763D36435001BC1B31E9ECC /* MetasearchCore */ = {
 			isa = PBXNativeTarget;
@@ -1094,6 +1100,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				94440C8A634959B7ACC30794 /* LLMServiceTests.swift in Sources */,
+				7CA287F731B78EAE33CC33B5 /* LlamaCppLLMServiceTests.swift in Sources */,
 				54A5D8D08D41785F14A61C1C /* QueryEnhancerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1604,7 +1611,7 @@
 		A545A52D0B6390CDE0BCBC38 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
+				BUNDLE_LOADER = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1617,10 +1624,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.InTheNeighborhoodUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/In the Neighborhood.app/InTheNeighborhood";
+				TEST_HOST = "";
 				TEST_TARGET_NAME = InTheNeighborhood;
 			};
 			name = Release;
@@ -1657,7 +1663,7 @@
 		B23BB4777339376B50A9878A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
+				BUNDLE_LOADER = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1670,10 +1676,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.InTheNeighborhoodUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/In the Neighborhood.app/InTheNeighborhood";
+				TEST_HOST = "";
 				TEST_TARGET_NAME = InTheNeighborhood;
 			};
 			name = Debug;
@@ -1974,6 +1979,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		68292BD103AEB50A8B2B13A9 /* LlamaFramework */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LlamaFramework;
+		};
 		CEBA3DFCBAADC77949AD62F0 /* LlamaFramework */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LlamaFramework;
