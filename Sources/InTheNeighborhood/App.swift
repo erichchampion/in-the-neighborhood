@@ -24,13 +24,15 @@ struct InTheNeighborhoodApp: App {
         let webSearchSource = WebSearchSource()
         let bookshopSource = BookshopSearchSource()
         let marketplaceSource = MarketplaceSearchSource()
+        let amazonSource = AmazonSearchSource()
         
         // Initialize coordinator
         coordinator = MetasearchCoordinator(sources: [
             mapKitSource,
             webSearchSource,
             bookshopSource,
-            marketplaceSource
+            marketplaceSource,
+            amazonSource
         ])
     }
     

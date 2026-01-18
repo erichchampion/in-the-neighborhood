@@ -31,6 +31,7 @@
 		49481E0FAE7C3E11C87FEAE9 /* LLMModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAEAF72EEE94C22CD809FE14 /* LLMModelCatalog.swift */; };
 		4B7FB421E03A13F7E8C3EE13 /* LLMIntegration.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8AF2E6175556A905C7EE69FB /* LLMIntegration.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4BEA507953444B3801B3C048 /* WebSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8FDF257C790838D3D7B1EBE /* WebSearchSource.swift */; };
+		4C96624E0C3093859845B50B /* AmazonProductScraper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */; };
 		4D8A3E0A3E347B7924F78E38 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50851D395CF28F509C40A93F /* EmptyStateView.swift */; };
 		4ED46E9FAF00AAF4214B0492 /* Foundation in Frameworks */ = {isa = PBXBuildFile; fileRef = BB5D8DF9F7DC34D995B4F256 /* Foundation */; };
 		4F395D9B9BE6151AF2598BFB /* ResultCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AECC6BA1D0880A719A66C4E /* ResultCache.swift */; };
@@ -60,6 +61,7 @@
 		862FF399872D21611741B020 /* MetasearchCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 93A2459508E032CFDA7292CA /* MetasearchCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8A7A2FDB0366C3361790F42D /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */; };
 		8B9E99BA792F4E22B51576C5 /* DenyListFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B19C06FE383083A13024E8 /* DenyListFilter.swift */; };
+		8D4F277F3BA4770A24E9B1D1 /* AmazonSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */; };
 		8DE4A6A253D01A0DEDE49369 /* BingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78121379A73D042FCB7D0587 /* BingProvider.swift */; };
 		91CA365F6BA59DC072393155 /* CircuitBreakerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4888A0B4A52D2C70CCA1B04 /* CircuitBreakerTests.swift */; };
 		925EAF2CF14FE7D6DFA5E7AB /* CircuitBreaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4496B05A829B434E7A8E98 /* CircuitBreaker.swift */; };
@@ -69,6 +71,7 @@
 		981805DF2CD76AB2DF821C1B /* SearchViewModelLLMFallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDE60A7E1D6173A15C949EC /* SearchViewModelLLMFallbackTests.swift */; };
 		99673B25605C0B31236CC75A /* WebSearchProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0211205B5F76793E4C81D729 /* WebSearchProvider.swift */; };
 		9AD524FFA3CD2C7307440087 /* ResultCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B47415AF857736FA4868DA3 /* ResultCacheTests.swift */; };
+		9B3091DA11F55AE69A1D2E52 /* AmazonProductCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4441FC91644334E53BCD786C /* AmazonProductCard.swift */; };
 		9CEFB587E29FFD98953948B6 /* MetasearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */; };
 		A496CB4716ED3D69B07A8C82 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A99C59F4177CDE3AA6DE31 /* App.swift */; };
 		A5299CC1C3B8122AFADEAC27 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0497F64900BDD2D6814695 /* LocationService.swift */; };
@@ -277,12 +280,14 @@
 		38925E057A95BBF3768FD4DA /* DuckDuckGoProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuckDuckGoProvider.swift; sourceTree = "<group>"; };
 		3DA3ECF235F8AF552D9189B8 /* SearchSourcesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SearchSourcesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4178FBF09D261BFBC3AC2D44 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4441FC91644334E53BCD786C /* AmazonProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductCard.swift; sourceTree = "<group>"; };
 		46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBusinessCard.swift; sourceTree = "<group>"; };
 		4B6C9B58D210B802419526EE /* OnlineResultCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineResultCard.swift; sourceTree = "<group>"; };
 		50851D395CF28F509C40A93F /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		570B31361FF9E1C713544C46 /* EnhancedQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedQueryTests.swift; sourceTree = "<group>"; };
 		5B47415AF857736FA4868DA3 /* ResultCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultCacheTests.swift; sourceTree = "<group>"; };
+		5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonSearchSource.swift; sourceTree = "<group>"; };
 		5CB62AF9EA43D48CA094D6EE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		5F7A2825C8944A88BC602997 /* LLMIntegration.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LLMIntegration.h; sourceTree = "<group>"; };
 		60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetasearchCoordinator.swift; sourceTree = "<group>"; };
@@ -325,6 +330,7 @@
 		B678FE11A64305F3993DDCAB /* SettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManagerTests.swift; sourceTree = "<group>"; };
 		BB5D8DF9F7DC34D995B4F256 /* Foundation */ = {isa = PBXFileReference; path = Foundation; sourceTree = "<group>"; };
 		BD535A5C276734ABF2587A51 /* BundleHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHelper.swift; sourceTree = "<group>"; };
+		BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductScraper.swift; sourceTree = "<group>"; };
 		BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultAggregator.swift; sourceTree = "<group>"; };
 		BE25AA993A0210D35FDB7ED7 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		C35A427A7452541A3C326E89 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
@@ -521,6 +527,8 @@
 		5F25705437ADFEFCBBF586D1 /* Specialized */ = {
 			isa = PBXGroup;
 			children = (
+				BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */,
+				5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */,
 				9B5D72F072A44053BEB5B62F /* BookshopSearchSource.swift */,
 				068A3AD1BEB1FB0F2D430DDE /* MarketplaceSearchSource.swift */,
 			);
@@ -585,6 +593,7 @@
 		75CDB10A030CE941430B1503 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				4441FC91644334E53BCD786C /* AmazonProductCard.swift */,
 				50851D395CF28F509C40A93F /* EmptyStateView.swift */,
 				E6B29927CCA2E7B386705AD6 /* ErrorView.swift */,
 				46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */,
@@ -1033,6 +1042,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9B3091DA11F55AE69A1D2E52 /* AmazonProductCard.swift in Sources */,
 				A496CB4716ED3D69B07A8C82 /* App.swift in Sources */,
 				2C93B9B024A912211AECEDEC /* AppDelegate.swift in Sources */,
 				4D8A3E0A3E347B7924F78E38 /* EmptyStateView.swift in Sources */,
@@ -1143,6 +1153,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C96624E0C3093859845B50B /* AmazonProductScraper.swift in Sources */,
+				8D4F277F3BA4770A24E9B1D1 /* AmazonSearchSource.swift in Sources */,
 				8DE4A6A253D01A0DEDE49369 /* BingProvider.swift in Sources */,
 				3A52D50609BAD0BF4E4CB7E5 /* BookshopSearchSource.swift in Sources */,
 				925EAF2CF14FE7D6DFA5E7AB /* CircuitBreaker.swift in Sources */,
