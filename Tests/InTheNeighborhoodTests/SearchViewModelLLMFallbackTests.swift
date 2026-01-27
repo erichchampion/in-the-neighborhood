@@ -28,17 +28,24 @@ final class SearchViewModelLLMFallbackTests: XCTestCase {
         let webSearchSource = WebSearchSource()
         let bookshopSource = BookshopSearchSource()
         let marketplaceSource = MarketplaceSearchSource()
+        let amazonSource = AmazonSearchSource()
+        let googleBooksSource = GoogleBooksSearchSource(apiKey: nil) // No API key for tests
         
         coordinator = MetasearchCoordinator(sources: [
             mapKitSource,
             webSearchSource,
             bookshopSource,
-            marketplaceSource
+            marketplaceSource,
+            amazonSource,
+            googleBooksSource
         ])
         
         viewModel = SearchViewModel(
             coordinator: coordinator,
-            queryEnhancer: queryEnhancer
+            queryEnhancer: queryEnhancer,
+            amazonSource: amazonSource,
+            googleBooksSource: googleBooksSource,
+            mapKitSource: mapKitSource
         )
     }
     

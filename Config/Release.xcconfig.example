@@ -1,0 +1,4 @@
+// Release configuration - Copy this file to Release.xcconfig and add your API keys
+// Or set BING_API_KEY as an environment variable in CI/CD
+
+BING_API_KEY = your_bing_api_key_here

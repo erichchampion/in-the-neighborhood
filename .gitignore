@@ -61,3 +61,8 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 build
+
+# API Keys - keep xcconfig files but don't commit actual keys
+# Users should set keys in their local xcconfig files or as environment variables
+Config/*.xcconfig
+!Config/*.xcconfig.example

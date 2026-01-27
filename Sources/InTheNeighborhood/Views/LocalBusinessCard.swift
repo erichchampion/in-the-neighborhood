@@ -18,6 +18,16 @@ struct LocalBusinessCard: View {
                             .foregroundColor(.secondary)
                     }
                     
+                    // Show website URL as clickable link if available
+                    if let url = result.url {
+                        Link(destination: url) {
+                            Text(truncatedURL(url))
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .lineLimit(1)
+                        }
+                    }
+                    
                     if let distance = result.distance {
                         Text(formatDistance(distance))
                             .font(.caption)
@@ -101,10 +111,29 @@ struct LocalBusinessCard: View {
         mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
     }
     
+    /// Truncates a URL to a maximum length, adding ellipsis if needed
+    /// - Parameter url: URL to truncate
+    /// - Returns: Truncated URL string
+    private func truncatedURL(_ url: URL) -> String {
+        let urlString = url.absoluteString
+        let maxLength = 50 // Maximum characters before truncation
+        
+        if urlString.count <= maxLength {
+            return urlString
+        }
+        
+        // Truncate and add ellipsis
+        let truncated = String(urlString.prefix(maxLength - 3))
+        return truncated + "..."
+    }
+    
     private func buildAccessibilityValue() -> String {
         var components: [String] = []
         if let description = result.description {
             components.append(description)
+        }
+        if let url = result.url {
+            components.append(url.absoluteString)
         }
         if let distance = result.distance {
             components.append(formatDistance(distance))

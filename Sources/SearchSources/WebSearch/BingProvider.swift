@@ -1,7 +1,7 @@
 import Foundation
 import MetasearchCore
 
-final class BingProvider: WebSearchProvider, @unchecked Sendable {
+public final class BingProvider: WebSearchProvider, @unchecked Sendable {
     private let session: URLSession
     private let baseURL = "https://api.bing.microsoft.com/v7.0/search"
     private let apiKey: String?
@@ -17,14 +17,14 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
         let isAd: Bool?
     }
     
-    init(apiKey: String? = nil, session: URLSession = .shared, maxRetries: Int = 3, retryDelay: TimeInterval = 1.0) {
+    public init(apiKey: String? = nil, session: URLSession = .shared, maxRetries: Int = 3, retryDelay: TimeInterval = 1.0) {
         self.apiKey = apiKey
         self.session = session
         self.maxRetries = maxRetries
         self.retryDelay = retryDelay
     }
     
-    func search(query: String) async throws -> [SearchResult] {
+    public func search(query: String) async throws -> [SearchResult] {
         guard let apiKey = apiKey else {
             // Without API key, return empty results
             return []

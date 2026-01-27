@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -81,9 +81,11 @@
 		A8ADEA0E944B2D77CFC32119 /* ResultAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */; };
 		AA312F9A2566273C669A09B8 /* LLMIntegration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AF2E6175556A905C7EE69FB /* LLMIntegration.framework */; };
 		AB32A016860800B45C8A154F /* LocalBusinessCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */; };
+		AC3CE8120A7FE599D023AE9E /* APIKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DFC2E07B3AFA2166B72DC3 /* APIKeys.swift */; };
 		AD0EE9ABCC5EFF53D10AF337 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C35A427A7452541A3C326E89 /* Localizable.strings */; };
 		AE7F2C375229424F751A8038 /* LocationServices.h in Headers */ = {isa = PBXBuildFile; fileRef = 7AC7DD6A5036678BAF3BC492 /* LocationServices.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AEA60F3E27C2F8A054A90F4F /* DenyListFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2234677CF4CB2CB1F4EDBE /* DenyListFilterTests.swift */; };
+		B15CE9B451A664A62D8D0221 /* GoogleBooksSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */; };
 		BC622F7A19D1799E99771A54 /* ProductCondition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87170702F20831507289E85A /* ProductCondition.swift */; };
 		BC9F7451A8003B00C5129DF3 /* ResultAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */; };
 		BCEE6BD4BFBB3FA947FCD244 /* SearchSources.h in Headers */ = {isa = PBXBuildFile; fileRef = 9EB5AAEA771C98E78C1ECFF6 /* SearchSources.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -265,6 +267,7 @@
 
 /* Begin PBXFileReference section */
 		00FF2C87B2B8D8FBC4BF193E /* LoggingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggingService.swift; sourceTree = "<group>"; };
+		01DFC2E07B3AFA2166B72DC3 /* APIKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeys.swift; sourceTree = "<group>"; };
 		0211205B5F76793E4C81D729 /* WebSearchProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchProvider.swift; sourceTree = "<group>"; };
 		059B580304543DED8353B7B0 /* IntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTests.swift; sourceTree = "<group>"; };
 		068A3AD1BEB1FB0F2D430DDE /* MarketplaceSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSearchSource.swift; sourceTree = "<group>"; };
@@ -282,7 +285,7 @@
 		33EC7EF1CAEA5214B3E6EC3C /* SearchResultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultTests.swift; sourceTree = "<group>"; };
 		36CDDACD5862987495E218E1 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		38925E057A95BBF3768FD4DA /* DuckDuckGoProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuckDuckGoProvider.swift; sourceTree = "<group>"; };
-		3DA3ECF235F8AF552D9189B8 /* SearchSourcesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SearchSourcesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3DA3ECF235F8AF552D9189B8 /* SearchSourcesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SearchSourcesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4178FBF09D261BFBC3AC2D44 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4441FC91644334E53BCD786C /* AmazonProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductCard.swift; sourceTree = "<group>"; };
 		46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
@@ -298,25 +301,25 @@
 		62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetasearchCoordinatorTests.swift; sourceTree = "<group>"; };
 		6A0497F64900BDD2D6814695 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		6A4496B05A829B434E7A8E98 /* CircuitBreaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreaker.swift; sourceTree = "<group>"; };
-		6E51CAA6CDAEC0D136B03E31 /* LLMIntegrationTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LLMIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E51CAA6CDAEC0D136B03E31 /* LLMIntegrationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LLMIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6EF2A1B962815C6186C69EC8 /* BookshopSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshopSearchSourceTests.swift; sourceTree = "<group>"; };
 		71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDomainListDownloadManager.swift; sourceTree = "<group>"; };
 		78121379A73D042FCB7D0587 /* BingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProvider.swift; sourceTree = "<group>"; };
 		787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultPrioritizer.swift; sourceTree = "<group>"; };
-		798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = InTheNeighborhood.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		798C5DD0EA4B954339D86B78 /* In the Neighborhood.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "In the Neighborhood.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AA0971404C5E03B0AFD0B2F /* QueryEnhancer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEnhancer.swift; sourceTree = "<group>"; };
 		7AC7DD6A5036678BAF3BC492 /* LocationServices.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocationServices.h; sourceTree = "<group>"; };
 		7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSearchSourceTests.swift; sourceTree = "<group>"; };
 		7DBA43DBF8BFAA9E4E84E540 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		87170702F20831507289E85A /* ProductCondition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCondition.swift; sourceTree = "<group>"; };
 		8AF2E6175556A905C7EE69FB /* LLMIntegration.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LLMIntegration.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = InTheNeighborhoodTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InTheNeighborhoodTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FA6EE2050D078FC30A50BDA /* in-the-neighborhood */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "in-the-neighborhood"; path = .; sourceTree = SOURCE_ROOT; };
 		93A2459508E032CFDA7292CA /* MetasearchCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MetasearchCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		97913D4C275C91C58C462025 /* LLMServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMServiceTests.swift; sourceTree = "<group>"; };
 		983077AC6B7A793DDF1C1B1C /* ModelDownloadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadView.swift; sourceTree = "<group>"; };
 		9957955B01A13F9142CA99FC /* SearchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResult.swift; sourceTree = "<group>"; };
-		9961462098B5FCEFAF9F0E71 /* LocationServicesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LocationServicesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9961462098B5FCEFAF9F0E71 /* LocationServicesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LocationServicesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A87F3CF0D76981418B6C31A /* MapKitSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKitSearchSourceTests.swift; sourceTree = "<group>"; };
 		9AECC6BA1D0880A719A66C4E /* ResultCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultCache.swift; sourceTree = "<group>"; };
 		9B5D72F072A44053BEB5B62F /* BookshopSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshopSearchSource.swift; sourceTree = "<group>"; };
@@ -324,29 +327,32 @@
 		9CF9FECFA4788365EF472CED /* EnhancedQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedQuery.swift; sourceTree = "<group>"; };
 		9EB5AAEA771C98E78C1ECFF6 /* SearchSources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SearchSources.h; sourceTree = "<group>"; };
 		9ECC101CD1AE041AC6E9EFED /* SearchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModelTests.swift; sourceTree = "<group>"; };
-		A601E719D0B83DF997FEDD8F /* CoreLocation */ = {isa = PBXFileReference; path = CoreLocation; sourceTree = "<group>"; };
+		A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleBooksSearchSource.swift; sourceTree = "<group>"; };
+		A601E719D0B83DF997FEDD8F /* CoreLocation */ = {isa = PBXFileReference; lastKnownFileType = text; path = CoreLocation; sourceTree = "<group>"; };
 		A8FDF257C790838D3D7B1EBE /* WebSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSource.swift; sourceTree = "<group>"; };
 		AAEAF72EEE94C22CD809FE14 /* LLMModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelCatalog.swift; sourceTree = "<group>"; };
 		AD93A7D0E8C5A64D3C2DAE74 /* LlamaCppLLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppLLMService.swift; sourceTree = "<group>"; };
 		AF009B0DE246BD0A192579FB /* SearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSource.swift; sourceTree = "<group>"; };
 		B1C0B5192341275AD0765A09 /* LlamaCppLLMServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppLLMServiceTests.swift; sourceTree = "<group>"; };
-		B35531AE74D9E3459B280A03 /* MetasearchCoreTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MetasearchCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B35531AE74D9E3459B280A03 /* MetasearchCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MetasearchCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3AE375238FA05BB374B675E /* QueryEnhancerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEnhancerTests.swift; sourceTree = "<group>"; };
 		B678FE11A64305F3993DDCAB /* SettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManagerTests.swift; sourceTree = "<group>"; };
-		BB5D8DF9F7DC34D995B4F256 /* Foundation */ = {isa = PBXFileReference; path = Foundation; sourceTree = "<group>"; };
+		BB5D8DF9F7DC34D995B4F256 /* Foundation */ = {isa = PBXFileReference; lastKnownFileType = text; path = Foundation; sourceTree = "<group>"; };
 		BD535A5C276734ABF2587A51 /* BundleHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHelper.swift; sourceTree = "<group>"; };
 		BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductScraper.swift; sourceTree = "<group>"; };
 		BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultAggregator.swift; sourceTree = "<group>"; };
 		BE25AA993A0210D35FDB7ED7 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		C35A427A7452541A3C326E89 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
-		C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = InTheNeighborhoodUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InTheNeighborhoodUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB2234677CF4CB2CB1F4EDBE /* DenyListFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenyListFilterTests.swift; sourceTree = "<group>"; };
 		CF2464ED8DB513B9CCFC9BB2 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
 		CF9D676FC5640A0BCF652813 /* LocationServices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LocationServices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1DA7AB97926D822EA2D4A30 /* LLMModelDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModelDownloadManager.swift; sourceTree = "<group>"; };
+		DE5A9D76260791772F421287 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		E12CE8A3B38B28C8ACBF785B /* LocationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationServiceTests.swift; sourceTree = "<group>"; };
 		E57F539E3E5A5E39E2CAA4D0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultAggregatorTests.swift; sourceTree = "<group>"; };
+		E651E8B7683F2C970877A493 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		E6B29927CCA2E7B386705AD6 /* ErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorView.swift; sourceTree = "<group>"; };
 		E8F4E04E9E5260293A812A2F /* BingProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProviderTests.swift; sourceTree = "<group>"; };
 		F3349062230C15686D213C47 /* WebSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSourceTests.swift; sourceTree = "<group>"; };
@@ -487,7 +493,7 @@
 		169127663F96CA16F069F2D3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */,
+				798C5DD0EA4B954339D86B78 /* In the Neighborhood.app */,
 				8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */,
 				C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */,
 				8AF2E6175556A905C7EE69FB /* LLMIntegration.framework */,
@@ -505,6 +511,7 @@
 		3090FFF68E0FC33B1995A090 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				01DFC2E07B3AFA2166B72DC3 /* APIKeys.swift */,
 				16BDCF8E6132E3B250025475 /* LoggingService.swift */,
 			);
 			path = Utilities;
@@ -536,6 +543,7 @@
 				BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */,
 				5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */,
 				9B5D72F072A44053BEB5B62F /* BookshopSearchSource.swift */,
+				A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */,
 				068A3AD1BEB1FB0F2D430DDE /* MarketplaceSearchSource.swift */,
 			);
 			path = Specialized;
@@ -563,6 +571,7 @@
 		63DBA15FC17C53F136AFA75B = {
 			isa = PBXGroup;
 			children = (
+				B166146ED36ED9B5DE74D3DC /* Config */,
 				65F936F1DD303F2C0504C2E5 /* InTheNeighborhood */,
 				45A202078573B372EBFB9ABC /* InTheNeighborhoodTests */,
 				A430FD64824D1466CCEBEDEF /* InTheNeighborhoodUITests */,
@@ -660,6 +669,15 @@
 			);
 			name = MetasearchCore;
 			path = Sources/MetasearchCore;
+			sourceTree = "<group>";
+		};
+		B166146ED36ED9B5DE74D3DC /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				DE5A9D76260791772F421287 /* Debug.xcconfig */,
+				E651E8B7683F2C970877A493 /* Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		B236470808B626CD720CDFB4 /* Packages */ = {
@@ -855,7 +873,7 @@
 				68292BD103AEB50A8B2B13A9 /* LlamaFramework */,
 			);
 			productName = InTheNeighborhood;
-			productReference = 798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */;
+			productReference = 798C5DD0EA4B954339D86B78 /* In the Neighborhood.app */;
 			productType = "com.apple.product-type.application";
 		};
 		625DD5A1DD8003291E1F7120 /* LocationServicesTests */ = {
@@ -981,7 +999,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					00E07656E72BB48EE46802C2 = {
 						DevelopmentTeam = KA5A6NN3PD;
@@ -1017,7 +1035,6 @@
 				E597DC82D7EE2E5D0247FDE0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				A6EBBBE81F94463481FB267D /* XCLocalSwiftPackageReference "." */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -1052,6 +1069,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC3CE8120A7FE599D023AE9E /* APIKeys.swift in Sources */,
 				9B3091DA11F55AE69A1D2E52 /* AmazonProductCard.swift in Sources */,
 				A496CB4716ED3D69B07A8C82 /* App.swift in Sources */,
 				2C93B9B024A912211AECEDEC /* AppDelegate.swift in Sources */,
@@ -1169,6 +1187,7 @@
 				3A52D50609BAD0BF4E4CB7E5 /* BookshopSearchSource.swift in Sources */,
 				925EAF2CF14FE7D6DFA5E7AB /* CircuitBreaker.swift in Sources */,
 				93F3D167C27AE3DFCC81F12C /* DuckDuckGoProvider.swift in Sources */,
+				B15CE9B451A664A62D8D0221 /* GoogleBooksSearchSource.swift in Sources */,
 				0D3FFB081F09E900D141F387 /* MapKitSearchSource.swift in Sources */,
 				7B4C9A9905A08010EAAB0260 /* MarketplaceSearchSource.swift in Sources */,
 				99673B25605C0B31236CC75A /* WebSearchProvider.swift in Sources */,
@@ -1270,6 +1289,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1294,6 +1314,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1301,6 +1322,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.SearchSources";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1314,6 +1336,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1331,6 +1354,7 @@
 		};
 		412D35703FB8219530EE4F17 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE5A9D76260791772F421287 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -1339,6 +1363,7 @@
 				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				EXECUTABLE_NAME = InTheNeighborhood;
 				INFOPLIST_FILE = Sources/InTheNeighborhood/Info.plist;
+				INFOPLIST_KEY_BING_API_KEY = "$(BING_API_KEY)";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1366,6 +1391,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1373,6 +1399,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.SearchSources";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1386,6 +1413,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1449,6 +1477,7 @@
 		};
 		59AE569F9D987F5D18369F59 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E651E8B7683F2C970877A493 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -1484,6 +1513,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1497,6 +1527,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -1507,6 +1538,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1531,6 +1563,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1538,6 +1571,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.LLMIntegration";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1557,6 +1591,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1564,6 +1599,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.LLMIntegration";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1583,6 +1619,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\".\"",
@@ -1594,6 +1631,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.LocationServices";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1627,6 +1665,7 @@
 		};
 		9437BE75634C37380844CCD3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E651E8B7683F2C970877A493 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -1635,6 +1674,7 @@
 				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				EXECUTABLE_NAME = InTheNeighborhood;
 				INFOPLIST_FILE = Sources/InTheNeighborhood/Info.plist;
+				INFOPLIST_KEY_BING_API_KEY = "$(BING_API_KEY)";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1684,6 +1724,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\".\"",
@@ -1695,6 +1736,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.LocationServices";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1736,6 +1778,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1743,6 +1786,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.MetasearchCore";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1756,6 +1800,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1780,6 +1825,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1787,6 +1833,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.MetasearchCore";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1798,6 +1845,7 @@
 		};
 		D4EE19F821A31C40F1741D1B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE5A9D76260791772F421287 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -1833,6 +1881,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1853,6 +1902,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1863,6 +1913,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -11,12 +11,14 @@ public struct SearchView: View {
         coordinator: MetasearchCoordinator,
         queryEnhancer: QueryEnhancer,
         amazonSource: any SearchSource,
+        googleBooksSource: any SearchSource,
         mapKitSource: any SearchSource
     ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel(
             coordinator: coordinator,
             queryEnhancer: queryEnhancer,
             amazonSource: amazonSource,
+            googleBooksSource: googleBooksSource,
             mapKitSource: mapKitSource
         ))
     }

@@ -22,6 +22,7 @@ public class SearchViewModel: ObservableObject {
     private let coordinator: MetasearchCoordinator
     private let queryEnhancer: QueryEnhancer
     private let amazonSource: any SearchSource
+    private let googleBooksSource: any SearchSource
     private let mapKitSource: any SearchSource
     private var searchTask: Task<Void, Never>?
     private let debounceDelay: TimeInterval = 0.5 // seconds
@@ -42,11 +43,13 @@ public class SearchViewModel: ObservableObject {
         coordinator: MetasearchCoordinator,
         queryEnhancer: QueryEnhancer,
         amazonSource: any SearchSource,
+        googleBooksSource: any SearchSource,
         mapKitSource: any SearchSource
     ) {
         self.coordinator = coordinator
         self.queryEnhancer = queryEnhancer
         self.amazonSource = amazonSource
+        self.googleBooksSource = googleBooksSource
         self.mapKitSource = mapKitSource
     }
     
@@ -171,12 +174,19 @@ public class SearchViewModel: ObservableObject {
         }
     }
     
-    // Thread 2: Amazon search
+    // Thread 2: Amazon and Google Books search (combined)
     private func searchAmazon(query: String) async -> [SearchResult] {
-        print("[SearchViewModel] Thread 2 (Amazon): Starting Amazon search for query: '\(query)'")
+        print("[SearchViewModel] Thread 2 (Amazon/Google Books): Starting product search for query: '\(query)'")
         do {
             let enhancedQuery = try await queryEnhancer.enhance(query: query)
-            let searchResults = try await amazonSource.search(query: enhancedQuery)
+            
+            // Search both Amazon and Google Books concurrently
+            async let amazonTask = amazonSource.search(query: enhancedQuery)
+            async let googleBooksTask = googleBooksSource.search(query: enhancedQuery)
+            
+            // Wait for both to complete
+            let amazonSearchResults = try? await amazonTask
+            let googleBooksSearchResults = try? await googleBooksTask
             
             guard !Task.isCancelled else {
                 await MainActor.run {
@@ -185,14 +195,21 @@ public class SearchViewModel: ObservableObject {
                 return []
             }
             
+            // Combine results from both sources
+            var combinedResults: [SearchResult] = []
+            combinedResults.append(contentsOf: amazonSearchResults ?? [])
+            combinedResults.append(contentsOf: googleBooksSearchResults ?? [])
+            
             await MainActor.run {
-                amazonResults = searchResults
+                amazonResults = combinedResults
                 isLoadingAmazon = false
                 // Update legacy results array
                 results = webResults + amazonResults + localResults
             }
             
-            return searchResults
+            print("[SearchViewModel] Thread 2: Combined \(amazonSearchResults?.count ?? 0) Amazon + \(googleBooksSearchResults?.count ?? 0) Google Books = \(combinedResults.count) total product results")
+            
+            return combinedResults
         } catch {
             guard !Task.isCancelled else {
                 await MainActor.run {

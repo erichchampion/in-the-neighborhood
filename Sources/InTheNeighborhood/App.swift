@@ -11,6 +11,7 @@ struct InTheNeighborhoodApp: App {
     let queryEnhancer: QueryEnhancer
     let locationService: LocationService
     let amazonSource: any SearchSource
+    let googleBooksSource: any SearchSource
     let mapKitSource: any SearchSource
     
     init() {
@@ -23,10 +24,18 @@ struct InTheNeighborhoodApp: App {
         
         // Initialize search sources
         mapKitSource = MapKitSearchSource(locationService: locationService)
-        let webSearchSource = WebSearchSource()
+        
+        // Initialize web search source with Bing API key from build configuration
+        let bingApiKey = APIKeys.bingAPIKey
+        let bingProvider = BingProvider(apiKey: bingApiKey)
+        let webSearchSource = WebSearchSource(bingProvider: bingProvider)
+        
         let bookshopSource = BookshopSearchSource()
         let marketplaceSource = MarketplaceSearchSource()
         amazonSource = AmazonSearchSource()
+        
+        // Initialize Google Books source (no API key required - works without authentication)
+        googleBooksSource = GoogleBooksSearchSource(apiKey: nil)
         
         // Initialize coordinator
         coordinator = MetasearchCoordinator(sources: [
@@ -34,7 +43,8 @@ struct InTheNeighborhoodApp: App {
             webSearchSource,
             bookshopSource,
             marketplaceSource,
-            amazonSource
+            amazonSource,
+            googleBooksSource
         ])
     }
     
@@ -44,6 +54,7 @@ struct InTheNeighborhoodApp: App {
                 coordinator: coordinator,
                 queryEnhancer: queryEnhancer,
                 amazonSource: amazonSource,
+                googleBooksSource: googleBooksSource,
                 mapKitSource: mapKitSource
             )
         }
