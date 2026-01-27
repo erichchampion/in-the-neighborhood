@@ -10,6 +10,8 @@ struct InTheNeighborhoodApp: App {
     let coordinator: MetasearchCoordinator
     let queryEnhancer: QueryEnhancer
     let locationService: LocationService
+    let amazonSource: any SearchSource
+    let mapKitSource: any SearchSource
     
     init() {
         // Initialize location service
@@ -20,11 +22,11 @@ struct InTheNeighborhoodApp: App {
         queryEnhancer = QueryEnhancer(llmService: llmService)
         
         // Initialize search sources
-        let mapKitSource = MapKitSearchSource(locationService: locationService)
+        mapKitSource = MapKitSearchSource(locationService: locationService)
         let webSearchSource = WebSearchSource()
         let bookshopSource = BookshopSearchSource()
         let marketplaceSource = MarketplaceSearchSource()
-        let amazonSource = AmazonSearchSource()
+        amazonSource = AmazonSearchSource()
         
         // Initialize coordinator
         coordinator = MetasearchCoordinator(sources: [
@@ -40,7 +42,9 @@ struct InTheNeighborhoodApp: App {
         WindowGroup {
             SearchView(
                 coordinator: coordinator,
-                queryEnhancer: queryEnhancer
+                queryEnhancer: queryEnhancer,
+                amazonSource: amazonSource,
+                mapKitSource: mapKitSource
             )
         }
     }

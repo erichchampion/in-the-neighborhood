@@ -10,6 +10,9 @@ packages:
   llama:
     path: .
     # Using local Package.swift which references ggml-org/llama.cpp b7658 xcframework
+  SwiftSoup:
+    url: https://github.com/scinfu/SwiftSoup.git
+    from: 2.7.6
 
 configs:
   Debug: debug
@@ -127,6 +130,8 @@ targets:
     dependencies:
       - target: MetasearchCore
       - target: LocationServices
+      - package: SwiftSoup
+        product: SwiftSoup
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.SearchSources

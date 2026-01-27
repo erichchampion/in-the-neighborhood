@@ -9,7 +9,7 @@ public actor MetasearchCoordinator {
     
     public init(
         sources: [any SearchSource],
-        timeout: TimeInterval = 3.0,
+        timeout: TimeInterval = 60.0, // Increased timeout to allow Amazon scraping with series page detection to complete
         denyListFilter: DenyListFilter = DenyListFilter(defaultDomains: [
             "amazon.com",
             "walmart.com",
@@ -27,10 +27,14 @@ public actor MetasearchCoordinator {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        return try await search(query: query, excludingSources: [])
+    }
+    
+    public func search(query: EnhancedQuery, excludingSources: Set<String>) async throws -> [SearchResult] {
         // Execute searches in parallel with timeout
         // Each source is independent - failures are handled gracefully
         var allResults: [SearchResult] = []
-        let sourcesToSearch = sources
+        let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
         let queryToSearch = query
         let timeoutValue = timeout
         
@@ -53,15 +57,43 @@ public actor MetasearchCoordinator {
             
             // Collect results from all sources, even if some failed
             for try await results in group {
+                // #region agent log
+                let sourceName = results.first?.source ?? "unknown"
+                print("[DEBUG] MetasearchCoordinator.swift:59 - Collected results from source: \(sourceName), count: \(results.count)")
+                if results.isEmpty && sourceName == "unknown" {
+                    print("[DEBUG] MetasearchCoordinator.swift:59 - WARNING: Empty results with unknown source - this may indicate a timeout or error")
+                }
+                for result in results {
+                    print("[DEBUG] MetasearchCoordinator.swift:59 - Result: source=\(result.source), title=\(result.title)")
+                }
+                // #endregion
                 allResults.append(contentsOf: results)
             }
         }
         
+        // #region agent log
+        print("[DEBUG] MetasearchCoordinator.swift:66 - Before filter: total results: \(allResults.count), Amazon results: \(allResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        // #endregion
+        
         // Aggregate, filter, and prioritize results
         // Even if some sources failed, we return what we have
         var filteredResults = resultAggregator.filter(results: allResults, denyList: denyListFilter)
+        
+        // #region agent log
+        print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        // #endregion
+        
         filteredResults = resultAggregator.aggregate(results: filteredResults)
+        
+        // #region agent log
+        print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        // #endregion
+        
         filteredResults = resultPrioritizer.prioritize(results: filteredResults)
+        
+        // #region agent log
+        print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        // #endregion
         
         return filteredResults
     }

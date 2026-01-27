@@ -3,11 +3,17 @@ import MetasearchCore
 
 struct AmazonProductCard: View {
     let result: SearchResult
+    let onRefine: (() -> Void)?
+    
+    init(result: SearchResult, onRefine: (() -> Void)? = nil) {
+        self.result = result
+        self.onRefine = onRefine
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                // Product Image
+                // Product Image Thumbnail
                 if let imageUrlString = result.metadata["imageUrl"] as? String,
                    let imageUrl = URL(string: imageUrlString) {
                     AsyncImage(url: imageUrl) { phase in
@@ -39,91 +45,103 @@ struct AmazonProductCard: View {
                         .cornerRadius(8)
                 }
                 
-                // Product Info
+                // Product Metadata
                 VStack(alignment: .leading, spacing: 6) {
+                    // Title
                     Text(result.title)
                         .font(.headline)
                         .lineLimit(2)
                     
-                    // Brand
+                    // Manufacturer/Brand
                     if let brand = result.metadata["brand"] as? String {
                         Text(brand)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     
-                    // Price
-                    if let price = result.metadata["price"] as? String {
-                        Text(price)
-                            .font(.headline)
-                            .foregroundColor(.blue)
+                    // Author (for books)
+                    if let author = result.metadata["author"] as? String {
+                        Text("by \(author)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                     
-                    // Ratings
-                    if let ratings = result.metadata["ratings"] as? Double {
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
-                                .font(.caption)
-                            Text(String(format: "%.1f", ratings))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                    // Artist (for media)
+                    if let artist = result.metadata["artist"] as? String {
+                        Text(artist)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                     
-                    // Availability
-                    if let availability = result.metadata["availability"] as? String {
-                        Text(availability)
+                    // ISBN or SKU (generally applicable identifiers)
+                    if let isbn = result.metadata["isbn"] as? String {
+                        Text("ISBN: \(isbn)")
                             .font(.caption)
-                            .foregroundColor(availability.lowercased().contains("stock") && !availability.lowercased().contains("out") ? .green : .orange)
+                            .foregroundColor(.secondary)
+                    } else if let sku = result.metadata["sku"] as? String {
+                        Text("SKU: \(sku)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
                 
                 Spacer()
             }
             
-            // View on Amazon button
-            if let url = result.url {
+            // Refine button
+            if let onRefine = onRefine {
                 Button(action: {
-                    UIApplication.shared.open(url)
+                    onRefine()
                 }) {
                     HStack {
-                        Image(systemName: "arrow.up.right.square")
-                        Text("View on Amazon")
+                        Image(systemName: "magnifyingglass")
+                        Text("Refine")
                     }
                     .font(.subheadline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(Color.orange)
+                    .background(Color.blue)
                     .cornerRadius(8)
                 }
-                .accessibilityLabel("View \(result.title) on Amazon")
-                .accessibilityHint("Opens this product page on Amazon")
+                .accessibilityLabel("Refine search with \(result.title)")
+                .accessibilityHint("Uses this product's metadata to refine the search on other websites")
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.clear)
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(buildAccessibilityLabel())
+        .onAppear {
+            // #region agent log
+            let brandStr = (result.metadata["brand"] as? String) ?? "nil"
+            let isbnStr = (result.metadata["isbn"] as? String) ?? "nil"
+            let skuStr = (result.metadata["sku"] as? String) ?? "nil"
+            let authorStr = (result.metadata["author"] as? String) ?? "nil"
+            let artistStr = (result.metadata["artist"] as? String) ?? "nil"
+            print("[DEBUG] AmazonProductCard.swift:115 - Rendering card with metadata - title: \(result.title), metadataKeys: \(Array(result.metadata.keys)), brand: \(brandStr), isbn: \(isbnStr), sku: \(skuStr), author: \(authorStr), artist: \(artistStr)")
+            // #endregion
+        }
     }
     
     private func buildAccessibilityLabel() -> String {
         var components: [String] = [result.title]
         
         if let brand = result.metadata["brand"] as? String {
-            components.append("Brand: \(brand)")
+            components.append("Manufacturer: \(brand)")
         }
-        if let price = result.metadata["price"] as? String {
-            components.append("Price: \(price)")
+        if let author = result.metadata["author"] as? String {
+            components.append("Author: \(author)")
         }
-        if let ratings = result.metadata["ratings"] as? Double {
-            components.append("Rating: \(String(format: "%.1f", ratings)) stars")
+        if let artist = result.metadata["artist"] as? String {
+            components.append("Artist: \(artist)")
         }
-        if let availability = result.metadata["availability"] as? String {
-            components.append("Availability: \(availability)")
+        if let isbn = result.metadata["isbn"] as? String {
+            components.append("ISBN: \(isbn)")
+        }
+        if let sku = result.metadata["sku"] as? String {
+            components.append("SKU: \(sku)")
         }
         
         return components.joined(separator: ", ")

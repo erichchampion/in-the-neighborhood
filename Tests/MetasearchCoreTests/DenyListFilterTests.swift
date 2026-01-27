@@ -56,4 +56,25 @@ final class DenyListFilterTests: XCTestCase {
         filter.removeDomain("amazon.com")
         XCTAssertFalse(filter.shouldFilter(url: url))
     }
+    
+    func test_DenyListFilter_DifferentTLDs() throws {
+        let filter = DenyListFilter(defaultDomains: ["amazon.com"])
+        
+        // Should filter amazon.com and all variants
+        let url1 = try XCTUnwrap(URL(string: "https://amazon.com/product"))
+        let url2 = try XCTUnwrap(URL(string: "https://amazon.ca/product"))
+        let url3 = try XCTUnwrap(URL(string: "https://www.amazon.ca/product"))
+        let url4 = try XCTUnwrap(URL(string: "https://amazon.co.uk/product"))
+        let url5 = try XCTUnwrap(URL(string: "https://smile.amazon.ca/product"))
+        
+        XCTAssertTrue(filter.shouldFilter(url: url1), "amazon.com should be filtered")
+        XCTAssertTrue(filter.shouldFilter(url: url2), "amazon.ca should be filtered when amazon.com is denied")
+        XCTAssertTrue(filter.shouldFilter(url: url3), "www.amazon.ca should be filtered when amazon.com is denied")
+        XCTAssertTrue(filter.shouldFilter(url: url4), "amazon.co.uk should be filtered when amazon.com is denied")
+        XCTAssertTrue(filter.shouldFilter(url: url5), "smile.amazon.ca should be filtered when amazon.com is denied")
+        
+        // Other domains should not be filtered
+        let allowedURL = try XCTUnwrap(URL(string: "https://localstore.com/product"))
+        XCTAssertFalse(filter.shouldFilter(url: allowedURL), "Other domains should not be filtered")
+    }
 }

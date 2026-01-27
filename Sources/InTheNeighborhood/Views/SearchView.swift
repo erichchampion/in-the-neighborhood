@@ -9,11 +9,15 @@ public struct SearchView: View {
     
     public init(
         coordinator: MetasearchCoordinator,
-        queryEnhancer: QueryEnhancer
+        queryEnhancer: QueryEnhancer,
+        amazonSource: any SearchSource,
+        mapKitSource: any SearchSource
     ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel(
             coordinator: coordinator,
-            queryEnhancer: queryEnhancer
+            queryEnhancer: queryEnhancer,
+            amazonSource: amazonSource,
+            mapKitSource: mapKitSource
         ))
     }
     
@@ -27,9 +31,6 @@ public struct SearchView: View {
                         Task {
                             await viewModel.search(query: viewModel.searchText)
                         }
-                    },
-                    onTextChange: {
-                        viewModel.debouncedSearch()
                     }
                 )
                 .padding()
@@ -41,15 +42,51 @@ public struct SearchView: View {
                         EmptyStateView(message: NSLocalizedString("Search for products at local merchants and ethical online retailers", comment: ""))
                         
                     case .loading:
-                        LoadingView()
+                        // Show loading view only if no results yet
+                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
+                            LoadingView()
+                        } else {
+                            // Show results with loading indicators
+                            ResultsView(
+                                webResults: viewModel.webResults,
+                                amazonResults: viewModel.amazonResults,
+                                localResults: viewModel.localResults,
+                                originalQuery: viewModel.originalQuery,
+                                selectedTab: $viewModel.selectedTab,
+                                isLoadingWeb: viewModel.isLoadingWeb,
+                                isLoadingAmazon: viewModel.isLoadingAmazon,
+                                isLoadingLocal: viewModel.isLoadingLocal,
+                                onRefine: { result in
+                                    Task {
+                                        await viewModel.refineSearch(with: result.metadata, originalQuery: viewModel.originalQuery)
+                                    }
+                                }
+                            )
+                            .accessibilityLabel("Search results")
+                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
+                        }
                         
                     case .loaded:
-                        if viewModel.results.isEmpty {
+                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
                             EmptyStateView(message: NSLocalizedString("No results found. Try a different search term.", comment: ""))
                         } else {
-                            ResultsView(results: viewModel.results)
-                                .accessibilityLabel("Search results")
-                                .accessibilityValue("\(viewModel.results.count) results found")
+                            ResultsView(
+                                webResults: viewModel.webResults,
+                                amazonResults: viewModel.amazonResults,
+                                localResults: viewModel.localResults,
+                                originalQuery: viewModel.originalQuery,
+                                selectedTab: $viewModel.selectedTab,
+                                isLoadingWeb: viewModel.isLoadingWeb,
+                                isLoadingAmazon: viewModel.isLoadingAmazon,
+                                isLoadingLocal: viewModel.isLoadingLocal,
+                                onRefine: { result in
+                                    Task {
+                                        await viewModel.refineSearch(with: result.metadata, originalQuery: viewModel.originalQuery)
+                                    }
+                                }
+                            )
+                            .accessibilityLabel("Search results")
+                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
                         }
                         
                     case .error:
@@ -100,7 +137,6 @@ public struct SearchView: View {
 struct SearchBarView: View {
     @Binding var searchText: String
     let onSearch: () -> Void
-    let onTextChange: () -> Void
     
     var body: some View {
         HStack {
@@ -113,9 +149,6 @@ struct SearchBarView: View {
                 .accessibilityHint("Enter a search query to find products at local merchants and ethical online retailers")
                 .onSubmit {
                     onSearch()
-                }
-                .onChange(of: searchText) {
-                    onTextChange()
                 }
             
             if !searchText.isEmpty {

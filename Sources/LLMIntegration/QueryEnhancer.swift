@@ -23,4 +23,23 @@ public actor QueryEnhancer {
             )
         }
     }
+    
+    /// Determines what types of local stores would carry a given product
+    /// Returns an array of store category names (e.g., ["bookstore", "furniture store"])
+    public func determineStoreCategories(for productQuery: String) async -> [String] {
+        let service = llmService
+        
+        // Try to use LLM if available
+        if let llmService = service as? LlamaCppLLMService {
+            do {
+                return try await llmService.determineStoreTypes(for: productQuery)
+            } catch {
+                // Fallback to empty array if LLM fails
+                return []
+            }
+        }
+        
+        // Fallback: return empty array if LLM service doesn't support this
+        return []
+    }
 }

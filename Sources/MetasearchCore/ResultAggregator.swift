@@ -35,6 +35,12 @@ public struct ResultAggregator {
     
     public func filter(results: [SearchResult], denyList: DenyListFilter) -> [SearchResult] {
         results.filter { result in
+            // Allow results from AmazonSearchSource even if URL is amazon.com
+            // The deny list is meant to filter Amazon results from OTHER sources
+            if result.source.lowercased() == "amazon" {
+                return true
+            }
+            
             guard let url = result.url else {
                 // Results without URLs (e.g., local businesses) are allowed
                 return true

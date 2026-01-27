@@ -8,6 +8,15 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
     private let maxRetries: Int
     private let retryDelay: TimeInterval
     
+    // Helper struct for ad checking (needs to be accessible outside parseBingResponse)
+    private struct WebPageInfo {
+        let url: String?
+        let displayUrl: String?
+        let _type: String?
+        let isSponsored: Bool?
+        let isAd: Bool?
+    }
+    
     init(apiKey: String? = nil, session: URLSession = .shared, maxRetries: Int = 3, retryDelay: TimeInterval = 1.0) {
         self.apiKey = apiKey
         self.session = session
@@ -77,6 +86,7 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
             }
             
             // Parse Bing API response
+            // First check raw JSON for ad indicators, then parse
             return try parseBingResponse(data: data)
         } catch {
             // Retry on network errors
@@ -94,6 +104,7 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
     }
     
     private func parseBingResponse(data: Data) throws -> [SearchResult] {
+        // Define response structures
         struct BingResponse: Codable {
             let webPages: WebPages?
             let news: News?
@@ -109,6 +120,17 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
                 let snippet: String?
                 let displayUrl: String?
                 let dateLastCrawled: String?
+                let _type: String?
+                let isSponsored: Bool?
+                let isAd: Bool?
+                let id: String?
+                
+                // Additional fields that might indicate ads
+                private enum CodingKeys: String, CodingKey {
+                    case name, url, snippet, displayUrl, dateLastCrawled
+                    case _type = "_type"
+                    case isSponsored, isAd, id
+                }
             }
             
             struct News: Codable {
@@ -132,6 +154,38 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
             }
         }
         
+        // First, check raw JSON for ad indicators
+        var adUrlSet: Set<String> = []
+        if let rawJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let webPages = rawJson["webPages"] as? [String: Any],
+           let webPagesValue = webPages["value"] as? [[String: Any]] {
+            // Look for ads array or sponsored results
+            if let ads = rawJson["ads"] as? [[String: Any]] {
+                for ad in ads {
+                    if let adUrl = ad["url"] as? String {
+                        adUrlSet.insert(adUrl.lowercased())
+                    }
+                }
+            }
+            
+            // Check each web page for ad indicators in raw JSON
+            for pageJson in webPagesValue {
+                if let pageUrl = pageJson["url"] as? String {
+                    // Check for various ad indicators
+                    if let isSponsored = pageJson["isSponsored"] as? Bool, isSponsored {
+                        adUrlSet.insert(pageUrl.lowercased())
+                    }
+                    if let isAd = pageJson["isAd"] as? Bool, isAd {
+                        adUrlSet.insert(pageUrl.lowercased())
+                    }
+                    if let type = pageJson["_type"] as? String,
+                       (type.lowercased().contains("ad") || type.lowercased().contains("sponsored")) {
+                        adUrlSet.insert(pageUrl.lowercased())
+                    }
+                }
+            }
+        }
+        
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         
@@ -152,10 +206,22 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
         
         // Parse web pages (primary results)
         if let webPages = response.webPages?.value {
-            results.append(contentsOf: webPages.compactMap { page in
+            results.append(contentsOf: webPages.compactMap { (page: BingResponse.WebPage) -> SearchResult? in
                 guard let title = page.name,
                       let urlString = page.url,
                       let url = URL(string: urlString) else {
+                    return nil
+                }
+                
+                // Skip if this is identified as an ad
+                let pageInfo = WebPageInfo(
+                    url: page.url,
+                    displayUrl: page.displayUrl,
+                    _type: page._type,
+                    isSponsored: page.isSponsored,
+                    isAd: page.isAd
+                )
+                if isAdResult(pageInfo: pageInfo, adUrlSet: adUrlSet) {
                     return nil
                 }
                 
@@ -205,5 +271,62 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
         }
         
         return results
+    }
+    
+    /// Checks if a Bing result appears to be an ad based on response fields and ad URL set
+    private func isAdResult(pageInfo: WebPageInfo, adUrlSet: Set<String>) -> Bool {
+        // First check if URL is in the known ad URL set from raw JSON
+        if let url = pageInfo.url?.lowercased(), adUrlSet.contains(url) {
+            return true
+        }
+        
+        // Check explicit ad indicators in decoded response
+        if let isSponsored = pageInfo.isSponsored, isSponsored {
+            return true
+        }
+        if let isAd = pageInfo.isAd, isAd {
+            return true
+        }
+        
+        // Check _type field for ad indicators
+        if let type = pageInfo._type?.lowercased() {
+            if type.contains("ad") || type.contains("sponsored") || type.contains("advertisement") {
+                return true
+            }
+        }
+        
+        // Check URL patterns that might indicate ads
+        if let url = pageInfo.url?.lowercased() {
+            let adUrlPatterns = [
+                "/ads/",
+                "/advertisement",
+                "/sponsored",
+                "bing.com/aclk",
+                "bing.com/clk",
+                "adclick",
+                "adclick.net"
+            ]
+            if adUrlPatterns.contains(where: { url.contains($0) }) {
+                return true
+            }
+        }
+        
+        // Check display URL for ad indicators
+        if let displayUrl = pageInfo.displayUrl?.lowercased() {
+            if displayUrl.contains("ad") || displayUrl.contains("sponsored") {
+                // Be more careful here - only flag if it's clearly an ad domain
+                let adDomains = [
+                    "adclick",
+                    "advertising",
+                    "ads.",
+                    "sponsored."
+                ]
+                if adDomains.contains(where: { displayUrl.contains($0) }) {
+                    return true
+                }
+            }
+        }
+        
+        return false
     }
 }

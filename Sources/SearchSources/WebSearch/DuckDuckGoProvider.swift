@@ -115,6 +115,18 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                     continue
                 }
                 
+                // Check if this result is an ad by examining the HTML context
+                // Look for ad indicators in the 200 chars before the match
+                let contextStart = max(0, match.range.location - 200)
+                let contextLength = match.range.location - contextStart + match.range.length
+                let contextRange = NSRange(location: contextStart, length: contextLength)
+                let contextBefore = nsString.substring(with: contextRange).lowercased()
+                
+                // Skip if this appears to be an ad/sponsored result
+                if isAdResult(context: contextBefore) {
+                    continue
+                }
+                
                 var urlString = nsString.substring(with: urlRange)
                 let title = nsString.substring(with: titleRange)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -219,6 +231,35 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
         }
         
         return results
+    }
+    
+    /// Checks if a result appears to be an ad based on HTML context
+    private func isAdResult(context: String) -> Bool {
+        let adIndicators = [
+            "class=\"ad\"",
+            "class='ad'",
+            "class=\"ad-",
+            "class='ad-",
+            "class=\"sponsored\"",
+            "class='sponsored'",
+            "class=\"result--ad\"",
+            "class='result--ad'",
+            "class=\"result__ad\"",
+            "class='result__ad'",
+            "data-module=\"ad\"",
+            "data-module='ad'",
+            "sponsored link",
+            "sponsored result",
+            "advertisement",
+            "ad result",
+            "microsoft advertising",
+            "ads by microsoft"
+        ]
+        
+        let lowercasedContext = context.lowercased()
+        return adIndicators.contains { indicator in
+            lowercasedContext.contains(indicator)
+        }
     }
 }
 

@@ -1,9 +1,11 @@
 import Foundation
 import MetasearchCore
+import SwiftSoup
 
 public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String = "amazon"
     public let sourceType: SourceType = .online
+    
     
     private let session: URLSession
     private let scraper: AmazonProductScraper
@@ -25,7 +27,18 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
-        return try await searchWithRetry(query: query.original, attempt: 0)
+        print("[AmazonSearchSource] Starting search for: \(query.original)")
+        do {
+            let results = try await searchWithRetry(query: query.original, attempt: 0)
+            print("[AmazonSearchSource] Found \(results.count) results")
+            for result in results {
+                print("[AmazonSearchSource] Result: source=\(result.source), title=\(result.title), url=\(result.url?.absoluteString ?? "nil")")
+            }
+            return results
+        } catch {
+            print("[AmazonSearchSource] Search failed with error: \(error)")
+            throw error
+        }
     }
     
     private func searchWithRetry(query: String, attempt: Int) async throws -> [SearchResult] {
@@ -36,13 +49,35 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
         ]
         
         guard let url = components?.url else {
+            print("[AmazonSearchSource] Failed to create URL")
             return []
         }
         
+        print("[AmazonSearchSource] Searching Amazon with URL: \(url.absoluteString)")
+        
         var request = URLRequest(url: url)
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
-        request.setValue("en-US,en;q=0.5", forHTTPHeaderField: "Accept-Language")
+        
+        // Set headers to mimic a real browser request (based on curl command)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", forHTTPHeaderField: "Accept")
+        request.setValue("en-US,en;q=0.9,es-419;q=0.8,es;q=0.7", forHTTPHeaderField: "Accept-Language")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
+        request.setValue("8", forHTTPHeaderField: "Device-Memory")
+        request.setValue("10", forHTTPHeaderField: "Downlink")
+        request.setValue("2", forHTTPHeaderField: "DPR")
+        request.setValue("4g", forHTTPHeaderField: "ECT")
+        request.setValue("u=0, i", forHTTPHeaderField: "Priority")
+        request.setValue("50", forHTTPHeaderField: "RTT")
+        request.setValue("8", forHTTPHeaderField: "Sec-CH-Device-Memory")
+        request.setValue("2", forHTTPHeaderField: "Sec-CH-DPR")
+        request.setValue("390", forHTTPHeaderField: "Sec-CH-Viewport-Width")
+        request.setValue("document", forHTTPHeaderField: "Sec-Fetch-Dest")
+        request.setValue("navigate", forHTTPHeaderField: "Sec-Fetch-Mode")
+        request.setValue("none", forHTTPHeaderField: "Sec-Fetch-Site")
+        request.setValue("?1", forHTTPHeaderField: "Sec-Fetch-User")
+        request.setValue("1", forHTTPHeaderField: "Upgrade-Insecure-Requests")
+        request.setValue("390", forHTTPHeaderField: "Viewport-Width")
         
         do {
             let (data, response) = try await session.data(for: request)
@@ -71,13 +106,18 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
             }
             
             guard let html = String(data: data, encoding: .utf8) else {
+                print("[AmazonSearchSource] Failed to decode HTML")
                 return []
             }
             
-            let productUrls = parseSearchResults(html: html)
+            print("[AmazonSearchSource] HTML received, length: \(html.count)")
+            let productInfos = parseSearchResults(html: html)
+            print("[AmazonSearchSource] Found \(productInfos.count) product URLs")
             
             // Scrape top products for detailed metadata
-            return try await scrapeProducts(urls: productUrls.prefix(maxProductsToScrape))
+            let results = try await scrapeProducts(productInfos: Array(productInfos.prefix(maxProductsToScrape)), originalQuery: query)
+            print("[AmazonSearchSource] Scraped \(results.count) products")
+            return results
         } catch {
             // Retry on network errors
             if attempt < maxRetries {
@@ -89,164 +129,397 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
         }
     }
     
-    private func parseSearchResults(html: String) -> [URL] {
-        var urls: [URL] = []
-        let nsString = html as NSString
+    private struct ProductInfo {
+        let url: URL
+        let imageUrl: String?
+    }
+    
+    private func parseSearchResults(html: String) -> [ProductInfo] {
+        var productInfos: [ProductInfo] = []
+        print("[AmazonSearchSource] Parsing search results HTML...")
         
-        // Amazon search results patterns - product links typically in data-asin attributes or hrefs
-        let patterns = [
-            // Pattern 1: Product link with data-asin
-            #"<a[^>]*data-asin="([^"]+)"[^>]*href="([^"]+)"[^>]*>.*?<span[^>]*>([^<]+)</span>"#,
-            // Pattern 2: Direct product link
-            #"<a[^>]*href="(/dp/[^"]+)"[^>]*>.*?<span[^>]*>([^<]+)</span>"#,
-            // Pattern 3: Product link in search result
-            #"href="(/gp/product/[^"]+)"[^>]*>.*?<span[^>]*>([^<]+)</span>"#,
-            // Pattern 4: Generic product link with title
-            #"<h2[^>]*>.*?<a[^>]*href="([^"]*/(?:dp|gp/product)/[^"]+)"[^>]*>([^<]+)</a>"#
-        ]
-        
-        for pattern in patterns {
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]) else {
-                continue
+        do {
+            // Parse HTML into a Document
+            let doc = try SwiftSoup.parse(html)
+            
+            // Find all search result containers
+            // Query for div elements with role="listitem" and data-component-type="s-search-result"
+            // Try multiple selector patterns to handle different HTML structures
+            var searchResults = try doc.select("div[role=listitem][data-component-type=s-search-result]")
+            if searchResults.isEmpty() {
+                // Fallback: try without role attribute
+                searchResults = try doc.select("div[data-component-type=s-search-result]")
             }
+            print("[AmazonSearchSource] Found \(searchResults.count) search result containers")
             
-            let matches = regex.matches(in: html, options: [], range: NSRange(location: 0, length: nsString.length))
+            var allFoundUrls: [(url: String, imageUrl: String?)] = []
+            var dataAsinUrls: [(url: String, imageUrl: String?)] = [] // Prioritize URLs with data-asin attributes
             
-            for match in matches {
-                var urlString: String? = nil
+            // Process each search result container
+            for (index, result) in searchResults.enumerated() {
+                var foundUrl: String? = nil
+                var foundImageUrl: String? = nil
+                var hasDataAsin = false
                 
-                // Extract URL from different capture groups depending on pattern
-                if match.numberOfRanges >= 3 {
-                    // Some patterns have ASIN first, then URL
-                    if match.range(at: 2).location != NSNotFound {
-                        urlString = nsString.substring(with: match.range(at: 2))
-                    } else if match.range(at: 1).location != NSNotFound {
-                        urlString = nsString.substring(with: match.range(at: 1))
+                // Strategy 1: Look for link in product image span (most reliable)
+                // Try both direct child and descendant selectors
+                if let imageSpan = try? result.select("span[data-component-type=s-product-image]").first() {
+                    // Extract product image from img.s-image
+                    if let img = try? imageSpan.select("img.s-image").first() {
+                        // Try src first, then data-src
+                        if let src = try? img.attr("src"), !src.isEmpty {
+                            foundImageUrl = src
+                        } else if let dataSrc = try? img.attr("data-src"), !dataSrc.isEmpty {
+                            foundImageUrl = dataSrc
+                        }
                     }
-                }
-                
-                guard var urlString = urlString,
-                      !urlString.isEmpty else {
-                    continue
-                }
-                
-                // Clean up URL
-                urlString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                // Handle relative URLs
-                if urlString.hasPrefix("/") {
-                    urlString = "https://www.amazon.com\(urlString)"
-                } else if !urlString.hasPrefix("http") {
-                    continue
-                }
-                
-                // Remove query parameters that might interfere
-                if let urlObj = URL(string: urlString) {
-                    var components = URLComponents(url: urlObj, resolvingAgainstBaseURL: false)
-                    // Keep only essential query parameters
-                    let queryItems = components?.queryItems
-                    components?.queryItems = queryItems?.filter { $0.name == "tag" || $0.name == "ref" }
                     
-                    if let finalUrl = components?.url {
-                        // Avoid duplicates
-                        if !urls.contains(where: { $0.absoluteString == finalUrl.absoluteString }) {
-                            urls.append(finalUrl)
+                    // Look for link within the image span (try direct child first, then any descendant)
+                    var imageLink: Element? = try? imageSpan.select("> a").first()
+                    if imageLink == nil {
+                        imageLink = try? imageSpan.select("a").first()
+                    }
+                    
+                    if let link = imageLink,
+                       let href = try? link.attr("href"),
+                       !href.isEmpty {
+                        if let url = processProductUrl(href) {
+                            foundUrl = url.absoluteString
+                            // Check for data-asin on the link or span
+                            if let asin = try? link.attr("data-asin"), !asin.isEmpty {
+                                hasDataAsin = true
+                            } else if let asin = try? imageSpan.attr("data-asin"), !asin.isEmpty {
+                                hasDataAsin = true
+                            }
                         }
                     }
                 }
+                
+                // Strategy 2: Look for link related to price-link span (as mentioned by user)
+                if foundUrl == nil {
+                    // Look for link with aria-describedby="price-link" (the span#price-link is just a marker)
+                    if let priceLink = try? result.select("a[aria-describedby=price-link]").first(),
+                       let href = try? priceLink.attr("href"),
+                       !href.isEmpty {
+                        if let url = processProductUrl(href) {
+                            foundUrl = url.absoluteString
+                            if let asin = try? priceLink.attr("data-asin"), !asin.isEmpty {
+                                hasDataAsin = true
+                            }
+                        }
+                    }
+                }
+                
+                // Strategy 3: Look for any link with /dp/ or /gp/product/ in the result container
+                if foundUrl == nil {
+                    if let productLink = try? result.select("a[href*=/dp/], a[href*=/gp/product/]").first(),
+                       let href = try? productLink.attr("href"),
+                       !href.isEmpty {
+                        if let url = processProductUrl(href) {
+                            foundUrl = url.absoluteString
+                            // Check if this element or parent has data-asin attribute
+                            if let asin = try? productLink.attr("data-asin"), !asin.isEmpty {
+                                hasDataAsin = true
+                            } else {
+                                // Check parent elements for data-asin
+                                var parent = productLink.parent()
+                                while parent != nil {
+                                    if let asin = try? parent?.attr("data-asin"), !asin.isEmpty {
+                                        hasDataAsin = true
+                                        break
+                                    }
+                                    parent = parent?.parent()
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If we found a URL but no image yet, try to find image in the result container
+                if foundUrl != nil && foundImageUrl == nil {
+                    // Try to find image anywhere in the result container
+                    if let img = try? result.select("img.s-image").first() {
+                        if let src = try? img.attr("src"), !src.isEmpty {
+                            foundImageUrl = src
+                        } else if let dataSrc = try? img.attr("data-src"), !dataSrc.isEmpty {
+                            foundImageUrl = dataSrc
+                        }
+                    }
+                }
+                
+                // Add the found URL and image to the appropriate list
+                if let urlString = foundUrl {
+                    if hasDataAsin {
+                        if !dataAsinUrls.contains(where: { $0.url == urlString }) {
+                            dataAsinUrls.append((url: urlString, imageUrl: foundImageUrl))
+                            print("[AmazonSearchSource] Found data-asin URL in result \(index): \(urlString.prefix(100)), image: \(foundImageUrl != nil ? "yes" : "no")")
+                        }
+                    } else if !allFoundUrls.contains(where: { $0.url == urlString }) && !dataAsinUrls.contains(where: { $0.url == urlString }) {
+                        allFoundUrls.append((url: urlString, imageUrl: foundImageUrl))
+                        print("[AmazonSearchSource] Found URL in result \(index): \(urlString.prefix(100)), image: \(foundImageUrl != nil ? "yes" : "no")")
+                    }
+                } else {
+                    print("[AmazonSearchSource] No URL found in result container \(index)")
+                }
             }
             
-            // If we found URLs with this pattern, use them
-            if !urls.isEmpty {
-                break
+            // Use data-asin URLs first (most reliable), then fall back to others
+            // Limit to top 10 URLs to avoid scraping too many
+            let maxUrls = 10
+            let prioritizedUrls = dataAsinUrls.isEmpty ? Array(allFoundUrls.prefix(maxUrls)) : Array(dataAsinUrls.prefix(maxUrls))
+            print("[AmazonSearchSource] Found \(dataAsinUrls.count) data-asin URLs, \(allFoundUrls.count) other URLs, using \(prioritizedUrls.count) total")
+            
+            if prioritizedUrls.isEmpty {
+                print("[AmazonSearchSource] WARNING: No URLs extracted! This may indicate Amazon's HTML structure has changed.")
+            } else {
+                print("[AmazonSearchSource] URLs to scrape: \(prioritizedUrls.prefix(5).map { $0.url }.joined(separator: ", "))")
             }
+            
+            // Convert to ProductInfo objects
+            for (urlString, imageUrl) in prioritizedUrls {
+                if let url = URL(string: urlString) {
+                    productInfos.append(ProductInfo(url: url, imageUrl: imageUrl))
+                }
+            }
+            
+            print("[AmazonSearchSource] Total product infos found: \(productInfos.count)")
+        } catch {
+            print("[AmazonSearchSource] Failed to parse HTML with SwiftSoup: \(error)")
+            return []
         }
         
-        return urls
+        return productInfos
     }
     
-    private func scrapeProducts(urls: ArraySlice<URL>) async throws -> [SearchResult] {
-        var results: [SearchResult] = []
+    private func processProductUrl(_ urlString: String) -> URL? {
+        var cleanedUrl = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Scrape products concurrently with timeout
-        try await withThrowingTaskGroup(of: (URL, Result<AmazonProductMetadata, Error>).self) { group in
-            for url in urls {
-                group.addTask {
-                    do {
-                        let metadata = try await self.scraper.scrapeProduct(url: url)
-                        return (url, .success(metadata))
-                    } catch {
-                        return (url, .failure(error))
-                    }
-                }
-            }
-            
-            for try await (url, result) in group {
-                switch result {
-                case .success(let metadata):
-                    // Use title from metadata or fallback
-                    let title = metadata.title ?? extractTitleFromURL(url: url) ?? "Amazon Product"
-                    
-                    // Build description from metadata
-                    var descriptionParts: [String] = []
-                    if let brand = metadata.brand {
-                        descriptionParts.append(brand)
-                    }
-                    if let price = metadata.price {
-                        descriptionParts.append(price)
-                    }
-                    if let ratings = metadata.ratings {
-                        descriptionParts.append("⭐ \(String(format: "%.1f", ratings))")
-                    }
-                    if let availability = metadata.availability {
-                        descriptionParts.append(availability)
-                    }
-                    
-                    let description = descriptionParts.isEmpty ? nil : descriptionParts.joined(separator: " • ")
-                    
-                    // Build metadata dictionary
-                    var metadataDict: [String: AnyHashable] = [:]
-                    if let price = metadata.price {
-                        metadataDict["price"] = price
-                    }
-                    if let brand = metadata.brand {
-                        metadataDict["brand"] = brand
-                    }
-                    if let ratings = metadata.ratings {
-                        metadataDict["ratings"] = ratings
-                    }
-                    if let availability = metadata.availability {
-                        metadataDict["availability"] = availability
-                    }
-                    if let asin = metadata.asin {
-                        metadataDict["asin"] = asin
-                    }
-                    if let imageUrl = metadata.imageUrl {
-                        metadataDict["imageUrl"] = imageUrl
-                    }
-                    
-                    let result = SearchResult(
-                        id: metadata.asin ?? UUID().uuidString,
+        guard !cleanedUrl.isEmpty else {
+            return nil
+        }
+        
+        // Skip non-product URLs - must contain /dp/ or /gp/product/
+        guard cleanedUrl.contains("/dp/") || cleanedUrl.contains("/gp/product/") else {
+            return nil
+        }
+        
+        // Skip tracking/redirect URLs (Amazon uses these for analytics)
+        if cleanedUrl.contains("aax-us-east-retail-direct") || 
+           cleanedUrl.contains("aax-us-west-retail-direct") ||
+           cleanedUrl.contains("aax-eu-west-retail-direct") ||
+           cleanedUrl.contains("/x/c/") {
+            return nil
+        }
+        
+        // Skip URLs that look like search result navigation or other non-product links
+        if cleanedUrl.contains("/s?") || cleanedUrl.contains("/s/") || cleanedUrl.contains("/ref=sr_") {
+            return nil
+        }
+        
+        // Skip credit card/financial product URLs early
+        let creditCardKeywords = ["credit-card", "creditcard", "secured-card", "business-card", "american-express", "amazon-card"]
+        if creditCardKeywords.contains(where: { cleanedUrl.lowercased().contains($0) }) {
+            print("[AmazonSearchSource] Skipping credit card URL pattern: \(cleanedUrl.prefix(100))")
+            return nil
+        }
+        
+        // Handle relative URLs
+        if cleanedUrl.hasPrefix("/") {
+            cleanedUrl = "https://www.amazon.com\(cleanedUrl)"
+        } else if !cleanedUrl.hasPrefix("http") {
+            return nil
+        }
+        
+        // Remove query parameters that might interfere
+        guard let urlObj = URL(string: cleanedUrl) else {
+            return nil
+        }
+        
+        var components = URLComponents(url: urlObj, resolvingAgainstBaseURL: false)
+        // Keep only essential query parameters
+        let queryItems = components?.queryItems
+        components?.queryItems = queryItems?.filter { $0.name == "tag" || $0.name == "ref" }
+        
+        guard let finalUrl = components?.url else {
+            return nil
+        }
+        
+        let finalUrlString = finalUrl.absoluteString
+        
+        // Skip credit card URLs early (before adding to list)
+        let creditCardASINs = ["B084KP3NG6", "B07984JN3L", "B00DB3BNIG"]
+        if creditCardASINs.contains(where: { finalUrlString.contains($0) }) {
+            print("[AmazonSearchSource] Skipping known credit card URL: \(finalUrlString)")
+            return nil
+        }
+        
+        return finalUrl
+    }
+    
+    private func scrapeProducts(productInfos: [ProductInfo], originalQuery: String = "") async throws -> [SearchResult] {
+        var results: [SearchResult] = []
+        print("[AmazonSearchSource] Scraping \(productInfos.count) product pages...")
+        
+        // Normalize search query for matching - extract meaningful words (skip common stop words)
+        let stopWords = Set(["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "from", "as", "is", "was", "are", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "should", "could", "may", "might", "must", "can"])
+        var characterSet = CharacterSet.whitespacesAndNewlines
+        characterSet.formUnion(CharacterSet.punctuationCharacters)
+        let queryWords = originalQuery.lowercased()
+            .components(separatedBy: characterSet)
+            .filter { !$0.isEmpty && !stopWords.contains($0) && $0.count > 1 }
+        
+        // Scrape products concurrently - process sequentially to avoid cancellation issues
+        for productInfo in productInfos {
+            do {
+                let metadata = try await scraper.scrapeProduct(url: productInfo.url)
+                
+                // Use title from metadata or fallback
+                let title = metadata.title ?? extractTitleFromURL(url: productInfo.url) ?? "Amazon Product"
+                
+                // Validate relevance: check if product matches the search query
+                if !queryWords.isEmpty {
+                    let isRelevant = isProductRelevant(
                         title: title,
-                        description: description,
-                        source: identifier,
-                        sourceType: sourceType,
-                        url: url,
-                        location: nil,
-                        distance: nil,
-                        metadata: metadataDict
+                        brand: metadata.brand,
+                        metadata: metadata,
+                        queryWords: queryWords
                     )
                     
-                    results.append(result)
-                    
-                case .failure:
-                    // Skip failed products, continue with others
-                    continue
+                    if !isRelevant {
+                        print("[AmazonSearchSource] Filtering out irrelevant product - title: '\(title)', query: '\(originalQuery)'")
+                        continue
+                    }
                 }
+                
+                // Build description from metadata
+                var descriptionParts: [String] = []
+                if let brand = metadata.brand {
+                    descriptionParts.append(brand)
+                }
+                if let price = metadata.price {
+                    descriptionParts.append(price)
+                }
+                if let ratings = metadata.ratings {
+                    descriptionParts.append("⭐ \(String(format: "%.1f", ratings))")
+                }
+                if let availability = metadata.availability {
+                    descriptionParts.append(availability)
+                }
+                
+                let description = descriptionParts.isEmpty ? nil : descriptionParts.joined(separator: " • ")
+                
+                // Build metadata dictionary
+                // Prefer image URL from search results, fall back to detail page image
+                let finalImageUrl = productInfo.imageUrl ?? metadata.imageUrl
+                
+                var metadataDict: [String: AnyHashable] = [:]
+                if let price = metadata.price {
+                    metadataDict["price"] = price
+                }
+                if let brand = metadata.brand {
+                    metadataDict["brand"] = brand
+                }
+                if let ratings = metadata.ratings {
+                    metadataDict["ratings"] = ratings
+                }
+                if let availability = metadata.availability {
+                    metadataDict["availability"] = availability
+                }
+                if let asin = metadata.asin {
+                    metadataDict["asin"] = asin
+                }
+                if let imageUrl = finalImageUrl {
+                    metadataDict["imageUrl"] = imageUrl
+                }
+                if let isbn = metadata.isbn {
+                    metadataDict["isbn"] = isbn
+                }
+                if let sku = metadata.sku {
+                    metadataDict["sku"] = sku
+                }
+                if let author = metadata.author {
+                    metadataDict["author"] = author
+                }
+                if let artist = metadata.artist {
+                    metadataDict["artist"] = artist
+                }
+                
+                // #region agent log
+                print("[DEBUG] AmazonSearchSource.swift:265 - Metadata stored in SearchResult - url: \(productInfo.url.absoluteString), title: \(title), metadataKeys: \(Array(metadataDict.keys)), metadataDict: \(metadataDict.mapValues { String(describing: $0) })")
+                // #endregion
+                
+                let result = SearchResult(
+                    id: metadata.asin ?? UUID().uuidString,
+                    title: title,
+                    description: description,
+                    source: identifier,
+                    sourceType: sourceType,
+                    url: productInfo.url,
+                    location: nil,
+                    distance: nil,
+                    metadata: metadataDict
+                )
+                
+                results.append(result)
+            } catch {
+                // Skip failed products, continue with others
+                print("[AmazonSearchSource] Failed to scrape \(productInfo.url.absoluteString): \(error)")
+                continue
             }
         }
         
         return results
+    }
+    
+    /// Validates if a product is relevant to the search query by checking if search terms appear in product metadata
+    private func isProductRelevant(title: String, brand: String?, metadata: AmazonProductMetadata, queryWords: [String]) -> Bool {
+        // Normalize text for comparison
+        let titleLower = title.lowercased()
+        let brandLower = brand?.lowercased() ?? ""
+        
+        // Combine all searchable text
+        var searchableText = titleLower
+        if !brandLower.isEmpty {
+            searchableText += " \(brandLower)"
+        }
+        if let author = metadata.author {
+            searchableText += " \(author.lowercased())"
+        }
+        if let sku = metadata.sku {
+            searchableText += " \(sku.lowercased())"
+        }
+        
+        // Check if at least one significant query word appears in the product metadata
+        // We require at least one match to consider it relevant
+        var matchCount = 0
+        for queryWord in queryWords {
+            // Check for exact word match or substring match (for compound words)
+            if searchableText.contains(queryWord) {
+                // Verify it's a word boundary match (not just a substring in the middle of another word)
+                // Simple check: word appears as standalone or at word boundaries
+                let wordPattern = "\\b\(NSRegularExpression.escapedPattern(for: queryWord))\\b"
+                if let regex = try? NSRegularExpression(pattern: wordPattern, options: .caseInsensitive) {
+                    let range = NSRange(location: 0, length: searchableText.utf16.count)
+                    if regex.firstMatch(in: searchableText, options: [], range: range) != nil {
+                        matchCount += 1
+                    }
+                } else {
+                    // Fallback to simple contains if regex fails
+                    matchCount += 1
+                }
+            }
+        }
+        
+        // Product is relevant if at least one query word matches
+        // For very short queries (1-2 words), require at least 1 match
+        // For longer queries (3+ words), require at least 1 match (we can be more lenient)
+        let isRelevant = matchCount > 0
+        
+        if !isRelevant {
+            print("[AmazonSearchSource] Relevance check failed - queryWords: \(queryWords), title: '\(title)', matches: \(matchCount)")
+        }
+        
+        return isRelevant
     }
     
     private func extractTitleFromURL(url: URL) -> String? {
@@ -257,7 +530,19 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
             let components = path.components(separatedBy: "/")
             if let productIndex = components.firstIndex(where: { $0 == "dp" || $0 == "gp" }),
                productIndex + 1 < components.count {
-                let productId = components[productIndex + 1]
+                var productId = components[productIndex + 1]
+                
+                // Skip "product" if it's part of the path structure
+                if productId.lowercased() == "product" && productIndex + 2 < components.count {
+                    productId = components[productIndex + 2]
+                }
+                
+                // If productId looks like an ASIN (starts with B and has 10 chars), don't use it as title
+                if productId.count == 10 && productId.hasPrefix("B") && productId.allSatisfy({ $0.isLetter || $0.isNumber }) {
+                    // This is an ASIN, not a readable title - return nil to use fallback
+                    return nil
+                }
+                
                 // Clean up the product ID to make it more readable
                 return productId.replacingOccurrences(of: "-", with: " ")
                     .replacingOccurrences(of: "_", with: " ")

@@ -25,6 +25,7 @@
 		3C39FACEAE4F8A4D9F92A56E /* MetasearchCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 93A2459508E032CFDA7292CA /* MetasearchCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		40BCE3324A08941E88DDCA92 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4178FBF09D261BFBC3AC2D44 /* SettingsView.swift */; };
 		42597DF3461EB73041805086 /* SearchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ECC101CD1AE041AC6E9EFED /* SearchViewModelTests.swift */; };
+		42C668A91480775056678E29 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 71B8098BE2ACB7D6BC63EAEA /* SwiftSoup */; };
 		441072BD5E96562FEA46476C /* SearchSourceProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA012EDE20812DDE18A84F24 /* SearchSourceProtocolTests.swift */; };
 		455A8D027838ECD87ECBA68D /* SourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3247F88426C16AAF3EF1D969 /* SourceType.swift */; };
 		491C98D5294E69A2D08A51B4 /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
@@ -358,6 +359,7 @@
 			files = (
 				2FE48D01DA1E11CE0EFE7874 /* MetasearchCore.framework in Frameworks */,
 				C4E24172F343DE563F7E431B /* LocationServices.framework in Frameworks */,
+				42C668A91480775056678E29 /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -801,6 +803,7 @@
 			);
 			name = SearchSources;
 			packageProductDependencies = (
+				71B8098BE2ACB7D6BC63EAEA /* SwiftSoup */,
 			);
 			productName = SearchSources;
 			productReference = 128A43B633EE0E59A603AA7B /* SearchSources.framework */;
@@ -1005,6 +1008,7 @@
 			mainGroup = 63DBA15FC17C53F136AFA75B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				E597DC82D7EE2E5D0247FDE0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				A6EBBBE81F94463481FB267D /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -2010,10 +2014,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		E597DC82D7EE2E5D0247FDE0 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		68292BD103AEB50A8B2B13A9 /* LlamaFramework */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LlamaFramework;
+		};
+		71B8098BE2ACB7D6BC63EAEA /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E597DC82D7EE2E5D0247FDE0 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
 		};
 		CEBA3DFCBAADC77949AD62F0 /* LlamaFramework */ = {
 			isa = XCSwiftPackageProductDependency;
