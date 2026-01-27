@@ -34,7 +34,10 @@ public struct ResultAggregator {
     }
     
     public func filter(results: [SearchResult], denyList: DenyListFilter) -> [SearchResult] {
-        results.filter { result in
+        // Create ad domain filter (returns empty set if list not downloaded yet - graceful degradation)
+        let adFilter = AdDomainFilter()
+        
+        return results.filter { result in
             // Allow results from AmazonSearchSource even if URL is amazon.com
             // The deny list is meant to filter Amazon results from OTHER sources
             if result.source.lowercased() == "amazon" {
@@ -49,7 +52,33 @@ public struct ResultAggregator {
             // Resolve redirect URLs before filtering
             let resolvedURL = resolveRedirectURL(url)
             
-            return !denyList.shouldFilter(url: resolvedURL)
+            // Check for search provider ad URLs
+            let resolvedURLString = resolvedURL.absoluteString.lowercased()
+            let originalURLString = url.absoluteString.lowercased()
+            
+            // DuckDuckGo ad URLs (y.js?ad_domain= pattern)
+            if (resolvedURLString.contains("duckduckgo.com/y.js") && resolvedURLString.contains("ad_domain=")) ||
+               (originalURLString.contains("duckduckgo.com/y.js") && originalURLString.contains("ad_domain=")) {
+                return false
+            }
+            
+            // Bing ad URLs (aclk, clk patterns)
+            if resolvedURLString.contains("bing.com/aclk") || resolvedURLString.contains("bing.com/clk") ||
+               originalURLString.contains("bing.com/aclk") || originalURLString.contains("bing.com/clk") {
+                return false
+            }
+            
+            // Check deny list first
+            if denyList.shouldFilter(url: resolvedURL) {
+                return false
+            }
+            
+            // Check ad domain filter (may have empty set if list not downloaded yet)
+            if adFilter.shouldFilter(url: resolvedURL) {
+                return false
+            }
+            
+            return true
         }
     }
     

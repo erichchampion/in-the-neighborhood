@@ -128,13 +128,23 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                 }
                 
                 var urlString = nsString.substring(with: urlRange)
-                let title = nsString.substring(with: titleRange)
+                var title = nsString.substring(with: titleRange)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .replacingOccurrences(of: "\n", with: " ")
                     .replacingOccurrences(of: "\t", with: " ")
                 
+                // Decode HTML entities in title
+                title = decodeHTMLEntities(title)
+                
                 // Skip if title is empty or too short
                 guard !title.isEmpty, title.count > 3 else {
+                    continue
+                }
+                
+                // Filter out DuckDuckGo ad URLs (y.js?ad_domain= pattern)
+                let urlStringLower = urlString.lowercased()
+                if urlStringLower.contains("duckduckgo.com/y.js") && urlStringLower.contains("ad_domain=") {
+                    // This is a DuckDuckGo ad redirect URL - skip it
                     continue
                 }
                 
@@ -153,6 +163,13 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                         
                         if let decoded = encodedPart.removingPercentEncoding {
                             urlString = decoded
+                            
+                            // Check if the decoded URL is a DuckDuckGo ad URL
+                            let decodedLower = urlString.lowercased()
+                            if decodedLower.contains("duckduckgo.com/y.js") && decodedLower.contains("ad_domain=") {
+                                // This is a DuckDuckGo ad redirect URL - skip it
+                                continue
+                            }
                         } else {
                             // If decoding fails, skip this result
                             continue
@@ -171,6 +188,13 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                     urlString = "https:" + urlString
                 } else if !urlString.hasPrefix("http://") && !urlString.hasPrefix("https://") {
                     // If it's a relative URL, skip it (we need absolute URLs)
+                    continue
+                }
+                
+                // Final check for ad URLs after all processing
+                let finalUrlLower = urlString.lowercased()
+                if finalUrlLower.contains("duckduckgo.com/y.js") && finalUrlLower.contains("ad_domain=") {
+                    // This is a DuckDuckGo ad redirect URL - skip it
                     continue
                 }
                 
@@ -196,10 +220,12 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                     if let snippetRegex = try? NSRegularExpression(pattern: snippetPattern, options: [.caseInsensitive]),
                        let snippetMatch = snippetRegex.firstMatch(in: contextAfter, options: [], range: NSRange(location: 0, length: contextAfter.count)),
                        snippetMatch.range(at: 1).location != NSNotFound {
-                        snippet = (contextAfter as NSString).substring(with: snippetMatch.range(at: 1))
+                        let extractedSnippet = (contextAfter as NSString).substring(with: snippetMatch.range(at: 1))
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                             .replacingOccurrences(of: "\n", with: " ")
                             .replacingOccurrences(of: "\t", with: " ")
+                        // Decode HTML entities in snippet
+                        snippet = decodeHTMLEntities(extractedSnippet)
                         break
                     }
                 }
@@ -208,6 +234,9 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                 if results.contains(where: { $0.url?.absoluteString == url.absoluteString }) {
                     continue
                 }
+                
+                // Extract shopping metadata from snippet and URL
+                let shoppingMetadata = extractShoppingMetadata(snippet: snippet, url: urlString)
                 
                 let result = SearchResult(
                     id: UUID().uuidString,
@@ -218,7 +247,7 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                     url: url,
                     location: nil,
                     distance: nil,
-                    metadata: [:]
+                    metadata: shoppingMetadata
                 )
                 
                 results.append(result)
@@ -231,6 +260,148 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
         }
         
         return results
+    }
+    
+    /// Decodes HTML entities in a string
+    /// Handles named entities (e.g., &amp;), decimal numeric entities (e.g., &#39;), and hexadecimal entities (e.g., &#x27;)
+    private func decodeHTMLEntities(_ string: String) -> String {
+        var result = string
+        
+        // First, decode common named entities
+        let namedEntities: [String: String] = [
+            "&amp;": "&",
+            "&lt;": "<",
+            "&gt;": ">",
+            "&quot;": "\"",
+            "&apos;": "'",
+            "&nbsp;": " ",
+            "&copy;": "©",
+            "&reg;": "®",
+            "&trade;": "™",
+            "&mdash;": "—",
+            "&ndash;": "–",
+            "&hellip;": "…"
+        ]
+        
+        for (entity, replacement) in namedEntities {
+            result = result.replacingOccurrences(of: entity, with: replacement, options: .caseInsensitive)
+        }
+        
+        // Decode decimal numeric entities (e.g., &#39;)
+        if let decimalRegex = try? NSRegularExpression(pattern: #"&#(\d+);"#, options: []) {
+            let nsString = result as NSString
+            let matches = decimalRegex.matches(in: result, options: [], range: NSRange(location: 0, length: nsString.length))
+            
+            // Process matches in reverse order to preserve indices
+            for match in matches.reversed() {
+                guard match.numberOfRanges >= 2,
+                      let codeRange = Range(match.range(at: 1), in: result),
+                      let code = Int(result[codeRange]),
+                      code >= 0 && code <= 0x10FFFF,
+                      let scalar = Unicode.Scalar(code) else {
+                    continue
+                }
+                
+                let replacement = String(Character(scalar))
+                result = (result as NSString).replacingCharacters(in: match.range, with: replacement)
+            }
+        }
+        
+        // Decode hexadecimal numeric entities (e.g., &#x27; or &#X27;)
+        if let hexRegex = try? NSRegularExpression(pattern: #"&#x([0-9a-fA-F]+);"#, options: [.caseInsensitive]) {
+            let nsString = result as NSString
+            let matches = hexRegex.matches(in: result, options: [], range: NSRange(location: 0, length: nsString.length))
+            
+            // Process matches in reverse order to preserve indices
+            for match in matches.reversed() {
+                guard match.numberOfRanges >= 2,
+                      let codeRange = Range(match.range(at: 1), in: result),
+                      let code = Int(result[codeRange], radix: 16),
+                      code >= 0 && code <= 0x10FFFF,
+                      let scalar = Unicode.Scalar(code) else {
+                    continue
+                }
+                
+                let replacement = String(Character(scalar))
+                result = (result as NSString).replacingCharacters(in: match.range, with: replacement)
+            }
+        }
+        
+        return result
+    }
+    
+    /// Extracts shopping-related metadata from search results
+    private func extractShoppingMetadata(snippet: String?, url: String) -> [String: AnyHashable] {
+        var metadata: [String: AnyHashable] = [:]
+        
+        // Extract price information from snippet
+        if let snippet = snippet {
+            if let price = extractPrice(from: snippet) {
+                metadata["price"] = price
+            }
+        }
+        
+        // Identify shopping domains
+        let shoppingDomains: [String: String] = [
+            "amazon.com": "amazon",
+            "amazon.co.uk": "amazon",
+            "walmart.com": "walmart",
+            "target.com": "target",
+            "bestbuy.com": "bestbuy",
+            "homedepot.com": "homedepot",
+            "lowes.com": "lowes",
+            "costco.com": "costco",
+            "ebay.com": "ebay",
+            "etsy.com": "etsy",
+            "shopify.com": "shopify",
+            "zappos.com": "zappos",
+            "overstock.com": "overstock",
+            "wayfair.com": "wayfair",
+            "macys.com": "macys",
+            "nordstrom.com": "nordstrom"
+        ]
+        
+        let urlLower = url.lowercased()
+        for (domain, shoppingDomain) in shoppingDomains {
+            if urlLower.contains(domain) {
+                metadata["shoppingDomain"] = shoppingDomain
+                metadata["isShoppingResult"] = true
+                break
+            }
+        }
+        
+        // If we found a price but no shopping domain, still mark as potential shopping result
+        if metadata["price"] != nil && metadata["isShoppingResult"] == nil {
+            metadata["isShoppingResult"] = true
+        }
+        
+        return metadata
+    }
+    
+    /// Extracts price information from text using regex patterns
+    private func extractPrice(from text: String) -> String? {
+        // Pattern 1: $XX.XX or $X,XXX.XX
+        let pricePattern1 = #"\$[\d,]+\.?\d*"#
+        // Pattern 2: Price: $XX.XX
+        let pricePattern2 = #"(?i)price[:\s]+\$?[\d,]+\.?\d*"#
+        // Pattern 3: $XX.XX - $YY.YY (price range)
+        let pricePattern3 = #"\$[\d,]+\.?\d*\s*-\s*\$[\d,]+\.?\d*"#
+        
+        let patterns = [pricePattern1, pricePattern2, pricePattern3]
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []),
+               let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: text.count)) {
+                let matchedString = (text as NSString).substring(with: match.range)
+                // Clean up the price string
+                let cleaned = matchedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleaned.isEmpty {
+                    return cleaned
+                }
+            }
+        }
+        
+        return nil
     }
     
     /// Checks if a result appears to be an ad based on HTML context

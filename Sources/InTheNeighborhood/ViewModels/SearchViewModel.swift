@@ -17,6 +17,7 @@ public class SearchViewModel: ObservableObject {
     @Published public var isLoadingLocal: Bool = false
     @Published public var errorMessage: String?
     @Published public var originalQuery: String = ""
+    @Published public var localStoreCategories: [String] = []
     
     private let coordinator: MetasearchCoordinator
     private let queryEnhancer: QueryEnhancer
@@ -74,6 +75,7 @@ public class SearchViewModel: ObservableObject {
         amazonResults = []
         localResults = []
         results = []
+        localStoreCategories = []
         
         // Set loading states
         isLoadingWeb = true
@@ -83,25 +85,27 @@ public class SearchViewModel: ObservableObject {
         searchTask = Task {
             // Launch three concurrent search threads - they update results independently
             // Don't wait for all to complete - each thread updates its results as it finishes
-            Task {
-                _ = await searchWeb(query: query)
-                await MainActor.run {
-                    updateStateAfterThreadCompletion()
-                }
+            print("[SearchViewModel] Starting all three search threads concurrently for query: '\(query)'")
+            
+            // Use async let to ensure all tasks start immediately and run concurrently
+            async let webTask = searchWeb(query: query)
+            async let amazonTask = searchAmazon(query: query)
+            async let localTask = searchLocal(query: query)
+            
+            // Wait for each task to complete and update state
+            _ = await webTask
+            await MainActor.run {
+                updateStateAfterThreadCompletion()
             }
             
-            Task {
-                _ = await searchAmazon(query: query)
-                await MainActor.run {
-                    updateStateAfterThreadCompletion()
-                }
+            _ = await amazonTask
+            await MainActor.run {
+                updateStateAfterThreadCompletion()
             }
             
-            Task {
-                _ = await searchLocal(query: query)
-                await MainActor.run {
-                    updateStateAfterThreadCompletion()
-                }
+            _ = await localTask
+            await MainActor.run {
+                updateStateAfterThreadCompletion()
             }
         }
     }
@@ -124,6 +128,7 @@ public class SearchViewModel: ObservableObject {
     
     // Thread 1: Web search (excluding Amazon and MapKit)
     private func searchWeb(query: String) async -> [SearchResult] {
+        print("[SearchViewModel] Thread 1 (Web): Starting web search for query: '\(query)'")
         do {
             let enhancedQuery = try await queryEnhancer.enhance(query: query)
             let searchResults = try await coordinator.search(
@@ -168,6 +173,7 @@ public class SearchViewModel: ObservableObject {
     
     // Thread 2: Amazon search
     private func searchAmazon(query: String) async -> [SearchResult] {
+        print("[SearchViewModel] Thread 2 (Amazon): Starting Amazon search for query: '\(query)'")
         do {
             let enhancedQuery = try await queryEnhancer.enhance(query: query)
             let searchResults = try await amazonSource.search(query: enhancedQuery)
@@ -205,6 +211,7 @@ public class SearchViewModel: ObservableObject {
     
     // Thread 3: Local stores (LLM + MapKit)
     private func searchLocal(query: String) async -> [SearchResult] {
+        print("[SearchViewModel] Thread 3 (Local): Starting local/MapKit search for query: '\(query)'")
         do {
             // Step 1: Ask LLM what store types would carry this product
             print("[SearchViewModel] Thread 3 (Local): Asking LLM for store categories for query: '\(query)'")
@@ -253,6 +260,7 @@ public class SearchViewModel: ObservableObject {
             
             await MainActor.run {
                 localResults = searchResults
+                localStoreCategories = categoriesToUse
                 isLoadingLocal = false
                 // Update legacy results array
                 results = webResults + amazonResults + localResults
@@ -301,6 +309,10 @@ public class SearchViewModel: ObservableObject {
         searchText = ""
         state = .idle
         results = []
+        webResults = []
+        amazonResults = []
+        localResults = []
+        localStoreCategories = []
         errorMessage = nil
     }
     
@@ -404,6 +416,7 @@ public class SearchViewModel: ObservableObject {
                         
                         await MainActor.run {
                             localResults = localSearchResults
+                            localStoreCategories = categoriesToUse
                             results = webResults + amazonResults + localResults
                         }
                     } catch {

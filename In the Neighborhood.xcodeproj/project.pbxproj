@@ -12,6 +12,7 @@
 		13A8DDBD2D66EA5F84D062E8 /* LocationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CE8A3B38B28C8ACBF785B /* LocationServiceTests.swift */; };
 		15A99BAE25FBE24DF7CBFAE5 /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
 		1910653CB9157170DE4C56E6 /* LLMIntegration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AF2E6175556A905C7EE69FB /* LLMIntegration.framework */; };
+		20E85E1BE4DB5061306703F4 /* AdDomainListDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */; };
 		22D50482BB19B1A5284D0A3A /* WebSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3349062230C15686D213C47 /* WebSearchSourceTests.swift */; };
 		234618746013180E5A0EE2BA /* QueryEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AA0971404C5E03B0AFD0B2F /* QueryEnhancer.swift */; };
 		2951B4A33075D30BEF4A9B65 /* LLMModelDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DA7AB97926D822EA2D4A30 /* LLMModelDownloadManager.swift */; };
@@ -103,6 +104,7 @@
 		EC745929CF4EE04B76F9772C /* IntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059B580304543DED8353B7B0 /* IntegrationTests.swift */; };
 		ED7A50E60AA137F91F038005 /* ErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B29927CCA2E7B386705AD6 /* ErrorView.swift */; };
 		F1254825FA4649F53C4B6B83 /* SettingsViewUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBAD1E688EC019564A5A55AA /* SettingsViewUITests.swift */; };
+		F4D2CC7FCD052FCC320AB87E /* AdDomainFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F1205B3990AEA6DAB0ACF51 /* AdDomainFilter.swift */; };
 		FEEDC9DA5E193434E1C9CDD8 /* SearchSources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 128A43B633EE0E59A603AA7B /* SearchSources.framework */; };
 /* End PBXBuildFile section */
 
@@ -275,6 +277,7 @@
 		28A99C59F4177CDE3AA6DE31 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		2B0F23568BE9E0358CB15D0E /* ResultPrioritizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultPrioritizerTests.swift; sourceTree = "<group>"; };
 		2C27659E73A83FBC565A7E24 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		2F1205B3990AEA6DAB0ACF51 /* AdDomainFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDomainFilter.swift; sourceTree = "<group>"; };
 		3247F88426C16AAF3EF1D969 /* SourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceType.swift; sourceTree = "<group>"; };
 		33EC7EF1CAEA5214B3E6EC3C /* SearchResultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultTests.swift; sourceTree = "<group>"; };
 		36CDDACD5862987495E218E1 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
@@ -297,6 +300,7 @@
 		6A4496B05A829B434E7A8E98 /* CircuitBreaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreaker.swift; sourceTree = "<group>"; };
 		6E51CAA6CDAEC0D136B03E31 /* LLMIntegrationTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LLMIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6EF2A1B962815C6186C69EC8 /* BookshopSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshopSearchSourceTests.swift; sourceTree = "<group>"; };
+		71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDomainListDownloadManager.swift; sourceTree = "<group>"; };
 		78121379A73D042FCB7D0587 /* BingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProvider.swift; sourceTree = "<group>"; };
 		787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultPrioritizer.swift; sourceTree = "<group>"; };
 		798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = InTheNeighborhood.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -640,6 +644,8 @@
 		AFDFDED0D1B74E9197BC6927 /* MetasearchCore */ = {
 			isa = PBXGroup;
 			children = (
+				2F1205B3990AEA6DAB0ACF51 /* AdDomainFilter.swift */,
+				71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */,
 				06B19C06FE383083A13024E8 /* DenyListFilter.swift */,
 				9CF9FECFA4788365EF472CED /* EnhancedQuery.swift */,
 				60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */,
@@ -1174,6 +1180,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4D2CC7FCD052FCC320AB87E /* AdDomainFilter.swift in Sources */,
+				20E85E1BE4DB5061306703F4 /* AdDomainListDownloadManager.swift in Sources */,
 				8B9E99BA792F4E22B51576C5 /* DenyListFilter.swift in Sources */,
 				73F4D2592054EFACAB66BE38 /* EnhancedQuery.swift in Sources */,
 				9CEFB587E29FFD98953948B6 /* MetasearchCoordinator.swift in Sources */,

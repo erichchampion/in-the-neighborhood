@@ -79,11 +79,19 @@ struct LocalBusinessCard: View {
     }
     
     private func formatDistance(_ meters: Double) -> String {
-        if meters < 1000 {
-            return String(format: "%.0f m away", meters)
+        // Convert meters to miles (1 mile = 1609.34 meters)
+        let miles = meters / 1609.34
+        
+        if miles < 0.1 {
+            // For very short distances, show in feet
+            let feet = meters * 3.28084
+            return String(format: "%.0f ft away", feet)
+        } else if miles < 1.0 {
+            // For distances less than 1 mile, show with 2 decimal places
+            return String(format: "%.2f miles away", miles)
         } else {
-            let km = meters / 1000
-            return String(format: "%.1f km away", km)
+            // For distances 1 mile or more, show with 1 decimal place
+            return String(format: "%.1f miles away", miles)
         }
     }
     

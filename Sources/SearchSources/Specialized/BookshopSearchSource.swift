@@ -127,13 +127,8 @@ public final class BookshopSearchSource: SearchSource {
                     .replacingOccurrences(of: "\n", with: " ")
                     .replacingOccurrences(of: "\t", with: " ")
                 
-                // Clean up title - remove HTML entities and extra whitespace
-                title = title.replacingOccurrences(of: "&nbsp;", with: " ")
-                    .replacingOccurrences(of: "&amp;", with: "&")
-                    .replacingOccurrences(of: "&lt;", with: "<")
-                    .replacingOccurrences(of: "&gt;", with: ">")
-                    .replacingOccurrences(of: "&quot;", with: "\"")
-                    .replacingOccurrences(of: "&#39;", with: "'")
+                // Decode HTML entities in title
+                title = decodeHTMLEntities(title)
                 
                 // Skip if title is empty or too short
                 guard !title.isEmpty, title.count > 3 else {
@@ -238,5 +233,73 @@ public final class BookshopSearchSource: SearchSource {
         }
         
         return results
+    }
+    
+    /// Decodes HTML entities in a string
+    /// Handles named entities (e.g., &amp;), decimal numeric entities (e.g., &#39;), and hexadecimal entities (e.g., &#x27;)
+    private func decodeHTMLEntities(_ string: String) -> String {
+        var result = string
+        
+        // First, decode common named entities
+        let namedEntities: [String: String] = [
+            "&amp;": "&",
+            "&lt;": "<",
+            "&gt;": ">",
+            "&quot;": "\"",
+            "&apos;": "'",
+            "&nbsp;": " ",
+            "&copy;": "©",
+            "&reg;": "®",
+            "&trade;": "™",
+            "&mdash;": "—",
+            "&ndash;": "–",
+            "&hellip;": "…"
+        ]
+        
+        for (entity, replacement) in namedEntities {
+            result = result.replacingOccurrences(of: entity, with: replacement, options: .caseInsensitive)
+        }
+        
+        // Decode decimal numeric entities (e.g., &#39;)
+        if let decimalRegex = try? NSRegularExpression(pattern: #"&#(\d+);"#, options: []) {
+            let nsString = result as NSString
+            let matches = decimalRegex.matches(in: result, options: [], range: NSRange(location: 0, length: nsString.length))
+            
+            // Process matches in reverse order to preserve indices
+            for match in matches.reversed() {
+                guard match.numberOfRanges >= 2,
+                      let codeRange = Range(match.range(at: 1), in: result),
+                      let code = Int(result[codeRange]),
+                      code >= 0 && code <= 0x10FFFF,
+                      let scalar = Unicode.Scalar(code) else {
+                    continue
+                }
+                
+                let replacement = String(Character(scalar))
+                result = (result as NSString).replacingCharacters(in: match.range, with: replacement)
+            }
+        }
+        
+        // Decode hexadecimal numeric entities (e.g., &#x27; or &#X27;)
+        if let hexRegex = try? NSRegularExpression(pattern: #"&#x([0-9a-fA-F]+);"#, options: [.caseInsensitive]) {
+            let nsString = result as NSString
+            let matches = hexRegex.matches(in: result, options: [], range: NSRange(location: 0, length: nsString.length))
+            
+            // Process matches in reverse order to preserve indices
+            for match in matches.reversed() {
+                guard match.numberOfRanges >= 2,
+                      let codeRange = Range(match.range(at: 1), in: result),
+                      let code = Int(result[codeRange], radix: 16),
+                      code >= 0 && code <= 0x10FFFF,
+                      let scalar = Unicode.Scalar(code) else {
+                    continue
+                }
+                
+                let replacement = String(Character(scalar))
+                result = (result as NSString).replacingCharacters(in: match.range, with: replacement)
+            }
+        }
+        
+        return result
     }
 }

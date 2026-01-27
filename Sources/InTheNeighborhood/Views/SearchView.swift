@@ -56,6 +56,7 @@ public struct SearchView: View {
                                 isLoadingWeb: viewModel.isLoadingWeb,
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
                                 isLoadingLocal: viewModel.isLoadingLocal,
+                                localStoreCategories: viewModel.localStoreCategories,
                                 onRefine: { result in
                                     Task {
                                         await viewModel.refineSearch(with: result.metadata, originalQuery: viewModel.originalQuery)
@@ -79,6 +80,7 @@ public struct SearchView: View {
                                 isLoadingWeb: viewModel.isLoadingWeb,
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
                                 isLoadingLocal: viewModel.isLoadingLocal,
+                                localStoreCategories: viewModel.localStoreCategories,
                                 onRefine: { result in
                                     Task {
                                         await viewModel.refineSearch(with: result.metadata, originalQuery: viewModel.originalQuery)
@@ -137,6 +139,7 @@ public struct SearchView: View {
 struct SearchBarView: View {
     @Binding var searchText: String
     let onSearch: () -> Void
+    @FocusState private var isSearchFieldFocused: Bool
     
     var body: some View {
         HStack {
@@ -145,6 +148,7 @@ struct SearchBarView: View {
             
             TextField("Search for products...", text: $searchText)
                 .textFieldStyle(.plain)
+                .focused($isSearchFieldFocused)
                 .accessibilityLabel("Search for products")
                 .accessibilityHint("Enter a search query to find products at local merchants and ethical online retailers")
                 .onSubmit {
@@ -163,5 +167,9 @@ struct SearchBarView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(10)
+        .onAppear {
+            // Focus the search field when the view appears
+            isSearchFieldFocused = true
+        }
     }
 }

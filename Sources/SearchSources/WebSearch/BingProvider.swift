@@ -30,7 +30,56 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
             return []
         }
         
-        return try await searchWithRetry(query: query, apiKey: apiKey, attempt: 0)
+        // Enhance query for shopping if product intent is detected
+        let enhancedQuery = enhanceQueryForShopping(query)
+        
+        return try await searchWithRetry(query: enhancedQuery, apiKey: apiKey, attempt: 0)
+    }
+    
+    /// Enhances query to improve shopping/product search results
+    private func enhanceQueryForShopping(_ query: String) -> String {
+        let lowercasedQuery = query.lowercased()
+        
+        // Detect product intent indicators (for potential future query enhancement)
+        let productIndicators = [
+            "buy", "purchase", "price", "cost", "shop", "shopping",
+            "product", "item", "for sale", "discount", "deal", "sale"
+        ]
+        
+        _ = productIndicators.contains { indicator in
+            lowercasedQuery.contains(indicator)
+        }
+        
+        // If no explicit product intent, check for common product patterns
+        // (e.g., brand names, model numbers, product categories)
+        _ = detectProductPattern(query: lowercasedQuery)
+        
+        // If product intent is detected, the query is likely already optimized
+        // Otherwise, we can optionally append shopping-related terms
+        // For now, we'll return the original query as Bing's algorithm should handle it
+        // But we'll mark it for shopping metadata extraction later
+        return query
+    }
+    
+    /// Detects if a query likely refers to a product (brand names, model numbers, etc.)
+    private func detectProductPattern(query: String) -> Bool {
+        // Check for model numbers (e.g., "iPhone 15", "MacBook Pro M3")
+        let modelNumberPattern = #"\b[A-Z][a-z]+\s+\d+[A-Z]?\d*\b"#
+        if let regex = try? NSRegularExpression(pattern: modelNumberPattern, options: []),
+           regex.firstMatch(in: query, options: [], range: NSRange(location: 0, length: query.count)) != nil {
+            return true
+        }
+        
+        // Check for common product categories
+        let productCategories = [
+            "laptop", "phone", "tablet", "headphones", "speaker", "camera",
+            "watch", "shoes", "clothing", "book", "game", "console",
+            "tv", "monitor", "keyboard", "mouse", "printer", "router"
+        ]
+        
+        return productCategories.contains { category in
+            query.contains(category)
+        }
     }
     
     private func searchWithRetry(query: String, apiKey: String, attempt: Int) async throws -> [SearchResult] {
@@ -204,6 +253,21 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
         
         var results: [SearchResult] = []
         
+        // Create a map of image URLs by domain/page for shopping results
+        var imageUrlMap: [String: String] = [:]
+        if let images = response.images?.value {
+            for image in images {
+                if let contentUrl = image.contentUrl,
+                   let thumbnailUrl = image.thumbnailUrl {
+                    // Try to match images to web pages by domain
+                    if let url = URL(string: contentUrl),
+                       let domain = url.host {
+                        imageUrlMap[domain] = thumbnailUrl
+                    }
+                }
+            }
+        }
+        
         // Parse web pages (primary results)
         if let webPages = response.webPages?.value {
             results.append(contentsOf: webPages.compactMap { (page: BingResponse.WebPage) -> SearchResult? in
@@ -232,6 +296,14 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
                 if let dateLastCrawled = page.dateLastCrawled {
                     metadata["dateLastCrawled"] = dateLastCrawled
                 }
+                
+                // Extract shopping metadata
+                let shoppingMetadata = extractShoppingMetadata(
+                    snippet: page.snippet,
+                    url: urlString,
+                    imageUrlMap: imageUrlMap
+                )
+                metadata.merge(shoppingMetadata) { (_, new) in new }
                 
                 return SearchResult(
                     id: UUID().uuidString,
@@ -328,5 +400,84 @@ final class BingProvider: WebSearchProvider, @unchecked Sendable {
         }
         
         return false
+    }
+    
+    /// Extracts shopping-related metadata from search results
+    private func extractShoppingMetadata(snippet: String?, url: String, imageUrlMap: [String: String]) -> [String: AnyHashable] {
+        var metadata: [String: AnyHashable] = [:]
+        
+        // Extract price information from snippet
+        if let snippet = snippet {
+            if let price = extractPrice(from: snippet) {
+                metadata["price"] = price
+            }
+        }
+        
+        // Identify shopping domains
+        let shoppingDomains: [String: String] = [
+            "amazon.com": "amazon",
+            "amazon.co.uk": "amazon",
+            "walmart.com": "walmart",
+            "target.com": "target",
+            "bestbuy.com": "bestbuy",
+            "homedepot.com": "homedepot",
+            "lowes.com": "lowes",
+            "costco.com": "costco",
+            "ebay.com": "ebay",
+            "etsy.com": "etsy",
+            "shopify.com": "shopify",
+            "zappos.com": "zappos",
+            "overstock.com": "overstock",
+            "wayfair.com": "wayfair",
+            "macys.com": "macys",
+            "nordstrom.com": "nordstrom"
+        ]
+        
+        let urlLower = url.lowercased()
+        for (domain, shoppingDomain) in shoppingDomains {
+            if urlLower.contains(domain) {
+                metadata["shoppingDomain"] = shoppingDomain
+                metadata["isShoppingResult"] = true
+                
+                // Try to find matching image URL
+                if let imageUrl = imageUrlMap[domain] {
+                    metadata["imageUrl"] = imageUrl
+                }
+                break
+            }
+        }
+        
+        // If we found a price but no shopping domain, still mark as potential shopping result
+        if metadata["price"] != nil && metadata["isShoppingResult"] == nil {
+            metadata["isShoppingResult"] = true
+        }
+        
+        return metadata
+    }
+    
+    /// Extracts price information from text using regex patterns
+    private func extractPrice(from text: String) -> String? {
+        // Pattern 1: $XX.XX or $X,XXX.XX
+        let pricePattern1 = #"\$[\d,]+\.?\d*"#
+        // Pattern 2: Price: $XX.XX
+        let pricePattern2 = #"(?i)price[:\s]+\$?[\d,]+\.?\d*"#
+        // Pattern 3: $XX.XX - $YY.YY (price range)
+        let pricePattern3 = #"\$[\d,]+\.?\d*\s*-\s*\$[\d,]+\.?\d*"#
+        
+        let patterns = [pricePattern1, pricePattern2, pricePattern3]
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []),
+               let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: text.count)) {
+                let matchedString = (text as NSString).substring(with: match.range)
+                // Clean up the price string
+                let cleaned = matchedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleaned.isEmpty {
+                    return cleaned
+                }
+            }
+        }
+        
+        return nil
     }
 }

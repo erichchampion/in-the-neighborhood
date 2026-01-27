@@ -6,10 +6,43 @@ struct OnlineResultCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(alignment: .top, spacing: 12) {
+                // Product Image Thumbnail (if available)
+                if hasShoppingMetadata, let imageUrlString = result.metadata["imageUrl"] as? String,
+                   let imageUrl = URL(string: imageUrlString) {
+                    AsyncImage(url: imageUrl) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .frame(width: 80, height: 80)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        case .failure:
+                            Image(systemName: "photo")
+                                .foregroundColor(.secondary)
+                                .frame(width: 80, height: 80)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .frame(width: 80, height: 80)
+                    .cornerRadius(8)
+                    .background(Color(.systemGray6))
+                }
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(result.title)
                         .font(.headline)
+                    
+                    // Show price if available
+                    if let price = result.metadata["price"] as? String {
+                        Text(price)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
                     
                     if let description = result.description {
                         Text(description)
@@ -18,9 +51,19 @@ struct OnlineResultCard: View {
                             .lineLimit(2)
                     }
                     
-                    Text(sourceLabel)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    // Show URL as link for online results, otherwise show source label
+                    if result.sourceType == .online, let url = result.url {
+                        Link(destination: url) {
+                            Text(truncatedURL(url))
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .lineLimit(1)
+                        }
+                    } else {
+                        Text(sourceLabel)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
@@ -51,12 +94,28 @@ struct OnlineResultCard: View {
         .accessibilityValue(buildAccessibilityValue())
     }
     
+    /// Checks if this result has shopping metadata
+    private var hasShoppingMetadata: Bool {
+        result.metadata["isShoppingResult"] as? Bool == true ||
+        result.metadata["price"] != nil ||
+        result.metadata["imageUrl"] != nil
+    }
+    
     private func buildAccessibilityValue() -> String {
         var components: [String] = []
         if let description = result.description {
             components.append(description)
         }
-        components.append(sourceLabel)
+        // Add price if available
+        if let price = result.metadata["price"] as? String {
+            components.append("Price: \(price)")
+        }
+        // For online results, use URL instead of "Online Option"
+        if result.sourceType == .online, let url = result.url {
+            components.append(url.absoluteString)
+        } else {
+            components.append(sourceLabel)
+        }
         return components.joined(separator: ", ")
     }
     
@@ -69,5 +128,21 @@ struct OnlineResultCard: View {
         case .online:
             return "Online Option"
         }
+    }
+    
+    /// Truncates a URL to a maximum length, adding ellipsis if needed
+    /// - Parameter url: URL to truncate
+    /// - Returns: Truncated URL string
+    private func truncatedURL(_ url: URL) -> String {
+        let urlString = url.absoluteString
+        let maxLength = 50 // Maximum characters before truncation
+        
+        if urlString.count <= maxLength {
+            return urlString
+        }
+        
+        // Truncate and add ellipsis
+        let truncated = String(urlString.prefix(maxLength - 3))
+        return truncated + "..."
     }
 }

@@ -11,6 +11,7 @@ public struct ResultsView: View {
     let isLoadingWeb: Bool
     let isLoadingAmazon: Bool
     let isLoadingLocal: Bool
+    let localStoreCategories: [String]
     
     public init(
         webResults: [SearchResult],
@@ -21,6 +22,7 @@ public struct ResultsView: View {
         isLoadingWeb: Bool = false,
         isLoadingAmazon: Bool = false,
         isLoadingLocal: Bool = false,
+        localStoreCategories: [String] = [],
         onRefine: ((SearchResult) -> Void)? = nil
     ) {
         self.webResults = webResults
@@ -31,6 +33,7 @@ public struct ResultsView: View {
         self.isLoadingWeb = isLoadingWeb
         self.isLoadingAmazon = isLoadingAmazon
         self.isLoadingLocal = isLoadingLocal
+        self.localStoreCategories = localStoreCategories
         self.onRefine = onRefine
     }
     
@@ -52,6 +55,25 @@ public struct ResultsView: View {
                 localStoresTabContent
             }
         }
+    }
+    
+    // Filter Amazon results to only include those with at least one required metadata key
+    private var filteredAmazonResults: [SearchResult] {
+        amazonResults.filter { result in
+            hasRefinementMetadata(result)
+        }
+    }
+    
+    // Check if a result has at least one of the required metadata keys for refinement
+    private func hasRefinementMetadata(_ result: SearchResult) -> Bool {
+        let brand = result.metadata["brand"] as? String
+        let isbn = result.metadata["isbn"] as? String
+        let sku = result.metadata["sku"] as? String
+        let author = result.metadata["author"] as? String
+        let artist = result.metadata["artist"] as? String
+        
+        // Return true if at least one metadata key is not nil
+        return brand != nil || isbn != nil || sku != nil || author != nil || artist != nil
     }
     
     private var webTabContent: some View {
@@ -85,7 +107,7 @@ public struct ResultsView: View {
                 }
                 
                 // Amazon Results Section
-                if !amazonResults.isEmpty {
+                if !filteredAmazonResults.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         if !webResults.isEmpty {
                             Text("Products")
@@ -101,7 +123,7 @@ public struct ResultsView: View {
                                 .padding(.bottom, 8)
                         }
                         
-                        ForEach(amazonResults) { result in
+                        ForEach(filteredAmazonResults) { result in
                             AmazonProductCard(result: result) {
                                 onRefine?(result)
                             }
@@ -125,7 +147,7 @@ public struct ResultsView: View {
                 }
                 
                 // Empty state
-                if !isLoadingWeb && !isLoadingAmazon && webResults.isEmpty && amazonResults.isEmpty {
+                if !isLoadingWeb && !isLoadingAmazon && webResults.isEmpty && filteredAmazonResults.isEmpty {
                     VStack {
                         Text("No web results found")
                             .font(.headline)
@@ -143,11 +165,21 @@ public struct ResultsView: View {
             VStack(spacing: 0) {
                 if !localResults.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Local Stores")
-                            .font(.headline)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .padding(.bottom, 8)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Local Stores")
+                                .font(.headline)
+                            
+                            if !localStoreCategories.isEmpty {
+                                Text("• " + localStoreCategories.joined(separator: ", "))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
                         
                         ForEach(localResults) { result in
                             ResultRowView(result: result)
