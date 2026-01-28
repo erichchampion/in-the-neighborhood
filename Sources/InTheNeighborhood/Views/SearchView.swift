@@ -59,6 +59,7 @@ public struct SearchView: View {
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
                                 isLoadingLocal: viewModel.isLoadingLocal,
                                 localStoreCategories: viewModel.localStoreCategories,
+                                downloadManager: downloadManager,
                                 onRefine: { result in
                                     Task {
                                         if let productMetadata = ProductMetadata(from: result.metadata) {
@@ -85,6 +86,7 @@ public struct SearchView: View {
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
                                 isLoadingLocal: viewModel.isLoadingLocal,
                                 localStoreCategories: viewModel.localStoreCategories,
+                                downloadManager: downloadManager,
                                 onRefine: { result in
                                     Task {
                                         if let productMetadata = ProductMetadata(from: result.metadata) {
@@ -108,21 +110,6 @@ public struct SearchView: View {
                         )
                     }
                     
-                    // Model download overlay - appears on top
-                    if downloadManager.downloadState == .downloading {
-                        Color.black.opacity(0.3)
-                            .ignoresSafeArea()
-                            .zIndex(1)
-                        
-                        ModelDownloadView(
-                            downloadManager: downloadManager,
-                            onCancel: {
-                                downloadManager.cancelDownload()
-                            }
-                        )
-                        .padding()
-                        .zIndex(2)
-                    }
                 }
             }
             .navigationTitle(NSLocalizedString("In the Neighborhood", comment: ""))

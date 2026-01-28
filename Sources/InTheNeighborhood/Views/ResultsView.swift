@@ -1,5 +1,6 @@
 import SwiftUI
 import MetasearchCore
+import LLMIntegration
 
 public struct ResultsView: View {
     let webResults: [SearchResult]
@@ -12,6 +13,7 @@ public struct ResultsView: View {
     let isLoadingAmazon: Bool
     let isLoadingLocal: Bool
     let localStoreCategories: [String]
+    @ObservedObject var downloadManager: LLMModelDownloadManager
     
     public init(
         webResults: [SearchResult],
@@ -23,6 +25,7 @@ public struct ResultsView: View {
         isLoadingAmazon: Bool = false,
         isLoadingLocal: Bool = false,
         localStoreCategories: [String] = [],
+        downloadManager: LLMModelDownloadManager = .shared,
         onRefine: ((SearchResult) -> Void)? = nil
     ) {
         self.webResults = webResults
@@ -34,12 +37,13 @@ public struct ResultsView: View {
         self.isLoadingAmazon = isLoadingAmazon
         self.isLoadingLocal = isLoadingLocal
         self.localStoreCategories = localStoreCategories
+        self.downloadManager = downloadManager
         self.onRefine = onRefine
     }
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Tab selector
+            // Tab selector - always visible so user can switch away from Local Stores while model downloads
             Picker("Results Tab", selection: $selectedTab) {
                 Text("Web").tag(SearchViewModel.TabSelection.web)
                 Text("Local Stores").tag(SearchViewModel.TabSelection.localStores)
@@ -48,12 +52,25 @@ public struct ResultsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             
-            // Tab content - show based on selection
-            if selectedTab == .web {
-                webTabContent
-            } else {
-                localStoresTabContent
+            // Tab content with download overlay only over this area when on Local Stores
+            ZStack {
+                if selectedTab == .web {
+                    webTabContent
+                } else {
+                    localStoresTabContent
+                }
+                
+                if selectedTab == .localStores && downloadManager.downloadState == .downloading {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    ModelDownloadView(
+                        downloadManager: downloadManager,
+                        onCancel: { downloadManager.cancelDownload() }
+                    )
+                    .padding()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
     
