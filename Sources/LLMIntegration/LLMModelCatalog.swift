@@ -25,7 +25,7 @@ public enum LLMModelID: String, Codable, CaseIterable, Sendable {
         case .qwen25_3BInstruct:
             return "Qwen2.5 3B Instruct"
         case .ministral3BInstruct:
-            return "Ministral 3B Instruct"
+            return "Ministral 3 3B"
         case .tinyLlama11BChat:
             return "TinyLlama 1.1B Chat (Legacy)"
         case .qwen215BInstruct:
@@ -133,7 +133,7 @@ struct ChatTemplateTokens: Sendable {
 /// Configuration for an LLM model
 public struct LLMModelConfiguration: Codable, Sendable {
     /// Unique identifier for the model
-    let id: LLMModelID
+    public let id: LLMModelID
 
     /// HuggingFace repository name
     let repository: String
@@ -330,12 +330,12 @@ public final class LLMModelCatalog: @unchecked Sendable {
     }
 
     /// Get all available models
-    var allModels: [LLMModelConfiguration] {
+    public var allModels: [LLMModelConfiguration] {
         return Array(models.values).sorted { $0.id.rawValue < $1.id.rawValue }
     }
 
-    /// Get recommended models only
-    var recommendedModels: [LLMModelConfiguration] {
+    /// Get recommended models only (for UI picker)
+    public var recommendedModels: [LLMModelConfiguration] {
         return allModels.filter { $0.recommended }
     }
 

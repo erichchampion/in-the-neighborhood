@@ -36,6 +36,8 @@ public final class LLMModelDownloadManager: NSObject, ObservableObject, @uncheck
     private let stateKey = "llmDownloadState"
     private let progressKey = "llmDownloadProgress"
     private let currentModelKey = "currentDownloadingModelID"
+    /// UserDefaults key for selected model ID (must match SettingsManager.selectedModelIDKey)
+    private let selectedModelIDKey = "selectedModelID"
 
     // MARK: - Initialization
 
@@ -109,11 +111,20 @@ public final class LLMModelDownloadManager: NSObject, ObservableObject, @uncheck
         return nil
     }
 
+    /// Returns the user's selected model ID from UserDefaults, or the default model if unset
+    public func selectedModelID() -> LLMModelID {
+        guard let rawValue = UserDefaults.standard.string(forKey: selectedModelIDKey),
+              let modelID = LLMModelID(rawValue: rawValue) else {
+            return LLMModelCatalog.defaultModelID
+        }
+        return modelID
+    }
+    
     /// Get path to model file (checks bundle first, then Application Support)
-    /// Uses the default model for backward compatibility
+    /// Uses the user's selected model ID
     /// - Returns: URL to model file, or nil if not found
     public func getModelPath() -> URL? {
-        return getModelPath(for: LLMModelCatalog.defaultModelID)
+        return getModelPath(for: selectedModelID())
     }
 
     /// Check if a specific model is available (bundled or downloaded)
@@ -124,10 +135,10 @@ public final class LLMModelDownloadManager: NSObject, ObservableObject, @uncheck
     }
 
     /// Check if model is available (bundled or downloaded)
-    /// Uses the default model for backward compatibility
+    /// Uses the user's selected model ID
     /// - Returns: True if model file exists
     public func isModelAvailable() -> Bool {
-        return isModelAvailable(for: LLMModelCatalog.defaultModelID)
+        return isModelAvailable(for: selectedModelID())
     }
 
     /// Delete model file for a specific model
@@ -233,11 +244,10 @@ public final class LLMModelDownloadManager: NSObject, ObservableObject, @uncheck
         downloadTask?.resume()
     }
 
-    /// Start download if model not available
-    /// Uses the default model for backward compatibility
+    /// Start download if selected model not available
     /// - Throws: LLMServiceError if download fails to start
     public func startDownloadIfNeeded() async throws {
-        try await startDownload(for: LLMModelCatalog.defaultModelID)
+        try await startDownload(for: selectedModelID())
     }
 
     /// Cancel ongoing download

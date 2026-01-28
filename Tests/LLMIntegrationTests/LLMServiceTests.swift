@@ -9,7 +9,7 @@ final class LLMServiceTests: XCTestCase {
         service.shouldThrow = true
         
         do {
-            let _ = try await service.enhanceQuery("test query")
+            let _ = try await service.enhanceQuery("test query", metadata: nil)
             XCTFail("Expected error to be thrown")
         } catch {
             XCTAssertTrue(error is LLMServiceError)

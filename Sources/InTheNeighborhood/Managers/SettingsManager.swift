@@ -1,14 +1,24 @@
 import Foundation
 import MetasearchCore
+import LLMIntegration
 
 @MainActor
 public class SettingsManager: ObservableObject {
     public static let shared = SettingsManager()
     
+    /// UserDefaults key for selected model ID (shared with LLMModelDownloadManager)
+    public static let selectedModelIDKey = "selectedModelID"
+    
     @Published public var denyList: DenyListFilter
     @Published public var searchRadius: Double {
         didSet {
             UserDefaults.standard.set(searchRadius, forKey: "searchRadius")
+        }
+    }
+    
+    @Published public var selectedModelID: LLMModelID {
+        didSet {
+            UserDefaults.standard.set(selectedModelID.rawValue, forKey: Self.selectedModelIDKey)
         }
     }
     
@@ -36,6 +46,14 @@ public class SettingsManager: ObservableObject {
             searchRadius = UserDefaults.standard.double(forKey: searchRadiusKey)
         } else {
             searchRadius = 16093.0 // 10 miles default
+        }
+        
+        // Load selected model ID from UserDefaults
+        if let rawValue = UserDefaults.standard.string(forKey: Self.selectedModelIDKey),
+           let modelID = LLMModelID(rawValue: rawValue) {
+            selectedModelID = modelID
+        } else {
+            selectedModelID = LLMModelCatalog.defaultModelID
         }
     }
     

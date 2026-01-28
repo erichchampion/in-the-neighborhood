@@ -1,7 +1,9 @@
 import SwiftUI
+import LLMIntegration
 
 struct SettingsView: View {
     @StateObject private var settingsManager = SettingsManager.shared
+    @ObservedObject private var downloadManager = LLMModelDownloadManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var showAddDomainAlert = false
     @State private var newDomain = ""
@@ -10,6 +12,45 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("AI Model") {
+                    Picker("Query enhancement model", selection: $settingsManager.selectedModelID) {
+                        ForEach(LLMModelCatalog.shared.recommendedModels, id: \.id) { modelConfig in
+                            Text("\(modelConfig.id.displayName) (\(modelConfig.fileSizeDescription))")
+                                .tag(modelConfig.id)
+                        }
+                    }
+                    if !downloadManager.isModelAvailable(for: settingsManager.selectedModelID) {
+                        if downloadManager.downloadState == .downloading {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ProgressView(value: downloadManager.downloadProgress)
+                                Text("Downloading: \(Int(downloadManager.downloadProgress * 100))%")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else if downloadManager.downloadState == .failed {
+                            Text("Download failed. Please try again.")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                            Button("Download") {
+                                Task {
+                                    try? await downloadManager.startDownload(for: settingsManager.selectedModelID)
+                                }
+                            }
+                        } else {
+                            HStack {
+                                Text("Not downloaded")
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Button("Download") {
+                                    Task {
+                                        try? await downloadManager.startDownload(for: settingsManager.selectedModelID)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 Section("Deny List") {
                     ForEach(settingsManager.denyList.allDeniedDomains, id: \.self) { domain in
                         HStack {

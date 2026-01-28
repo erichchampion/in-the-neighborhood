@@ -163,7 +163,9 @@ public actor LlamaCppLLMService: LLMService {
                 }
                 
                 do {
-                    // Ensure model is loaded
+                    // If user changed selected model, unload so we load the new one
+                    self.ensureLoadedModelMatchesSelection()
+                    // Ensure model is loaded (uses selected model)
                     if !self.isModelLoaded() {
                         try self.loadModelSync()
                     }
@@ -319,7 +321,9 @@ public actor LlamaCppLLMService: LLMService {
                 }
                 
                 do {
-                    // Ensure model is loaded
+                    // If user changed selected model, unload so we load the new one
+                    self.ensureLoadedModelMatchesSelection()
+                    // Ensure model is loaded (uses selected model)
                     if !self.isModelLoaded() {
                         try self.loadModelSync()
                     }
@@ -383,8 +387,21 @@ public actor LlamaCppLLMService: LLMService {
         return llamaContext != nil && llamaModel != nil
     }
     
+    /// Unloads the current model and context. Call before loading a different model.
+    nonisolated private func unloadModelSync() {
+        if let context = llamaContext {
+            llama_free(context)
+            llamaContext = nil
+        }
+        if let model = llamaModel {
+            llama_model_free(model)
+            llamaModel = nil
+        }
+        modelConfig = nil
+    }
+    
     nonisolated private func loadModelSync() throws {
-        // Skip if already loaded
+        // Skip if already loaded (and no switch requested; caller handles switch via unload first)
         if isModelLoaded() {
             return
         }
@@ -399,16 +416,28 @@ public actor LlamaCppLLMService: LLMService {
             )
         }
         
-        // Get model configuration
+        let downloadManager = LLMModelDownloadManager.shared
+        let selectedID = downloadManager.selectedModelID()
         let catalog = LLMModelCatalog.shared
-        let defaultModelConfig = catalog.defaultModel
-        modelConfig = defaultModelConfig
         
-        // Find model file
-        let modelPath = try findModelPath()
+        // Use selected model config, fall back to default for config only (path still uses selected)
+        let configToUse = catalog.model(for: selectedID) ?? catalog.defaultModel
+        modelConfig = configToUse
+        
+        // Find model file for selected model (getModelPath() uses selectedModelID())
+        guard let pathURL = downloadManager.getModelPath() else {
+            LoggingService.shared.info(
+                "Selected model '\(selectedID.rawValue)' not downloaded, using rule-based fallback",
+                category: "LlamaCppLLMService"
+            )
+            modelConfig = nil
+            throw LLMServiceError.modelNotFound
+        }
+        let modelPath = pathURL.path
         
         // Validate file exists
         guard FileManager.default.fileExists(atPath: modelPath) else {
+            modelConfig = nil
             throw LLMServiceError.modelNotFound
         }
         
@@ -424,6 +453,7 @@ public actor LlamaCppLLMService: LLMService {
         
         // Load model
         guard let model = llama_model_load_from_file(modelPath, modelParams) else {
+            modelConfig = nil
             throw LLMServiceError.modelLoadFailed("Failed to load model from \(modelPath)")
         }
         
@@ -431,33 +461,39 @@ public actor LlamaCppLLMService: LLMService {
         
         // Create context
         var contextParams = llama_context_default_params()
-        contextParams.n_ctx = UInt32(defaultModelConfig.contextWindow)
+        contextParams.n_ctx = UInt32(configToUse.contextWindow)
         contextParams.n_batch = UInt32(Self.batchSize)
         contextParams.n_threads = Int32(Self.defaultThreadCount)
         
         guard let context = llama_init_from_model(model, contextParams) else {
             llama_model_free(model)
             llamaModel = nil
+            modelConfig = nil
             throw LLMServiceError.modelLoadFailed("Failed to create context")
         }
         
         llamaContext = context
         
         LoggingService.shared.info(
-            "Model loaded successfully: \(defaultModelConfig.id.displayName)",
+            "Model loaded successfully: \(configToUse.id.displayName)",
             category: "LlamaCppLLMService"
         )
     }
     
     nonisolated private func findModelPath() throws -> String {
         let downloadManager = LLMModelDownloadManager.shared
-        
-        // Try to get default model path
         if let modelPath = downloadManager.getModelPath() {
             return modelPath.path
         }
-        
         throw LLMServiceError.modelNotFound
+    }
+    
+    /// If the user changed the selected model, unload current model so next load uses the new one.
+    nonisolated private func ensureLoadedModelMatchesSelection() {
+        let selectedID = LLMModelDownloadManager.shared.selectedModelID()
+        if isModelLoaded(), let currentID = modelConfig?.id, currentID != selectedID {
+            unloadModelSync()
+        }
     }
     
     nonisolated private func buildQueryEnhancementPrompt(query: String, metadata: ProductMetadata?) -> String {
