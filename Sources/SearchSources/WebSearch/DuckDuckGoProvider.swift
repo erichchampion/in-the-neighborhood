@@ -236,7 +236,17 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                 }
                 
                 // Extract shopping metadata from snippet and URL
-                let shoppingMetadata = extractShoppingMetadata(snippet: snippet, url: urlString)
+                let shoppingMetadataDict = extractShoppingMetadata(snippet: snippet, url: urlString)
+                
+                // Build ProductMetadata
+                let productMetadata = ProductMetadata(
+                    price: shoppingMetadataDict["price"] as? String,
+                    shoppingDomain: shoppingMetadataDict["shoppingDomain"] as? String,
+                    isShoppingResult: shoppingMetadataDict["isShoppingResult"] as? Bool
+                )
+                
+                // Convert to dictionary for SearchResult (backward compatibility)
+                let metadata = productMetadata.toDictionary()
                 
                 let result = SearchResult(
                     id: UUID().uuidString,
@@ -247,7 +257,7 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                     url: url,
                     location: nil,
                     distance: nil,
-                    metadata: shoppingMetadata
+                    metadata: metadata
                 )
                 
                 results.append(result)

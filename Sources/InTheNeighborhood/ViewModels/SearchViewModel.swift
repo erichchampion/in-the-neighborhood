@@ -134,8 +134,26 @@ public class SearchViewModel: ObservableObject {
         print("[SearchViewModel] Thread 1 (Web): Starting web search for query: '\(query)'")
         do {
             let enhancedQuery = try await queryEnhancer.enhance(query: query)
+            
+            // If we have indications that the product is a book, append "bookshop.org" to the query
+            let isBook = isBookProduct(enhancedQuery: enhancedQuery)
+            let modifiedQuery: EnhancedQuery
+            if isBook {
+                let modifiedOriginal = "\(enhancedQuery.original) bookshop.org"
+                modifiedQuery = EnhancedQuery(
+                    original: modifiedOriginal,
+                    productType: enhancedQuery.productType,
+                    categories: enhancedQuery.categories,
+                    priceMax: enhancedQuery.priceMax,
+                    condition: enhancedQuery.condition
+                )
+                print("[SearchViewModel] Thread 1 (Web): Detected book product, appending 'bookshop.org' to query: '\(modifiedOriginal)'")
+            } else {
+                modifiedQuery = enhancedQuery
+            }
+            
             let searchResults = try await coordinator.search(
-                query: enhancedQuery,
+                query: modifiedQuery,
                 excludingSources: ["amazon", "mapkit"]
             )
             
@@ -333,37 +351,31 @@ public class SearchViewModel: ObservableObject {
         errorMessage = nil
     }
     
-    public func refineSearch(with metadata: [String: AnyHashable], originalQuery: String) async {
+    public func refineSearch(with metadata: ProductMetadata, originalQuery: String) async {
         // Cancel previous search
         searchTask?.cancel()
         
-        // Build refined query from original query and metadata
+        // Build refined query from original query and metadata for search engines
+        // We'll also pass structured metadata to the LLM for better categorization
         var refinedQueryParts: [String] = [originalQuery]
         
         // Add brand/manufacturer if available
-        if let brand = metadata["brand"] as? String {
+        if let brand = metadata.brand {
             refinedQueryParts.append(brand)
         }
         
         // Add author if available (for books)
-        if let author = metadata["author"] as? String {
+        if let author = metadata.author {
             refinedQueryParts.append(author)
         }
         
         // Add artist if available (for media)
-        if let artist = metadata["artist"] as? String {
+        if let artist = metadata.artist {
             refinedQueryParts.append(artist)
         }
         
-        // Add ISBN or SKU if available (as identifier)
-        if let isbn = metadata["isbn"] as? String {
-            refinedQueryParts.append(isbn)
-        } else if let sku = metadata["sku"] as? String {
-            refinedQueryParts.append(sku)
-        } else if let asin = metadata["asin"] as? String {
-            // Use ASIN as fallback identifier
-            refinedQueryParts.append(asin)
-        }
+        // Note: We don't add ISBN/SKU/ASIN to the text query as they're not useful for search engines
+        // Instead, we pass them as structured metadata to the LLM
         
         // Combine parts, remove duplicates, and trim
         var seen = Set<String>()
@@ -382,8 +394,8 @@ public class SearchViewModel: ObservableObject {
         
         searchTask = Task {
             do {
-                // Enhance query with LLM
-                let enhancedQuery = try await queryEnhancer.enhance(query: refinedQuery)
+                // Enhance query with LLM, passing structured metadata for better categorization
+                let enhancedQuery = try await queryEnhancer.enhance(query: refinedQuery, metadata: metadata)
                 
                 // For web search, use only the categories from enhance (not store categories)
                 // Store categories are only used for local MapKit search
@@ -403,7 +415,8 @@ public class SearchViewModel: ObservableObject {
                 Task {
                     do {
                         // Step 1: Ask LLM what store types would carry this product
-                        let storeCategories = await queryEnhancer.determineStoreCategories(for: refinedQuery)
+                        // Pass metadata to help with better categorization
+                        let storeCategories = await queryEnhancer.determineStoreCategories(for: refinedQuery, metadata: metadata)
                         
                         // Step 2: Use store categories if available, otherwise fall back to enhancedQuery.categories
                         // Filter out known example categories from enhance prompt
@@ -462,5 +475,26 @@ public class SearchViewModel: ObservableObject {
         }
         
         await searchTask?.value
+    }
+    
+    // Check if a product is a book based on EnhancedQuery indicators
+    private func isBookProduct(enhancedQuery: EnhancedQuery) -> Bool {
+        // Check productType
+        if let productType = enhancedQuery.productType,
+           productType.lowercased().contains("book") {
+            return true
+        }
+        
+        // Check categories
+        if enhancedQuery.categories.contains(where: { $0.lowercased().contains("book") }) {
+            return true
+        }
+        
+        // Check original query
+        if enhancedQuery.original.lowercased().contains("book") {
+            return true
+        }
+        
+        return false
     }
 }

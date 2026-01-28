@@ -759,8 +759,39 @@ final class AmazonProductScraper: @unchecked Sendable {
                             let cleaned = extracted.replacingOccurrences(of: "-", with: "").replacingOccurrences(of: " ", with: "")
                             if cleaned.count == 10 || cleaned.count == 13 {
                                 isbn = extracted
+                                print("[DEBUG] AmazonProductScraper - ISBN extracted from keywords meta: \(isbn ?? "nil")")
                                 break
                             }
+                        }
+                    }
+                }
+            }
+            
+            // Fallback: Extract ISBN from title (common pattern: "Title: ISBN: Author")
+            if isbn == nil, let titleText = title {
+                // Pattern: Look for 10 or 13 digit numbers in the title
+                // Common formats: "Title: 9780143135692: Author" or "Title: ISBN: 9780143135692"
+                // Prioritize patterns that match between colons (more reliable)
+                let isbnPatterns = [
+                    #":\s*(\d{13})(?:\s*:|$)"#,  // 13-digit ISBN between colons (most common)
+                    #":\s*(\d{10})(?:\s*:|$)"#,  // 10-digit ISBN between colons
+                    #"ISBN[:\s]*(\d{10,13})"#,  // Explicit ISBN label
+                    #"isbn[:\s]*(\d{10,13})"#,   // Lowercase ISBN label
+                    #"(\d{13})"#,  // 13-digit ISBN anywhere (fallback)
+                    #"(\d{10})"#   // 10-digit ISBN anywhere (fallback)
+                ]
+                
+                for pattern in isbnPatterns {
+                    if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                       let match = regex.firstMatch(in: titleText, options: [], range: NSRange(location: 0, length: (titleText as NSString).length)),
+                       match.range(at: 1).location != NSNotFound {
+                        let extracted = (titleText as NSString).substring(with: match.range(at: 1))
+                        let cleaned = extracted.replacingOccurrences(of: "-", with: "").replacingOccurrences(of: " ", with: "")
+                        // Validate: ISBN should be exactly 10 or 13 digits
+                        if cleaned.count == 10 || cleaned.count == 13 {
+                            isbn = extracted
+                            print("[DEBUG] AmazonProductScraper - ISBN extracted from title: \(isbn ?? "nil")")
+                            break
                         }
                     }
                 }
@@ -946,6 +977,48 @@ final class AmazonProductScraper: @unchecked Sendable {
                    let extracted = try? authorMeta.attr("content"),
                    !extracted.isEmpty && extracted.count > 2 && !invalidAuthorValues.contains(extracted.lowercased()) {
                     author = extracted
+                    print("[DEBUG] AmazonProductScraper - Author extracted from meta tag: \(author ?? "nil")")
+                }
+            }
+            
+            // Fallback: Extract author from title (common pattern: "Title: ISBN: Author: ..." or "Title: Author")
+            if author == nil, let titleText = title {
+                // Pattern 1: "Title: ISBN: Author: ..." - extract text after ISBN (handles "Walker, Alice" format)
+                // Pattern 2: "Title: Author: ..." - extract text after colon
+                // Pattern 3: Look for "by Author" pattern
+                // Pattern 4: Look for "Last, First" pattern anywhere in title
+                let authorPatterns = [
+                    #":\s*\d{10,13}\s*:\s*([^:]+?)(?:\s*:|$)"#,  // After ISBN: "Title: 9780143135692: Walker, Alice: Books"
+                    #":\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:\s*:|$)"#,  // Name pattern after colon
+                    #"\bby\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)"#,  // "by Author" pattern
+                    #"([A-Z][a-z]+,\s*[A-Z][a-z]+)"#,  // "Last, First" format anywhere
+                    #":\s*([A-Z][a-z]+,\s*[A-Z][a-z]+)"#  // "Last, First" after colon
+                ]
+                
+                for pattern in authorPatterns {
+                    if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                       let match = regex.firstMatch(in: titleText, options: [], range: NSRange(location: 0, length: (titleText as NSString).length)),
+                       match.range(at: 1).location != NSNotFound {
+                        var extracted = (titleText as NSString).substring(with: match.range(at: 1))
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        
+                        // Clean up: remove trailing colons, "Books", etc.
+                        extracted = extracted.replacingOccurrences(of: #":\s*Books?$"#, with: "", options: .regularExpression)
+                        extracted = extracted.trimmingCharacters(in: CharacterSet(charactersIn: " :"))
+                        
+                        // Validate: should be a reasonable author name
+                        let words = extracted.components(separatedBy: CharacterSet(charactersIn: " ,")).filter { !$0.isEmpty }
+                        if !extracted.isEmpty && extracted.count > 2 && 
+                           !invalidAuthorValues.contains(extracted.lowercased()) &&
+                           words.count >= 1 {
+                            // Additional validation: check if it looks like a name (contains letters, not just numbers)
+                            if extracted.rangeOfCharacter(from: CharacterSet.letters) != nil {
+                                author = extracted
+                                print("[DEBUG] AmazonProductScraper - Author extracted from title: \(author ?? "nil")")
+                                break
+                            }
+                        }
+                    }
                 }
             }
             

@@ -61,7 +61,9 @@ public struct SearchView: View {
                                 localStoreCategories: viewModel.localStoreCategories,
                                 onRefine: { result in
                                     Task {
-                                        await viewModel.refineSearch(with: result.metadata, originalQuery: viewModel.originalQuery)
+                                        if let productMetadata = ProductMetadata(from: result.metadata) {
+                                            await viewModel.refineSearch(with: productMetadata, originalQuery: viewModel.originalQuery)
+                                        }
                                     }
                                 }
                             )
@@ -85,7 +87,9 @@ public struct SearchView: View {
                                 localStoreCategories: viewModel.localStoreCategories,
                                 onRefine: { result in
                                     Task {
-                                        await viewModel.refineSearch(with: result.metadata, originalQuery: viewModel.originalQuery)
+                                        if let productMetadata = ProductMetadata(from: result.metadata) {
+                                            await viewModel.refineSearch(with: productMetadata, originalQuery: viewModel.originalQuery)
+                                        }
                                     }
                                 }
                             )

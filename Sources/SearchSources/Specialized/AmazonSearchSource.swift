@@ -408,40 +408,28 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
                 
                 let description = descriptionParts.isEmpty ? nil : descriptionParts.joined(separator: " • ")
                 
-                // Build metadata dictionary
+                // Build ProductMetadata
                 // Prefer image URL from search results, fall back to detail page image
                 let finalImageUrl = productInfo.imageUrl ?? metadata.imageUrl
                 
-                var metadataDict: [String: AnyHashable] = [:]
-                if let price = metadata.price {
-                    metadataDict["price"] = price
-                }
-                if let brand = metadata.brand {
-                    metadataDict["brand"] = brand
-                }
+                let productMetadata = ProductMetadata(
+                    isbn: metadata.isbn,
+                    author: metadata.author,
+                    sku: metadata.sku,
+                    asin: metadata.asin,
+                    brand: metadata.brand,
+                    artist: metadata.artist,
+                    price: metadata.price,
+                    imageUrl: finalImageUrl,
+                    availability: metadata.availability,
+                    ratings: metadata.ratings
+                )
+                
+                // Convert to dictionary for SearchResult (backward compatibility)
+                var metadataDict = productMetadata.toDictionary()
+                // Add ratings as Double if available (ProductMetadata stores it as Double)
                 if let ratings = metadata.ratings {
                     metadataDict["ratings"] = ratings
-                }
-                if let availability = metadata.availability {
-                    metadataDict["availability"] = availability
-                }
-                if let asin = metadata.asin {
-                    metadataDict["asin"] = asin
-                }
-                if let imageUrl = finalImageUrl {
-                    metadataDict["imageUrl"] = imageUrl
-                }
-                if let isbn = metadata.isbn {
-                    metadataDict["isbn"] = isbn
-                }
-                if let sku = metadata.sku {
-                    metadataDict["sku"] = sku
-                }
-                if let author = metadata.author {
-                    metadataDict["author"] = author
-                }
-                if let artist = metadata.artist {
-                    metadataDict["artist"] = artist
                 }
                 
                 // #region agent log

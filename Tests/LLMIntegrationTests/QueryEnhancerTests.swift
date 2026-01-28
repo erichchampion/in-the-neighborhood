@@ -107,6 +107,90 @@ final class QueryEnhancerTests: XCTestCase {
         XCTAssertEqual(enhanced.priceMax, 300.0)
         XCTAssertEqual(enhanced.condition, .new)
     }
+    
+    // MARK: - Metadata-Aware Tests
+    
+    func test_QueryEnhancer_PassesMetadataToLLM() async throws {
+        let query = "The color purple"
+        let metadata = ProductMetadata(
+            isbn: "9780143135692",
+            author: "Alice Walker"
+        )
+        
+        mockLLMService.mockResponse = EnhancedQuery(
+            original: query,
+            productType: "book",
+            categories: ["bookstore"],
+            priceMax: nil,
+            condition: nil
+        )
+        
+        let enhanced = try await enhancer.enhance(query: query, metadata: metadata)
+        
+        // Verify metadata was passed to LLM service
+        XCTAssertNotNil(mockLLMService.receivedMetadata)
+        XCTAssertEqual(mockLLMService.receivedMetadata?.isbn, "9780143135692")
+        XCTAssertEqual(mockLLMService.receivedMetadata?.author, "Alice Walker")
+        
+        // Verify enhanced query reflects book categorization
+        XCTAssertEqual(enhanced.productType, "book")
+        XCTAssertTrue(enhanced.categories.contains("bookstore"))
+    }
+    
+    func test_QueryEnhancer_HandlesISBNMetadata() async throws {
+        let query = "The color purple"
+        let metadata = ProductMetadata(isbn: "9780143135692")
+        
+        mockLLMService.mockResponse = EnhancedQuery(
+            original: query,
+            productType: "book",
+            categories: ["bookstore"],
+            priceMax: nil,
+            condition: nil
+        )
+        
+        let enhanced = try await enhancer.enhance(query: query, metadata: metadata)
+        
+        XCTAssertEqual(mockLLMService.receivedMetadata?.isbn, "9780143135692")
+        XCTAssertEqual(enhanced.productType, "book")
+    }
+    
+    func test_QueryEnhancer_HandlesSKUMetadata() async throws {
+        let query = "office chair"
+        let metadata = ProductMetadata(sku: "OC-12345")
+        
+        mockLLMService.mockResponse = EnhancedQuery(
+            original: query,
+            productType: "office chair",
+            categories: ["furniture store", "office supply"],
+            priceMax: nil,
+            condition: nil
+        )
+        
+        let enhanced = try await enhancer.enhance(query: query, metadata: metadata)
+        
+        XCTAssertEqual(mockLLMService.receivedMetadata?.sku, "OC-12345")
+        XCTAssertEqual(enhanced.productType, "office chair")
+    }
+    
+    func test_QueryEnhancer_HandlesAuthorMetadata() async throws {
+        let query = "The color purple"
+        let metadata = ProductMetadata(author: "Alice Walker")
+        
+        mockLLMService.mockResponse = EnhancedQuery(
+            original: query,
+            productType: "book",
+            categories: ["bookstore"],
+            priceMax: nil,
+            condition: nil
+        )
+        
+        let enhanced = try await enhancer.enhance(query: query, metadata: metadata)
+        
+        XCTAssertEqual(mockLLMService.receivedMetadata?.author, "Alice Walker")
+        XCTAssertEqual(enhanced.productType, "book")
+        XCTAssertTrue(enhanced.categories.contains("bookstore"))
+    }
 }
 
 // MARK: - Mock LLM Service
@@ -114,8 +198,11 @@ final class QueryEnhancerTests: XCTestCase {
 final class MockLLMService: LLMService, @unchecked Sendable {
     var mockResponse: EnhancedQuery?
     var shouldThrow = false
+    var receivedMetadata: ProductMetadata?
     
-    func enhanceQuery(_ query: String) async throws -> EnhancedQuery {
+    func enhanceQuery(_ query: String, metadata: ProductMetadata?) async throws -> EnhancedQuery {
+        receivedMetadata = metadata
+        
         if shouldThrow {
             throw LLMServiceError.modelUnavailable
         }

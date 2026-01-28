@@ -206,13 +206,14 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
         let itemLocation = item.placemark.location
         let distance = itemLocation?.distance(from: location)
         
-        var metadata: [String: AnyHashable] = [:]
-        if let phone = item.phoneNumber {
-            metadata["phone"] = phone
-        }
-        if let url = item.url {
-            metadata["url"] = url.absoluteString
-        }
+        // Build ProductMetadata
+        let productMetadata = ProductMetadata(
+            phone: item.phoneNumber,
+            url: item.url?.absoluteString
+        )
+        
+        // Convert to dictionary for SearchResult (backward compatibility)
+        let metadata = productMetadata.toDictionary()
         
         return SearchResult(
             id: UUID().uuidString,

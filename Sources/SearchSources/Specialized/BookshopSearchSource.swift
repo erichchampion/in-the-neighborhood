@@ -196,15 +196,15 @@ public final class BookshopSearchSource: SearchSource {
                     description = price
                 }
                 
-                // Build metadata
-                var metadata: [String: AnyHashable] = [:]
-                if let author = author {
-                    metadata["author"] = author
-                }
-                if let price = price {
-                    metadata["price"] = price
-                }
-                metadata["attribution"] = "Bookshop.org"
+                // Build ProductMetadata
+                let productMetadata = ProductMetadata(
+                    author: author,
+                    price: price,
+                    attribution: "Bookshop.org"
+                )
+                
+                // Convert to dictionary for SearchResult (backward compatibility)
+                let metadata = productMetadata.toDictionary()
                 
                 // Avoid duplicates
                 if results.contains(where: { $0.url?.absoluteString == url.absoluteString }) {

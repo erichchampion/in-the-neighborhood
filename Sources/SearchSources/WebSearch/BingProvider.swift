@@ -289,21 +289,31 @@ public final class BingProvider: WebSearchProvider, @unchecked Sendable {
                     return nil
                 }
                 
-                var metadata: [String: AnyHashable] = [:]
-                if let displayUrl = page.displayUrl {
-                    metadata["displayUrl"] = displayUrl
-                }
-                if let dateLastCrawled = page.dateLastCrawled {
-                    metadata["dateLastCrawled"] = dateLastCrawled
-                }
-                
                 // Extract shopping metadata
                 let shoppingMetadata = extractShoppingMetadata(
                     snippet: page.snippet,
                     url: urlString,
                     imageUrlMap: imageUrlMap
                 )
-                metadata.merge(shoppingMetadata) { (_, new) in new }
+                
+                // Build ProductMetadata
+                let productMetadata = ProductMetadata(
+                    price: shoppingMetadata["price"] as? String,
+                    imageUrl: shoppingMetadata["imageUrl"] as? String,
+                    displayUrl: page.displayUrl,
+                    dateLastCrawled: page.dateLastCrawled,
+                    shoppingDomain: shoppingMetadata["shoppingDomain"] as? String,
+                    isShoppingResult: shoppingMetadata["isShoppingResult"] as? Bool
+                )
+                
+                // Convert to dictionary for SearchResult (backward compatibility)
+                var metadata = productMetadata.toDictionary()
+                // Merge any additional shopping metadata that might not be in ProductMetadata
+                for (key, value) in shoppingMetadata {
+                    if metadata[key] == nil {
+                        metadata[key] = value
+                    }
+                }
                 
                 return SearchResult(
                     id: UUID().uuidString,

@@ -167,6 +167,87 @@ final class LlamaCppLLMServiceTests: XCTestCase {
         XCTAssertEqual(enhanced.original, query)
     }
     
+    // MARK: - Metadata-Aware Tests
+    
+    func test_EnhanceQuery_WithISBNMetadata_CategorizesAsBook() async throws {
+        guard await modelIsAvailable() else {
+            throw XCTSkip("LLM model not available for testing")
+        }
+        
+        let query = "The color purple"
+        let metadata = ProductMetadata(isbn: "9780143135692")
+        
+        let enhanced = try await service.enhanceQuery(query, metadata: metadata)
+        
+        XCTAssertEqual(enhanced.original, query)
+        // Should recognize ISBN and categorize as book
+        XCTAssertTrue(
+            enhanced.productType?.lowercased().contains("book") == true ||
+            enhanced.categories.contains("bookstore") ||
+            enhanced.categories.contains { $0.lowercased().contains("book") }
+        )
+    }
+    
+    func test_EnhanceQuery_WithAuthorMetadata_CategorizesAsBook() async throws {
+        guard await modelIsAvailable() else {
+            throw XCTSkip("LLM model not available for testing")
+        }
+        
+        let query = "The color purple"
+        let metadata = ProductMetadata(author: "Alice Walker")
+        
+        let enhanced = try await service.enhanceQuery(query, metadata: metadata)
+        
+        XCTAssertEqual(enhanced.original, query)
+        // Should recognize author and categorize as book
+        XCTAssertTrue(
+            enhanced.productType?.lowercased().contains("book") == true ||
+            enhanced.categories.contains("bookstore") ||
+            enhanced.categories.contains { $0.lowercased().contains("book") }
+        )
+    }
+    
+    func test_EnhanceQuery_WithSKUMetadata_ExtractsProductType() async throws {
+        guard await modelIsAvailable() else {
+            throw XCTSkip("LLM model not available for testing")
+        }
+        
+        let query = "office chair"
+        let metadata = ProductMetadata(sku: "OC-12345")
+        
+        let enhanced = try await service.enhanceQuery(query, metadata: metadata)
+        
+        XCTAssertEqual(enhanced.original, query)
+        XCTAssertNotNil(enhanced.productType)
+        // Should extract product type from query
+        XCTAssertTrue(enhanced.productType?.lowercased().contains("chair") == true || 
+                     enhanced.productType?.lowercased().contains("office") == true)
+    }
+    
+    func test_EnhanceQuery_FallbackParser_UsesISBNMetadata() async throws {
+        // Test fallback parser with metadata (when LLM unavailable)
+        let query = "The color purple"
+        let metadata = ProductMetadata(isbn: "9780143135692")
+        
+        let enhanced = try await service.enhanceQuery(query, metadata: metadata)
+        
+        XCTAssertEqual(enhanced.original, query)
+        // Fallback parser should recognize ISBN and categorize as book
+        XCTAssertTrue(enhanced.categories.contains("bookstore"))
+    }
+    
+    func test_EnhanceQuery_FallbackParser_UsesAuthorMetadata() async throws {
+        // Test fallback parser with metadata (when LLM unavailable)
+        let query = "The color purple"
+        let metadata = ProductMetadata(author: "Alice Walker")
+        
+        let enhanced = try await service.enhanceQuery(query, metadata: metadata)
+        
+        XCTAssertEqual(enhanced.original, query)
+        // Fallback parser should recognize author and categorize as book
+        XCTAssertTrue(enhanced.categories.contains("bookstore"))
+    }
+    
     // MARK: - Helper Methods
     
     private func modelIsAvailable() async -> Bool {

@@ -321,39 +321,23 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
             let urlString = volumeInfo.infoLink ?? volumeInfo.previewLink
             let url = urlString.flatMap { URL(string: $0) }
             
-            // Build metadata dictionary
-            var metadata: [String: AnyHashable] = [:]
-            if !authorString.isEmpty {
-                metadata["author"] = authorString
-            }
-            if let isbn = isbn {
-                metadata["isbn"] = isbn
-            }
-            if let imageUrl = imageUrl {
-                metadata["imageUrl"] = imageUrl
-            }
-            if let publisher = volumeInfo.publisher {
-                metadata["publisher"] = publisher
-            }
-            if let publishedDate = volumeInfo.publishedDate {
-                metadata["publishedDate"] = publishedDate
-            }
-            if let pageCount = volumeInfo.pageCount {
-                metadata["pageCount"] = String(pageCount)
-            }
-            if let averageRating = volumeInfo.averageRating {
-                metadata["averageRating"] = averageRating
-            }
-            if let ratingsCount = volumeInfo.ratingsCount {
-                metadata["ratingsCount"] = ratingsCount
-            }
-            if let price = price {
-                metadata["price"] = price
-            }
-            if let buyLink = volume.saleInfo?.buyLink {
-                metadata["buyLink"] = buyLink
-            }
-            metadata["source"] = "Google Books"
+            // Build ProductMetadata
+            let productMetadata = ProductMetadata(
+                isbn: isbn,
+                author: authorString.isEmpty ? nil : authorString,
+                price: price,
+                imageUrl: imageUrl,
+                publisher: volumeInfo.publisher,
+                publishedDate: volumeInfo.publishedDate,
+                pageCount: volumeInfo.pageCount.map { String($0) },
+                averageRating: volumeInfo.averageRating,
+                ratingsCount: volumeInfo.ratingsCount,
+                buyLink: volume.saleInfo?.buyLink,
+                source: "Google Books"
+            )
+            
+            // Convert to dictionary for SearchResult (backward compatibility)
+            let metadata = productMetadata.toDictionary()
             
             let result = SearchResult(
                 id: volume.id,

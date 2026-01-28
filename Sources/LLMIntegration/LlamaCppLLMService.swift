@@ -47,7 +47,7 @@ public actor LlamaCppLLMService: LLMService {
     
     // MARK: - LLMService Protocol
     
-    public func enhanceQuery(_ query: String) async throws -> EnhancedQuery {
+    public func enhanceQuery(_ query: String, metadata: ProductMetadata? = nil) async throws -> EnhancedQuery {
         // Validate input
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else {
@@ -57,7 +57,7 @@ public actor LlamaCppLLMService: LLMService {
         // Try to use LLM if model is available, otherwise fall back to rule-based parsing
         if await modelIsAvailable() {
             do {
-                let result = try await enhanceQueryWithLLM(trimmedQuery)
+                let result = try await enhanceQueryWithLLM(trimmedQuery, metadata: metadata)
                 print("[LlamaCppLLMService] enhanceQuery succeeded for query: '\(trimmedQuery)'")
                 return result
             } catch {
@@ -74,12 +74,12 @@ public actor LlamaCppLLMService: LLMService {
         }
         
         // Fallback to rule-based parsing
-        return try parseQuery(trimmedQuery)
+        return try parseQuery(trimmedQuery, metadata: metadata)
     }
     
     /// Determines what types of local stores would carry a given product
     /// Returns an array of store category names (e.g., ["bookstore", "furniture store"])
-    public func determineStoreTypes(for productQuery: String) async throws -> [String] {
+    public func determineStoreTypes(for productQuery: String, metadata: ProductMetadata? = nil) async throws -> [String] {
         // Validate input
         let trimmedQuery = productQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else {
@@ -104,7 +104,7 @@ public actor LlamaCppLLMService: LLMService {
         // Try to use LLM if model is available, otherwise return empty array
         if await modelIsAvailable() {
             do {
-                let result = try await determineStoreTypesWithLLM(trimmedQuery)
+                let result = try await determineStoreTypesWithLLM(trimmedQuery, metadata: metadata)
                 // #region agent log
                 logToFile([
                     "sessionId": "debug-session",
@@ -153,7 +153,7 @@ public actor LlamaCppLLMService: LLMService {
         return LLMModelDownloadManager.shared.isModelAvailable()
     }
     
-    private func enhanceQueryWithLLM(_ query: String) async throws -> EnhancedQuery {
+    private func enhanceQueryWithLLM(_ query: String, metadata: ProductMetadata?) async throws -> EnhancedQuery {
         // All llama.cpp operations must run on the serial queue
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [weak self] in
@@ -173,7 +173,7 @@ public actor LlamaCppLLMService: LLMService {
                     }
                     
                     // Build prompt for query enhancement
-                    let prompt = self.buildQueryEnhancementPrompt(query: query)
+                    let prompt = self.buildQueryEnhancementPrompt(query: query, metadata: metadata)
                     
                     // Console log the prompt
                     print("[LlamaCppLLMService] Sending prompt to LLM for query: '\(query)'")
@@ -309,7 +309,7 @@ public actor LlamaCppLLMService: LLMService {
         }
     }
     
-    private func determineStoreTypesWithLLM(_ productQuery: String) async throws -> [String] {
+    private func determineStoreTypesWithLLM(_ productQuery: String, metadata: ProductMetadata?) async throws -> [String] {
         // All llama.cpp operations must run on the serial queue
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [weak self] in
@@ -329,7 +329,7 @@ public actor LlamaCppLLMService: LLMService {
                     }
                     
                     // Build prompt for store type detection
-                    let prompt = self.buildStoreTypeDetectionPrompt(productQuery: productQuery)
+                    let prompt = self.buildStoreTypeDetectionPrompt(productQuery: productQuery, metadata: metadata)
                     
                     // Console log the prompt
                     print("[LlamaCppLLMService] Sending store categories prompt for product: '\(productQuery)'")
@@ -460,24 +460,65 @@ public actor LlamaCppLLMService: LLMService {
         throw LLMServiceError.modelNotFound
     }
     
-    nonisolated private func buildQueryEnhancementPrompt(query: String) -> String {
+    nonisolated private func buildQueryEnhancementPrompt(query: String, metadata: ProductMetadata?) -> String {
         // Build a prompt that asks the LLM to extract structured information from the query
         // and return it as JSON
         let config = modelConfig ?? LLMModelCatalog.shared.defaultModel
         let templateTokens = config.chatTemplate.tokens
+        
+        // Build metadata context section if metadata is available
+        var metadataContext = ""
+        if let metadata = metadata, !metadata.isEmpty {
+            var metadataParts: [String] = []
+            
+            if let isbn = metadata.isbn {
+                metadataParts.append("ISBN: \(isbn) (indicates this is a book)")
+            }
+            if let author = metadata.author {
+                metadataParts.append("Author: \(author) (indicates this is a book or media)")
+            }
+            if let sku = metadata.sku {
+                metadataParts.append("SKU: \(sku) (indicates this is a specific product)")
+            }
+            if let asin = metadata.asin {
+                metadataParts.append("ASIN: \(asin) (indicates this is an Amazon product)")
+            }
+            if let brand = metadata.brand {
+                metadataParts.append("Brand: \(brand) (indicates manufacturer)")
+            }
+            if let artist = metadata.artist {
+                metadataParts.append("Artist: \(artist) (indicates this is media/music)")
+            }
+            
+            if !metadataParts.isEmpty {
+                metadataContext = "\n\nAdditional context about the product:\n" + metadataParts.joined(separator: "\n") + "\n\nUse this metadata to help determine the product type and categories. For example:\n- ISBN or Author present → productType: 'book', categories: ['bookstore']\n- SKU or ASIN present → productType: specific product name, categories: appropriate retail stores\n- Brand present → productType: brand + product name, categories: stores that sell that brand"
+            }
+        }
         
         // Build system prompt
         let systemPrompt = """
         You are a JSON API. You MUST respond with ONLY valid JSON. Do not include any explanations, conversation, or other text.
         
         Extract structured information from the user's search query and return it as a JSON object with these fields:
-        - productType: The main product or item (e.g., "office chair", "bicycle")
-        - categories: Array of business categories (e.g., ["furniture store", "office supply"])
+        - productType: The main product or item (e.g., "office chair", "bicycle", "book")
+        - categories: Array of business categories (e.g., ["furniture store", "office supply"], ["bookstore"], ["sporting goods"])
         - priceMax: Maximum price if mentioned (number, or null)
         - condition: Product condition if mentioned ("new", "used", "refurbished", or null)
         
+        IMPORTANT: Pay attention to metadata clues:
+        - ISBN numbers indicate books → productType should be "book" or book title, categories should include "bookstore"
+        - Author names indicate books or media → productType should reflect the book/media title, categories should include "bookstore" or "media store"
+        - SKU numbers indicate specific products → productType should be the specific product name
+        - ASIN indicates Amazon products → productType should be the specific product name
+        - Brand names indicate manufacturer → include brand in productType if relevant
+        
+        Examples:
+        - Query: "The color purple" with ISBN: "9780143135692" → {"productType": "book", "categories": ["bookstore"], "priceMax": null, "condition": null}
+        - Query: "The color purple" with Author: "Alice Walker" → {"productType": "book", "categories": ["bookstore"], "priceMax": null, "condition": null}
+        - Query: "office chair" with SKU: "OC-12345" → {"productType": "office chair", "categories": ["furniture store", "office supply"], "priceMax": null, "condition": null}
+        
         Your response must be ONLY the JSON object starting with { and ending with }. No other text.
-        """
+        """ + metadataContext
         
         // Build user prompt - be very explicit
         let userPrompt = "Query: \"\(query)\". Return JSON only:"
@@ -515,10 +556,36 @@ public actor LlamaCppLLMService: LLMService {
         }
     }
     
-    nonisolated private func buildStoreTypeDetectionPrompt(productQuery: String) -> String {
+    nonisolated private func buildStoreTypeDetectionPrompt(productQuery: String, metadata: ProductMetadata?) -> String {
         // Build a prompt that asks the LLM what types of local stores would carry a product
         let config = modelConfig ?? LLMModelCatalog.shared.defaultModel
         let templateTokens = config.chatTemplate.tokens
+        
+        // Build metadata context section if metadata is available
+        var metadataContext = ""
+        if let metadata = metadata, !metadata.isEmpty {
+            var metadataParts: [String] = []
+            
+            if let isbn = metadata.isbn {
+                metadataParts.append("ISBN: \(isbn) (indicates this is a book)")
+            }
+            if let author = metadata.author {
+                metadataParts.append("Author: \(author) (indicates this is a book or media)")
+            }
+            if let sku = metadata.sku {
+                metadataParts.append("SKU: \(sku) (indicates this is a specific product)")
+            }
+            if let asin = metadata.asin {
+                metadataParts.append("ASIN: \(asin) (indicates this is an Amazon product)")
+            }
+            if let brand = metadata.brand {
+                metadataParts.append("Brand: \(brand) (indicates manufacturer)")
+            }
+            
+            if !metadataParts.isEmpty {
+                metadataContext = "\n\nAdditional context about the product:\n" + metadataParts.joined(separator: "\n") + "\n\nUse this metadata to help determine store types. For example:\n- ISBN or Author present → storeCategories: ['bookstore']\n- SKU or ASIN present → storeCategories: appropriate retail stores for that product type"
+            }
+        }
         
         // Build system prompt
         let systemPrompt = """
@@ -529,8 +596,13 @@ public actor LlamaCppLLMService: LLMService {
         
         IMPORTANT: Only return store categories that are actually relevant to the specific product being asked about. Do not include generic or example categories. Base your response solely on the product provided.
         
+        Pay attention to metadata clues:
+        - ISBN numbers indicate books → storeCategories should include "bookstore"
+        - Author names indicate books or media → storeCategories should include "bookstore" or "media store"
+        - SKU or ASIN indicate specific products → determine appropriate retail stores based on product type
+        
         Return valid JSON only, no explanation. If you cannot determine store types, return an empty array.
-        """
+        """ + metadataContext
         
         // Build user prompt
         let userPrompt = "What types of local stores would carry this product: \"\(productQuery)\"?"
@@ -1593,7 +1665,7 @@ public actor LlamaCppLLMService: LLMService {
         return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    nonisolated private func parseQuery(_ query: String) throws -> EnhancedQuery {
+    nonisolated private func parseQuery(_ query: String, metadata: ProductMetadata?) throws -> EnhancedQuery {
         // Basic rule-based parsing as fallback
         var productType: String?
         var categories: [String] = []
@@ -1601,6 +1673,41 @@ public actor LlamaCppLLMService: LLMService {
         var condition: ProductCondition?
         
         let lowercased = query.lowercased()
+        
+        // Use metadata to improve categorization
+        if let metadata = metadata {
+            // ISBN indicates a book
+            if metadata.isbn != nil {
+                categories.append("bookstore")
+                // Query is the book title
+                productType = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            // Author indicates book or media
+            else if metadata.author != nil {
+                categories.append("bookstore")
+                productType = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            // SKU or ASIN indicates a specific product
+            else if metadata.sku != nil || metadata.asin != nil {
+                // Product type is the query itself
+                productType = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Categories will be determined by keyword matching below
+            }
+            // Brand indicates manufacturer
+            else if metadata.brand != nil {
+                // Include brand in product type if not already present
+                if let brand = metadata.brand, !lowercased.contains(brand.lowercased()) {
+                    productType = "\(brand) \(query)".trimmingCharacters(in: .whitespacesAndNewlines)
+                } else {
+                    productType = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+            // Artist indicates media/music
+            else if metadata.artist != nil {
+                categories.append("media store")
+                productType = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
         
         // Extract price constraint
         if let priceMatch = lowercased.range(of: #"under\s+\$?(\d+)"#, options: .regularExpression) {
@@ -1620,26 +1727,30 @@ public actor LlamaCppLLMService: LLMService {
             condition = .refurbished
         }
         
-        // Simple keyword-based category detection
-        if lowercased.contains("book") {
-            categories.append("bookstore")
-        }
-        if lowercased.contains("bicycle") || lowercased.contains("bike") {
-            categories.append("sporting goods")
-        }
-        if lowercased.contains("furniture") || lowercased.contains("chair") {
-            categories.append("furniture store")
-        }
-        if lowercased.contains("office") {
-            categories.append("office supply")
+        // Simple keyword-based category detection (only if not already set by metadata)
+        if categories.isEmpty {
+            if lowercased.contains("book") {
+                categories.append("bookstore")
+            }
+            if lowercased.contains("bicycle") || lowercased.contains("bike") {
+                categories.append("sporting goods")
+            }
+            if lowercased.contains("furniture") || lowercased.contains("chair") {
+                categories.append("furniture store")
+            }
+            if lowercased.contains("office") {
+                categories.append("office supply")
+            }
         }
         
-        // Extract product type (simplified - take last noun phrase)
-        let words = query.components(separatedBy: .whitespaces)
-        if words.count > 1 {
-            productType = words.suffix(2).joined(separator: " ")
-        } else {
-            productType = words.first
+        // Extract product type (simplified - take last noun phrase) if not set by metadata
+        if productType == nil {
+            let words = query.components(separatedBy: .whitespaces)
+            if words.count > 1 {
+                productType = words.suffix(2).joined(separator: " ")
+            } else {
+                productType = words.first
+            }
         }
         
         return EnhancedQuery(

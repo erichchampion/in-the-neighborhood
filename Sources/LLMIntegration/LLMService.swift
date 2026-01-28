@@ -1,8 +1,10 @@
 import Foundation
 import MetasearchCore
 
+/// Protocol for LLM services that enhance search queries
+/// Uses ProductMetadata (Sendable) for type-safe metadata passing
 public protocol LLMService: Sendable {
-    func enhanceQuery(_ query: String) async throws -> EnhancedQuery
+    func enhanceQuery(_ query: String, metadata: ProductMetadata?) async throws -> EnhancedQuery
 }
 
 public enum LLMServiceError: Error {
