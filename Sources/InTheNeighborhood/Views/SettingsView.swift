@@ -12,6 +12,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Search") {
+                    Toggle("Use AI to choose searches", isOn: $settingsManager.useAgentSearch)
+                        .accessibilityLabel("Use AI to choose searches")
+                        .accessibilityHint("When on, the AI model decides which search tools to run (web, products, local stores)")
+                }
+                
                 Section("AI Model") {
                     Picker("Query enhancement model", selection: $settingsManager.selectedModelID) {
                         ForEach(LLMModelCatalog.shared.recommendedModels, id: \.id) { modelConfig in

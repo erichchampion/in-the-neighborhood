@@ -24,6 +24,7 @@ public class SearchViewModel: ObservableObject {
     private let amazonSource: any SearchSource
     private let googleBooksSource: any SearchSource
     private let mapKitSource: any SearchSource
+    private let searchAgent: SearchAgent?
     private var searchTask: Task<Void, Never>?
     private let debounceDelay: TimeInterval = 0.5 // seconds
     
@@ -44,13 +45,15 @@ public class SearchViewModel: ObservableObject {
         queryEnhancer: QueryEnhancer,
         amazonSource: any SearchSource,
         googleBooksSource: any SearchSource,
-        mapKitSource: any SearchSource
+        mapKitSource: any SearchSource,
+        searchAgent: SearchAgent? = nil
     ) {
         self.coordinator = coordinator
         self.queryEnhancer = queryEnhancer
         self.amazonSource = amazonSource
         self.googleBooksSource = googleBooksSource
         self.mapKitSource = mapKitSource
+        self.searchAgent = searchAgent
     }
     
     public func search(query: String) async {
@@ -86,31 +89,73 @@ public class SearchViewModel: ObservableObject {
         isLoadingLocal = true
         
         searchTask = Task {
-            // Launch three concurrent search threads - they update results independently
-            // Don't wait for all to complete - each thread updates its results as it finishes
-            print("[SearchViewModel] Starting all three search threads concurrently for query: '\(query)'")
+            if SettingsManager.shared.useAgentSearch, let agent = searchAgent {
+                // Agent-driven search: LLM chooses tools; fallback to classic on parse failure or max iterations
+                print("[SearchViewModel] Using agent search for query: '\(query)'")
+                do {
+                    let result = try await agent.run(
+                        userQuery: query,
+                        metadata: nil,
+                        classicFallback: { [weak self] fallbackQuery in
+                            await self?.runClassicSearch(query: fallbackQuery) ?? AgentSearchResult(
+                                webResults: [], amazonResults: [], localResults: [], localStoreCategories: []
+                            )
+                        }
+                    )
+                    guard !Task.isCancelled else { return }
+                    webResults = result.webResults
+                    amazonResults = result.amazonResults
+                    localResults = result.localResults
+                    localStoreCategories = result.localStoreCategories
+                    results = result.webResults + result.amazonResults + result.localResults
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    let fallback = await runClassicSearch(query: query)
+                    webResults = fallback.webResults
+                    amazonResults = fallback.amazonResults
+                    localResults = fallback.localResults
+                    localStoreCategories = fallback.localStoreCategories
+                    results = fallback.webResults + fallback.amazonResults + fallback.localResults
+                    if webResults.isEmpty && amazonResults.isEmpty && localResults.isEmpty {
+                        errorMessage = error.localizedDescription
+                    }
+                }
+                isLoadingWeb = false
+                isLoadingAmazon = false
+                isLoadingLocal = false
+                state = .loaded
+                return
+            }
             
-            // Use async let to ensure all tasks start immediately and run concurrently
+            // Classic path: three concurrent search threads
+            print("[SearchViewModel] Starting all three search threads concurrently for query: '\(query)'")
             async let webTask = searchWeb(query: query)
             async let amazonTask = searchAmazon(query: query)
             async let localTask = searchLocal(query: query)
             
-            // Wait for each task to complete and update state
             _ = await webTask
-            await MainActor.run {
-                updateStateAfterThreadCompletion()
-            }
-            
+            await MainActor.run { updateStateAfterThreadCompletion() }
             _ = await amazonTask
-            await MainActor.run {
-                updateStateAfterThreadCompletion()
-            }
-            
+            await MainActor.run { updateStateAfterThreadCompletion() }
             _ = await localTask
-            await MainActor.run {
-                updateStateAfterThreadCompletion()
-            }
+            await MainActor.run { updateStateAfterThreadCompletion() }
         }
+    }
+    
+    /// Runs web, product, and local search for the given query and returns combined result (used for agent fallback).
+    private func runClassicSearch(query: String) async -> AgentSearchResult {
+        async let w = searchWeb(query: query)
+        async let a = searchAmazon(query: query)
+        async let l = searchLocal(query: query)
+        _ = await w
+        _ = await a
+        _ = await l
+        return AgentSearchResult(
+            webResults: webResults,
+            amazonResults: amazonResults,
+            localResults: localResults,
+            localStoreCategories: localStoreCategories
+        )
     }
     
     /// Updates the overall state after a search thread completes
@@ -351,13 +396,23 @@ public class SearchViewModel: ObservableObject {
         errorMessage = nil
     }
     
-    public func refineSearch(with metadata: ProductMetadata, originalQuery: String) async {
+    /// Refines the current search using product metadata and optional full result title (e.g. from the card the user tapped).
+    /// - Parameters:
+    ///   - metadata: Product metadata (ISBN, SKU, author, brand, etc.).
+    ///   - originalQuery: The query that produced the results.
+    ///   - resultTitle: Optional full product title from the result card; when provided, used to build a more specific refined query.
+    public func refineSearch(with metadata: ProductMetadata, originalQuery: String, resultTitle: String? = nil) async {
+        print("[SearchViewModel] refineSearch called — originalQuery: '\(originalQuery)', resultTitle: '\(resultTitle ?? "")', hasMetadata: \(!metadata.isEmpty)")
+        
         // Cancel previous search
         searchTask?.cancel()
         
-        // Build refined query from original query and metadata for search engines
-        // We'll also pass structured metadata to the LLM for better categorization
-        var refinedQueryParts: [String] = [originalQuery]
+        // Build refined query: prefer full product title when provided, then add original query and metadata
+        var refinedQueryParts: [String] = []
+        if let title = resultTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+            refinedQueryParts.append(title)
+        }
+        refinedQueryParts.append(originalQuery)
         
         // Add brand/manufacturer if available
         if let brand = metadata.brand {
@@ -374,8 +429,13 @@ public class SearchViewModel: ObservableObject {
             refinedQueryParts.append(artist)
         }
         
-        // Note: We don't add ISBN/SKU/ASIN to the text query as they're not useful for search engines
-        // Instead, we pass them as structured metadata to the LLM
+        // Add concrete identifiers when available (ISBN, SKU) for more precise search
+        if let isbn = metadata.isbn {
+            refinedQueryParts.append(isbn)
+        }
+        if let sku = metadata.sku {
+            refinedQueryParts.append(sku)
+        }
         
         // Combine parts, remove duplicates, and trim
         var seen = Set<String>()
@@ -391,8 +451,53 @@ public class SearchViewModel: ObservableObject {
         
         state = .loading
         errorMessage = nil
+        self.originalQuery = refinedQuery
+        webResults = []
+        amazonResults = []
+        localResults = []
+        results = []
+        localStoreCategories = []
+        isLoadingWeb = true
+        isLoadingAmazon = true
+        isLoadingLocal = true
         
         searchTask = Task {
+            if SettingsManager.shared.useAgentSearch, let agent = searchAgent {
+                do {
+                    let result = try await agent.run(
+                        userQuery: refinedQuery,
+                        metadata: metadata,
+                        classicFallback: { [weak self] fallbackQuery in
+                            await self?.runClassicSearch(query: fallbackQuery) ?? AgentSearchResult(
+                                webResults: [], amazonResults: [], localResults: [], localStoreCategories: []
+                            )
+                        }
+                    )
+                    guard !Task.isCancelled else { return }
+                    webResults = result.webResults
+                    amazonResults = result.amazonResults
+                    localResults = result.localResults
+                    localStoreCategories = result.localStoreCategories
+                    results = result.webResults + result.amazonResults + result.localResults
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    let fallback = await runClassicSearch(query: refinedQuery)
+                    webResults = fallback.webResults
+                    amazonResults = fallback.amazonResults
+                    localResults = fallback.localResults
+                    localStoreCategories = fallback.localStoreCategories
+                    results = fallback.webResults + fallback.amazonResults + fallback.localResults
+                    if webResults.isEmpty && amazonResults.isEmpty && localResults.isEmpty {
+                        errorMessage = error.localizedDescription
+                    }
+                }
+                isLoadingWeb = false
+                isLoadingAmazon = false
+                isLoadingLocal = false
+                state = .loaded
+                return
+            }
+            
             do {
                 // Enhance query with LLM, passing structured metadata for better categorization
                 let enhancedQuery = try await queryEnhancer.enhance(query: refinedQuery, metadata: metadata)

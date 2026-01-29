@@ -12,14 +12,16 @@ public struct SearchView: View {
         queryEnhancer: QueryEnhancer,
         amazonSource: any SearchSource,
         googleBooksSource: any SearchSource,
-        mapKitSource: any SearchSource
+        mapKitSource: any SearchSource,
+        searchAgent: SearchAgent? = nil
     ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel(
             coordinator: coordinator,
             queryEnhancer: queryEnhancer,
             amazonSource: amazonSource,
             googleBooksSource: googleBooksSource,
-            mapKitSource: mapKitSource
+            mapKitSource: mapKitSource,
+            searchAgent: searchAgent
         ))
     }
     
@@ -44,12 +46,8 @@ public struct SearchView: View {
                         EmptyStateView(message: NSLocalizedString("Search for products at local merchants and ethical online retailers", comment: ""))
                         
                     case .loading:
-                        // Show loading view only if no results yet
-                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
-                            LoadingView()
-                        } else {
-                            // Show results with loading indicators
-                            ResultsView(
+                        // Show results area with per-section progress indicators (same layout as loaded state)
+                        ResultsView(
                                 webResults: viewModel.webResults,
                                 amazonResults: viewModel.amazonResults,
                                 localResults: viewModel.localResults,
@@ -62,15 +60,17 @@ public struct SearchView: View {
                                 downloadManager: downloadManager,
                                 onRefine: { result in
                                     Task {
-                                        if let productMetadata = ProductMetadata(from: result.metadata) {
-                                            await viewModel.refineSearch(with: productMetadata, originalQuery: viewModel.originalQuery)
-                                        }
+                                        let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
+                                        await viewModel.refineSearch(
+                                            with: productMetadata,
+                                            originalQuery: viewModel.originalQuery,
+                                            resultTitle: result.title
+                                        )
                                     }
                                 }
                             )
                             .accessibilityLabel("Search results")
-                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
-                        }
+                            .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
                         
                     case .loaded:
                         if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
@@ -89,9 +89,12 @@ public struct SearchView: View {
                                 downloadManager: downloadManager,
                                 onRefine: { result in
                                     Task {
-                                        if let productMetadata = ProductMetadata(from: result.metadata) {
-                                            await viewModel.refineSearch(with: productMetadata, originalQuery: viewModel.originalQuery)
-                                        }
+                                        let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
+                                        await viewModel.refineSearch(
+                                            with: productMetadata,
+                                            originalQuery: viewModel.originalQuery,
+                                            resultTitle: result.title
+                                        )
                                     }
                                 }
                             )

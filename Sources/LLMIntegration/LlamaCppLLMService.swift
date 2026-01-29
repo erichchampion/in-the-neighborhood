@@ -23,7 +23,46 @@ public actor LlamaCppLLMService: LLMService {
     private static let defaultThreadCount: UInt32 = 4
     private static let defaultSamplerSeed: UInt32 = 0
     private static let defaultMaxTokens = 256 // Shorter for query enhancement
+    private static let agentMaxTokens = 512 // Room for JSON tool call or done
     private static let defaultTemperature: Double = 0.3 // Lower temperature for more deterministic JSON output
+    
+    /// Builds a multi-turn prompt from message history (system, user, assistant, tool_result).
+    /// The result ends with the assistant header so the model generates the next message.
+    /// Used by the agent loop; testable without loading the model.
+    nonisolated static func buildMultiTurnPromptForAgent(messages: [(role: String, content: String)], chatTemplate: ChatTemplateFormat) -> String {
+        let t = chatTemplate.tokens
+        var parts: [String] = []
+        if let begin = t.beginSequence { parts.append(begin) }
+        var i = 0
+        while i < messages.count {
+            let role = messages[i].role
+            let content = messages[i].content
+            switch role {
+            case "system":
+                if let h = t.systemHeader { parts.append(h) }
+                parts.append(content)
+                if let e = t.endOfTurn { parts.append(e) }
+            case "user":
+                if let h = t.userHeader { parts.append(h) }
+                parts.append(content)
+                if let e = t.endOfTurn { parts.append(e) }
+            case "assistant":
+                if let h = t.assistantHeader { parts.append(h) }
+                parts.append(content)
+                if let e = t.endOfTurn { parts.append(e) }
+            case "tool_result":
+                if let h = t.userHeader { parts.append(h) }
+                parts.append("Tool result: \(content)")
+                if let e = t.endOfTurn { parts.append(e) }
+            default:
+                i += 1
+                continue
+            }
+            i += 1
+        }
+        if let h = t.assistantHeader { parts.append(h) }
+        return parts.joined()
+    }
     
     // MARK: - Initialization
     
@@ -304,6 +343,41 @@ public actor LlamaCppLLMService: LLMService {
                     }
                     
                     continuation.resume(returning: enhanced)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+    
+    /// Generates the next assistant message from multi-turn agent messages (used by SearchAgent).
+    /// Ensures model is loaded, builds prompt with buildMultiTurnPromptForAgent, runs inference.
+    public func generateFromAgentMessages(messages: [(role: String, content: String)]) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: LLMServiceError.modelNotLoaded)
+                    return
+                }
+                do {
+                    self.ensureLoadedModelMatchesSelection()
+                    if !self.isModelLoaded() {
+                        try self.loadModelSync()
+                    }
+                    guard let model = self.llamaModel, let context = self.llamaContext else {
+                        continuation.resume(throwing: LLMServiceError.modelNotLoaded)
+                        return
+                    }
+                    let config = self.modelConfig ?? LLMModelCatalog.shared.defaultModel
+                    let prompt = Self.buildMultiTurnPromptForAgent(messages: messages, chatTemplate: config.chatTemplate)
+                    let response = try self.generateResponse(
+                        prompt: prompt,
+                        context: context,
+                        model: model,
+                        maxTokens: Self.agentMaxTokens,
+                        temperature: Self.defaultTemperature
+                    )
+                    continuation.resume(returning: response)
                 } catch {
                     continuation.resume(throwing: error)
                 }

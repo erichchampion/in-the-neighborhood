@@ -74,22 +74,17 @@ public struct ResultsView: View {
         }
     }
     
-    // Filter Amazon results to only include those with at least one required metadata key
+    // Filter Amazon results to only include those with at least one metadata key useful for refinement
     private var filteredAmazonResults: [SearchResult] {
-        amazonResults.filter { result in
-            hasRefinementMetadata(result)
-        }
+        amazonResults.filter { hasRefinementMetadata($0) }
     }
     
-    // Check if a result has at least one of the required metadata keys for refinement
     private func hasRefinementMetadata(_ result: SearchResult) -> Bool {
         let brand = result.metadata["brand"] as? String
         let isbn = result.metadata["isbn"] as? String
         let sku = result.metadata["sku"] as? String
         let author = result.metadata["author"] as? String
         let artist = result.metadata["artist"] as? String
-        
-        // Return true if at least one metadata key is not nil
         return brand != nil || isbn != nil || sku != nil || author != nil || artist != nil
     }
     
@@ -123,7 +118,7 @@ public struct ResultsView: View {
                     .padding(.top, 40)
                 }
                 
-                // Amazon Results Section
+                // Amazon Results Section — only show products with refinement metadata (brand, isbn, sku, author, artist)
                 if !filteredAmazonResults.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         if !webResults.isEmpty {

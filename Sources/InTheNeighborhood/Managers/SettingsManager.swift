@@ -8,6 +8,8 @@ public class SettingsManager: ObservableObject {
     
     /// UserDefaults key for selected model ID (shared with LLMModelDownloadManager)
     public static let selectedModelIDKey = "selectedModelID"
+    /// UserDefaults key for agent-driven search (AI chooses which tools to call)
+    public static let useAgentSearchKey = "useAgentSearch"
     
     @Published public var denyList: DenyListFilter
     @Published public var searchRadius: Double {
@@ -19,6 +21,12 @@ public class SettingsManager: ObservableObject {
     @Published public var selectedModelID: LLMModelID {
         didSet {
             UserDefaults.standard.set(selectedModelID.rawValue, forKey: Self.selectedModelIDKey)
+        }
+    }
+    
+    @Published public var useAgentSearch: Bool {
+        didSet {
+            UserDefaults.standard.set(useAgentSearch, forKey: Self.useAgentSearchKey)
         }
     }
     
@@ -55,6 +63,8 @@ public class SettingsManager: ObservableObject {
         } else {
             selectedModelID = LLMModelCatalog.defaultModelID
         }
+        
+        useAgentSearch = UserDefaults.standard.object(forKey: Self.useAgentSearchKey) as? Bool ?? false
     }
     
     public func addDenyDomain(_ domain: String) {
