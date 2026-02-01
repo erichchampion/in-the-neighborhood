@@ -1,6 +1,9 @@
 import Foundation
 import MetasearchCore
 import llama
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// llama.cpp-based LLM service implementation for on-device query enhancement
 /// Falls back to rule-based parsing when model is not available
@@ -757,6 +760,9 @@ public actor LlamaCppLLMService: LLMService {
         maxTokens: Int,
         temperature: Double
     ) throws -> String {
+        guard Self.isGPUWorkPermitted() else {
+            throw LLMServiceError.inferenceFailed("App in background; Metal not permitted", reason: .transientFailure)
+        }
         print("[LlamaCppLLMService] generateResponse: Starting, prompt length: \(prompt.count), maxTokens: \(maxTokens)")
         
         // Tokenize prompt
@@ -900,6 +906,15 @@ public actor LlamaCppLLMService: LLMService {
         return result
     }
     
+    /// On iOS, Metal cannot run in background; returns false when app is not active.
+    nonisolated private static func isGPUWorkPermitted() -> Bool {
+        #if canImport(UIKit)
+        return DispatchQueue.main.sync { UIApplication.shared.applicationState == .active }
+        #else
+        return true
+        #endif
+    }
+    
     nonisolated private func runInference(
         context: OpaquePointer,
         promptTokens: [Int32],
@@ -908,6 +923,9 @@ public actor LlamaCppLLMService: LLMService {
     ) throws -> [Int32] {
         if Task.isCancelled {
             throw LLMServiceError.inferenceFailed("Inference cancelled", reason: .transientFailure)
+        }
+        guard Self.isGPUWorkPermitted() else {
+            throw LLMServiceError.inferenceFailed("App in background; Metal not permitted", reason: .transientFailure)
         }
         
         guard let model = llama_get_model(context),
@@ -941,6 +959,9 @@ public actor LlamaCppLLMService: LLMService {
         while processedTokens < promptTokens.count {
             if Task.isCancelled {
                 throw LLMServiceError.inferenceFailed("Inference cancelled during prompt processing", reason: .transientFailure)
+            }
+            guard Self.isGPUWorkPermitted() else {
+                throw LLMServiceError.inferenceFailed("App in background; Metal not permitted", reason: .transientFailure)
             }
             
             batch.n_tokens = 0
@@ -980,6 +1001,9 @@ public actor LlamaCppLLMService: LLMService {
             processedTokens += batchSize
         }
         
+        guard Self.isGPUWorkPermitted() else {
+            throw LLMServiceError.inferenceFailed("App in background; Metal not permitted", reason: .transientFailure)
+        }
         guard lastBatchSize > 0,
               llama_get_logits_ith(context, Int32(lastBatchSize - 1)) != nil else {
             throw LLMServiceError.inferenceFailed("Failed to get logits from prompt", reason: .modelStateCorruption)
@@ -1039,6 +1063,9 @@ public actor LlamaCppLLMService: LLMService {
         for iteration in 1..<maxTokens {
             if Task.isCancelled {
                 throw LLMServiceError.inferenceFailed("Inference cancelled during generation", reason: .transientFailure)
+            }
+            guard Self.isGPUWorkPermitted() else {
+                throw LLMServiceError.inferenceFailed("App in background; Metal not permitted", reason: .transientFailure)
             }
             
             guard llama_get_logits_ith(context, 0) != nil else {

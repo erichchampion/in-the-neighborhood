@@ -3,6 +3,7 @@ import MetasearchCore
 import LLMIntegration
 
 public struct SearchView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: SearchViewModel
     @StateObject private var downloadManager = LLMModelDownloadManager.shared
     @State private var showSettings = false
@@ -127,6 +128,11 @@ public struct SearchView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .background {
+                    viewModel.cancelInFlightSearch()
+                }
             }
         }
     }

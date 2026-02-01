@@ -56,6 +56,11 @@ public class SearchViewModel: ObservableObject {
         self.searchAgent = searchAgent
     }
     
+    /// Cancels any in-flight search (e.g. when app goes to background to avoid Metal GPU work).
+    public func cancelInFlightSearch() {
+        searchTask?.cancel()
+    }
+    
     public func search(query: String) async {
         // Cancel previous search
         searchTask?.cancel()
