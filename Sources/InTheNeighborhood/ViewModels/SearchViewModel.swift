@@ -119,19 +119,22 @@ public class SearchViewModel: ObservableObject {
                         }
                     )
                     guard !Task.isCancelled else { return }
-                    webResults = result.webResults
-                    amazonResults = result.amazonResults
-                    localResults = result.localResults
-                    localStoreCategories = result.localStoreCategories
-                    results = result.webResults + result.amazonResults + result.localResults
+                    // Prefer larger counts so we never overwrite incremental streaming with a stale snapshot
+                    applyFinalResults(
+                        webResults: result.webResults,
+                        amazonResults: result.amazonResults,
+                        localResults: result.localResults,
+                        localStoreCategories: result.localStoreCategories
+                    )
                 } catch {
                     guard !Task.isCancelled else { return }
                     let fallback = await runClassicSearch(query: query)
-                    webResults = fallback.webResults
-                    amazonResults = fallback.amazonResults
-                    localResults = fallback.localResults
-                    localStoreCategories = fallback.localStoreCategories
-                    results = fallback.webResults + fallback.amazonResults + fallback.localResults
+                    applyFinalResults(
+                        webResults: fallback.webResults,
+                        amazonResults: fallback.amazonResults,
+                        localResults: fallback.localResults,
+                        localStoreCategories: fallback.localStoreCategories
+                    )
                     if webResults.isEmpty && amazonResults.isEmpty && localResults.isEmpty {
                         errorMessage = error.localizedDescription
                     }
@@ -222,6 +225,20 @@ public class SearchViewModel: ObservableObject {
         }
     }
     
+    /// Applies final result arrays without overwriting with a smaller set, so incremental streaming is never erased.
+    private func applyFinalResults(
+        webResults newWeb: [SearchResult],
+        amazonResults newAmazon: [SearchResult],
+        localResults newLocal: [SearchResult],
+        localStoreCategories newCategories: [String]
+    ) {
+        if newWeb.count >= webResults.count { webResults = newWeb }
+        if newAmazon.count >= amazonResults.count { amazonResults = newAmazon }
+        if newLocal.count >= localResults.count { localResults = newLocal }
+        if !newCategories.isEmpty { localStoreCategories = newCategories }
+        results = webResults + amazonResults + localResults
+    }
+    
     // Thread 1: Web search (excluding Amazon, MapKit, and Google Books; products section handles Google Books)
     // Uses streaming coordinator to display results incrementally as each source completes
     private func searchWeb(enhancedQuery: EnhancedQuery) async -> [SearchResult] {
@@ -260,6 +277,11 @@ public class SearchViewModel: ObservableObject {
                 }
             }
         )
+        
+        // Yield to MainActor so any pending onResults Task { @MainActor } blocks run
+        // before we read webResults. Otherwise we can return (and callers can assign)
+        // a stale snapshot and overwrite the incremental updates already displayed.
+        await MainActor.run { }
         
         guard !Task.isCancelled else {
             isLoadingWeb = false
@@ -514,19 +536,21 @@ public class SearchViewModel: ObservableObject {
                         }
                     )
                     guard !Task.isCancelled else { return }
-                    webResults = result.webResults
-                    amazonResults = result.amazonResults
-                    localResults = result.localResults
-                    localStoreCategories = result.localStoreCategories
-                    results = result.webResults + result.amazonResults + result.localResults
+                    applyFinalResults(
+                        webResults: result.webResults,
+                        amazonResults: result.amazonResults,
+                        localResults: result.localResults,
+                        localStoreCategories: result.localStoreCategories
+                    )
                 } catch {
                     guard !Task.isCancelled else { return }
                     let fallback = await runClassicSearch(query: refinedQuery)
-                    webResults = fallback.webResults
-                    amazonResults = fallback.amazonResults
-                    localResults = fallback.localResults
-                    localStoreCategories = fallback.localStoreCategories
-                    results = fallback.webResults + fallback.amazonResults + fallback.localResults
+                    applyFinalResults(
+                        webResults: fallback.webResults,
+                        amazonResults: fallback.amazonResults,
+                        localResults: fallback.localResults,
+                        localStoreCategories: fallback.localStoreCategories
+                    )
                     if webResults.isEmpty && amazonResults.isEmpty && localResults.isEmpty {
                         errorMessage = error.localizedDescription
                     }
