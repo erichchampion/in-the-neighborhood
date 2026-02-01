@@ -52,10 +52,12 @@ public final class SearchAgent: Sendable {
 
     /// Runs the agent loop; returns accumulated results or fallback result on parse failure / max iterations.
     /// - Parameter runTimeClassicFallback: When provided, called with the current query when fallback is needed; when nil, uses init's fallback.
+    /// - Parameter onToolResult: Optional callback invoked when each tool completes; enables incremental UI display before agent loop finishes.
     public func run(
         userQuery: String,
         metadata: MetasearchCore.ProductMetadata?,
-        classicFallback runTimeClassicFallback: (@Sendable (String) async throws -> AgentSearchResult)? = nil
+        classicFallback runTimeClassicFallback: (@Sendable (String) async throws -> AgentSearchResult)? = nil,
+        onToolResult: (@Sendable (String, [SearchResult]) -> Void)? = nil
     ) async throws -> AgentSearchResult {
         let performFallback: () async throws -> AgentSearchResult = {
             if let runTimeFallback = runTimeClassicFallback {
@@ -118,13 +120,16 @@ public final class SearchAgent: Sendable {
                 switch tool {
                 case "search_web":
                     webResults = results
+                    onToolResult?(tool, results)
                 case "search_products":
                     amazonResults = results
+                    onToolResult?(tool, results)
                 case "search_local_stores":
                     localResults = results
                     if let cats = arguments["categories"] as? [String] {
                         localStoreCategories = cats
                     }
+                    onToolResult?(tool, results)
                 default:
                     break
                 }

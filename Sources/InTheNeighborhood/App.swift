@@ -26,10 +26,10 @@ struct InTheNeighborhoodApp: App {
         // Initialize search sources
         mapKitSource = MapKitSearchSource(locationService: locationService)
         
-        // Initialize web search source with Bing API key from build configuration
+        // Initialize web search sources (DuckDuckGo + Bing as separate sources for incremental display)
         let bingApiKey = APIKeys.bingAPIKey
-        let bingProvider = BingProvider(apiKey: bingApiKey)
-        let webSearchSource = WebSearchSource(bingProvider: bingProvider)
+        let duckDuckGoSource = DuckDuckGoSearchSource()
+        let bingSource = BingSearchSource(apiKey: bingApiKey)
         
         let bookshopSource = BookshopSearchSource()
         let marketplaceSource = MarketplaceSearchSource()
@@ -38,10 +38,11 @@ struct InTheNeighborhoodApp: App {
         // Initialize Google Books source (no API key required - works without authentication)
         googleBooksSource = GoogleBooksSearchSource(apiKey: nil)
         
-        // Initialize coordinator
+        // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
         coordinator = MetasearchCoordinator(sources: [
             mapKitSource,
-            webSearchSource,
+            duckDuckGoSource,
+            bingSource,
             bookshopSource,
             marketplaceSource,
             amazonSource,

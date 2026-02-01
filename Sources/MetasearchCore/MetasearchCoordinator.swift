@@ -98,6 +98,43 @@ public actor MetasearchCoordinator {
         return filteredResults
     }
     
+    /// Streaming variant: yields (sourceIdentifier, results) as each source completes.
+    /// Applies filter and aggregate per batch; caller is responsible for merging/deduplicating across batches.
+    public func searchStreaming(
+        query: EnhancedQuery,
+        excludingSources: Set<String> = [],
+        onResults: @escaping @Sendable (String, [SearchResult]) -> Void
+    ) async {
+        let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
+        let queryToSearch = query
+        let timeoutValue = timeout
+        
+        await withTaskGroup(of: (String, [SearchResult]).self) { group in
+            for source in sourcesToSearch {
+                let sourceIdentifier = source.identifier
+                group.addTask {
+                    do {
+                        let results = try await self.withTimeout(seconds: timeoutValue) {
+                            try await source.search(query: queryToSearch)
+                        }
+                        return (sourceIdentifier, results)
+                    } catch {
+                        return (sourceIdentifier, [])
+                    }
+                }
+            }
+            
+            for await (sourceIdentifier, rawResults) in group {
+                // Filter and aggregate on actor (avoids Sendable issues with resultAggregator/denyListFilter)
+                var filtered = resultAggregator.filter(results: rawResults, denyList: denyListFilter)
+                filtered = resultAggregator.aggregate(results: filtered)
+                if !filtered.isEmpty {
+                    onResults(sourceIdentifier, filtered)
+                }
+            }
+        }
+    }
+    
     private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escaping @Sendable () async throws -> T) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask {
