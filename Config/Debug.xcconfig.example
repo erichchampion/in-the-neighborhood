@@ -1,4 +1,5 @@
 // Debug configuration - Copy this file to Debug.xcconfig and add your API keys
-// Or set BING_API_KEY as an environment variable
+// Or set BING_API_KEY and BESTBUY_API_KEY as environment variables
 
 BING_API_KEY = your_bing_api_key_here
+BESTBUY_API_KEY = your_bestbuy_api_key_here

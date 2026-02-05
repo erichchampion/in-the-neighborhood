@@ -44,8 +44,7 @@ public class SettingsManager: ObservableObject {
                 "walmart.com",
                 "target.com",
                 "homedepot.com",
-                "lowes.com",
-                "bestbuy.com"
+                "lowes.com"
             ])
         }
         

@@ -12,6 +12,7 @@ struct InTheNeighborhoodApp: App {
     let locationService: LocationService
     let amazonSource: any SearchSource
     let googleBooksSource: any SearchSource
+    let bestBuySource: any SearchSource
     let mapKitSource: any SearchSource
     let searchAgent: SearchAgent?
     
@@ -38,6 +39,9 @@ struct InTheNeighborhoodApp: App {
         // Initialize Google Books source (no API key required - works without authentication)
         googleBooksSource = GoogleBooksSearchSource(apiKey: nil)
         
+        // Initialize Best Buy source (returns empty when no API key)
+        bestBuySource = BestBuySearchSource(apiKey: APIKeys.bestbuyAPIKey)
+        
         // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
         coordinator = MetasearchCoordinator(sources: [
             mapKitSource,
@@ -54,12 +58,18 @@ struct InTheNeighborhoodApp: App {
             webSearch: { [coordinator] query, excluding in
                 (try? await coordinator.search(query: query, excludingSources: excluding)) ?? []
             },
-            productSearch: { [amazonSource, googleBooksSource] query in
+            productSearch: { [amazonSource, googleBooksSource, bestBuySource] query in
                 async let a = try? amazonSource.search(query: query)
                 async let b = try? googleBooksSource.search(query: query)
+                async let c = try? bestBuySource.search(query: query)
                 let amazon = await a ?? []
                 let google = await b ?? []
-                return amazon + google
+                let bestbuy = await c ?? []
+                var combined = amazon + google + bestbuy
+                // Deduplicate by id
+                var seen = Set<String>()
+                combined = combined.filter { seen.insert($0.id).inserted }
+                return combined
             },
             localSearch: { [mapKitSource] query in
                 (try? await mapKitSource.search(query: query)) ?? []
@@ -85,6 +95,7 @@ struct InTheNeighborhoodApp: App {
                 queryEnhancer: queryEnhancer,
                 amazonSource: amazonSource,
                 googleBooksSource: googleBooksSource,
+                bestBuySource: bestBuySource,
                 mapKitSource: mapKitSource,
                 searchAgent: searchAgent
             )

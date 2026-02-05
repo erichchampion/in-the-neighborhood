@@ -13,6 +13,7 @@ public struct SearchView: View {
         queryEnhancer: QueryEnhancer,
         amazonSource: any SearchSource,
         googleBooksSource: any SearchSource,
+        bestBuySource: any SearchSource,
         mapKitSource: any SearchSource,
         searchAgent: SearchAgent? = nil
     ) {
@@ -21,6 +22,7 @@ public struct SearchView: View {
             queryEnhancer: queryEnhancer,
             amazonSource: amazonSource,
             googleBooksSource: googleBooksSource,
+            bestBuySource: bestBuySource,
             mapKitSource: mapKitSource,
             searchAgent: searchAgent
         ))

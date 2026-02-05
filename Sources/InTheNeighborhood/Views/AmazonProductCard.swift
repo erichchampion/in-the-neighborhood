@@ -1,13 +1,17 @@
 import SwiftUI
 import MetasearchCore
 
-struct AmazonProductCard: View {
+/// Reusable product card for Amazon, Best Buy, and other product sources.
+/// When urlToOpen is provided and non-nil, shows an Open button to open the product URL in the browser.
+struct ProductCard: View {
     let result: SearchResult
     let onRefine: (() -> Void)?
+    let urlToOpen: URL?
     
-    init(result: SearchResult, onRefine: (() -> Void)? = nil) {
+    init(result: SearchResult, onRefine: (() -> Void)? = nil, urlToOpen: URL? = nil) {
         self.result = result
         self.onRefine = onRefine
+        self.urlToOpen = urlToOpen
     }
     
     var body: some View {
@@ -73,6 +77,14 @@ struct AmazonProductCard: View {
                             .foregroundColor(.secondary)
                     }
                     
+                    // Price (for Best Buy, etc.)
+                    if let price = result.metadata["price"] as? String {
+                        Text(price)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
+                    
                     // ISBN or SKU (generally applicable identifiers)
                     if let isbn = result.metadata["isbn"] as? String {
                         Text("ISBN: \(isbn)")
@@ -88,24 +100,42 @@ struct AmazonProductCard: View {
                 Spacer()
             }
             
-            // Refine button
-            if let onRefine = onRefine {
-                Button(action: {
-                    onRefine()
-                }) {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                        Text("Refine")
+            // Buttons: Refine and optionally Open
+            HStack(spacing: 12) {
+                if let onRefine = onRefine {
+                    Button(action: {
+                        onRefine()
+                    }) {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                            Text("Refine")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.blue)
+                        .cornerRadius(8)
                     }
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.blue)
-                    .cornerRadius(8)
+                    .accessibilityLabel("Refine search with \(result.title)")
+                    .accessibilityHint("Uses this product's metadata to refine the search on other websites")
                 }
-                .accessibilityLabel("Refine search with \(result.title)")
-                .accessibilityHint("Uses this product's metadata to refine the search on other websites")
+                
+                if let url = urlToOpen {
+                    Button(action: {
+                        UIApplication.shared.open(url)
+                    }) {
+                        Label("Open", systemImage: "arrow.up.right.square")
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    .accessibilityLabel("Open \(result.title)")
+                    .accessibilityHint("Opens this result in your browser")
+                }
             }
         }
         .padding()
@@ -120,7 +150,9 @@ struct AmazonProductCard: View {
             let skuStr = (result.metadata["sku"] as? String) ?? "nil"
             let authorStr = (result.metadata["author"] as? String) ?? "nil"
             let artistStr = (result.metadata["artist"] as? String) ?? "nil"
-            print("[DEBUG] AmazonProductCard.swift:115 - Rendering card with metadata - title: \(result.title), metadataKeys: \(Array(result.metadata.keys)), brand: \(brandStr), isbn: \(isbnStr), sku: \(skuStr), author: \(authorStr), artist: \(artistStr)")
+            let resultUrlStr = result.url?.absoluteString ?? "nil"
+            let urlToOpenStr = urlToOpen?.absoluteString ?? "nil"
+            print("[DEBUG] ProductCard.swift - Rendering card with metadata - title: \(result.title), metadataKeys: \(Array(result.metadata.keys)), brand: \(brandStr), isbn: \(isbnStr), sku: \(skuStr), author: \(authorStr), artist: \(artistStr), source: \(result.source), result.url: \(resultUrlStr), urlToOpen: \(urlToOpenStr)")
             // #endregion
         }
     }
@@ -147,3 +179,6 @@ struct AmazonProductCard: View {
         return components.joined(separator: ", ")
     }
 }
+
+// Backward compatibility
+typealias AmazonProductCard = ProductCard

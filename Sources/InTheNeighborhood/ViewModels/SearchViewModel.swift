@@ -23,6 +23,7 @@ public class SearchViewModel: ObservableObject {
     private let queryEnhancer: QueryEnhancer
     private let amazonSource: any SearchSource
     private let googleBooksSource: any SearchSource
+    private let bestBuySource: any SearchSource
     private let mapKitSource: any SearchSource
     private let searchAgent: SearchAgent?
     private var searchTask: Task<Void, Never>?
@@ -37,6 +38,7 @@ public class SearchViewModel: ObservableObject {
     
     public enum TabSelection {
         case web
+        case products
         case localStores
     }
     
@@ -45,6 +47,7 @@ public class SearchViewModel: ObservableObject {
         queryEnhancer: QueryEnhancer,
         amazonSource: any SearchSource,
         googleBooksSource: any SearchSource,
+        bestBuySource: any SearchSource,
         mapKitSource: any SearchSource,
         searchAgent: SearchAgent? = nil
     ) {
@@ -52,6 +55,7 @@ public class SearchViewModel: ObservableObject {
         self.queryEnhancer = queryEnhancer
         self.amazonSource = amazonSource
         self.googleBooksSource = googleBooksSource
+        self.bestBuySource = bestBuySource
         self.mapKitSource = mapKitSource
         self.searchAgent = searchAgent
     }
@@ -97,6 +101,13 @@ public class SearchViewModel: ObservableObject {
             if SettingsManager.shared.useAgentSearch, let agent = searchAgent {
                 // Agent-driven search: LLM chooses tools; fallback to classic on parse failure or max iterations
                 print("[SearchViewModel] Using agent search for query: '\(query)'")
+                // Run product search in parallel so we always get Best Buy, Amazon, Google Books results
+                // even when the LLM only calls search_web and never search_products
+                let productSearchTask = Task { [weak self] in
+                    guard let self else { return }
+                    let eq = EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
+                    _ = await self.searchAmazon(enhancedQuery: eq)
+                }
                 do {
                     let result = try await agent.run(
                         userQuery: query,
@@ -124,10 +135,12 @@ public class SearchViewModel: ObservableObject {
                         }
                     )
                     guard !Task.isCancelled else { return }
+                    await productSearchTask.value
+                    guard !Task.isCancelled else { return }
                     // Prefer larger counts so we never overwrite incremental streaming with a stale snapshot
                     applyFinalResults(
                         webResults: result.webResults,
-                        amazonResults: result.amazonResults,
+                        amazonResults: result.amazonResults.isEmpty ? amazonResults : result.amazonResults,
                         localResults: result.localResults,
                         localStoreCategories: result.localStoreCategories
                     )
@@ -301,50 +314,40 @@ public class SearchViewModel: ObservableObject {
     // Thread 2: Amazon and Google Books search (combined)
     // Updates amazonResults incrementally as each source completes
     private func searchAmazon(enhancedQuery: EnhancedQuery) async -> [SearchResult] {
-        print("[SearchViewModel] Thread 2 (Amazon/Google Books): Starting product search for query: '\(enhancedQuery.original)'")
-        do {
-            // Search both sources concurrently; display results as each completes (whichever finishes first)
-            var combinedResults: [SearchResult] = []
-            await withTaskGroup(of: [SearchResult].self) { group in
-                group.addTask { (try? await self.amazonSource.search(query: enhancedQuery)) ?? [] }
-                group.addTask { (try? await self.googleBooksSource.search(query: enhancedQuery)) ?? [] }
-                
-                for await batchResults in group {
-                    guard !Task.isCancelled else { break }
-                    if !batchResults.isEmpty {
-                        let existingIds = Set(combinedResults.map { $0.id })
-                        let newResults = batchResults.filter { !existingIds.contains($0.id) }
-                        if !newResults.isEmpty {
-                            combinedResults.append(contentsOf: newResults)
-                            amazonResults = combinedResults
-                            results = webResults + amazonResults + localResults
-                        }
+        print("[SearchViewModel] Thread 2 (Amazon/Google Books/Best Buy): Starting product search for query: '\(enhancedQuery.original)'")
+        // Search all product sources concurrently; display results as each completes
+        var combinedResults: [SearchResult] = []
+        await withTaskGroup(of: [SearchResult].self) { group in
+            group.addTask { (try? await self.amazonSource.search(query: enhancedQuery)) ?? [] }
+            group.addTask { (try? await self.googleBooksSource.search(query: enhancedQuery)) ?? [] }
+            group.addTask { (try? await self.bestBuySource.search(query: enhancedQuery)) ?? [] }
+            
+            for await batchResults in group {
+                guard !Task.isCancelled else { break }
+                if !batchResults.isEmpty {
+                    let existingIds = Set(combinedResults.map { $0.id })
+                    let newResults = batchResults.filter { !existingIds.contains($0.id) }
+                    if !newResults.isEmpty {
+                        combinedResults.append(contentsOf: newResults)
+                        amazonResults = combinedResults
+                        results = webResults + amazonResults + localResults
                     }
                 }
             }
-            
-            guard !Task.isCancelled else {
-                isLoadingAmazon = false
-                return []
-            }
-            
-            amazonResults = combinedResults
-            isLoadingAmazon = false
-            results = webResults + amazonResults + localResults
-            
-            print("[SearchViewModel] Thread 2: Product results count = \(combinedResults.count)")
-            
-            return combinedResults
-        } catch {
-            guard !Task.isCancelled else {
-                isLoadingAmazon = false
-                return []
-            }
-            
-            amazonResults = []
+        }
+        
+        guard !Task.isCancelled else {
             isLoadingAmazon = false
             return []
         }
+        
+        amazonResults = combinedResults
+        isLoadingAmazon = false
+        results = webResults + amazonResults + localResults
+        
+        print("[SearchViewModel] Thread 2: Product results count = \(combinedResults.count)")
+        
+        return combinedResults
     }
     
     // Thread 3: Local stores (MapKit; enhancedQuery and storeCategories provided by caller)
@@ -514,6 +517,11 @@ public class SearchViewModel: ObservableObject {
         
         searchTask = Task {
             if SettingsManager.shared.useAgentSearch, let agent = searchAgent {
+                let productSearchTask = Task { [weak self] in
+                    guard let self else { return }
+                    let eq = EnhancedQuery(original: refinedQuery, productType: nil, categories: [], priceMax: nil, condition: nil)
+                    _ = await self.searchAmazon(enhancedQuery: eq)
+                }
                 do {
                     let result = try await agent.run(
                         userQuery: refinedQuery,
@@ -541,9 +549,12 @@ public class SearchViewModel: ObservableObject {
                         }
                     )
                     guard !Task.isCancelled else { return }
+                    await productSearchTask.value
+                    guard !Task.isCancelled else { return }
+                    let amazonToApply = result.amazonResults.isEmpty ? amazonResults : result.amazonResults
                     applyFinalResults(
                         webResults: result.webResults,
-                        amazonResults: result.amazonResults,
+                        amazonResults: amazonToApply,
                         localResults: result.localResults,
                         localStoreCategories: result.localStoreCategories
                     )
