@@ -664,7 +664,9 @@ public actor LlamaCppLLMService: LLMService {
             """
         case .phi:
             return """
-            \(templateTokens.instructStart ?? "")\(systemPrompt)\n\(userPrompt)\(templateTokens.instructEnd ?? "")
+            \(templateTokens.systemHeader ?? "")\(systemPrompt)\(templateTokens.endOfTurn ?? "")
+            \(templateTokens.userHeader ?? "")\(userPrompt)\(templateTokens.endOfTurn ?? "")
+            \(templateTokens.assistantHeader ?? "")
             """
         }
     }
@@ -748,7 +750,9 @@ public actor LlamaCppLLMService: LLMService {
             """
         case .phi:
             return """
-            \(templateTokens.instructStart ?? "")\(systemPrompt)\n\(userPrompt)\(templateTokens.instructEnd ?? "")
+            \(templateTokens.systemHeader ?? "")\(systemPrompt)\(templateTokens.endOfTurn ?? "")
+            \(templateTokens.userHeader ?? "")\(userPrompt)\(templateTokens.endOfTurn ?? "")
+            \(templateTokens.assistantHeader ?? "")
             """
         }
     }

@@ -96,14 +96,16 @@ enum ChatTemplateFormat: String, Codable, Sendable {
                 assistantHeader: nil
             )
         case .phi:
+            // Phi-3 uses ChatML-style format: <|user|>, <|end|>, <|assistant|>
+            // System goes in first <|user|> block; then <|assistant|>; then user in second <|user|> block
             return ChatTemplateTokens(
                 beginSequence: nil,
-                instructStart: "Instruct: ",
-                instructEnd: "\nOutput: ",
-                endOfTurn: nil,
-                systemHeader: nil,
-                userHeader: nil,
-                assistantHeader: nil
+                instructStart: nil,
+                instructEnd: nil,
+                endOfTurn: "<|end|>\n",
+                systemHeader: "<|user|>\n",
+                userHeader: "<|assistant|>\n<|user|>\n",
+                assistantHeader: "<|assistant|>\n"
             )
         case .llama32:
             return ChatTemplateTokens(
