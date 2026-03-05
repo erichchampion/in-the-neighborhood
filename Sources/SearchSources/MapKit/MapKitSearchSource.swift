@@ -203,8 +203,8 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
             return nil
         }
         
-        let itemLocation = item.placemark.location
-        let distance = itemLocation?.distance(from: location)
+        let itemLocation = item.location
+        let distance = itemLocation.distance(from: location)
         
         // Build ProductMetadata
         let productMetadata = ProductMetadata(
@@ -218,7 +218,7 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
         return SearchResult(
             id: UUID().uuidString,
             title: name,
-            description: item.placemark.title,
+            description: nil,
             source: identifier,
             sourceType: sourceType,
             url: item.url,

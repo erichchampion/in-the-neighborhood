@@ -106,7 +106,7 @@ struct LocalBusinessCard: View {
     }
     
     private func openDirections(to location: CLLocation) {
-        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: location.coordinate))
+        let mapItem = MKMapItem(location: location, address: nil)
         mapItem.name = result.title
         mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
     }

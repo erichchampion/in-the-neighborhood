@@ -1,7 +1,7 @@
 import XCTest
 @testable import InTheNeighborhood
 import MetasearchCore
-import LLMIntegration
+
 
 @MainActor
 final class SearchViewModelTests: XCTestCase {

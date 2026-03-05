@@ -1,13 +1,10 @@
 import Foundation
 import MetasearchCore
-import LLMIntegration
 
 @MainActor
 public class SettingsManager: ObservableObject {
     public static let shared = SettingsManager()
     
-    /// UserDefaults key for selected model ID (shared with LLMModelDownloadManager)
-    public static let selectedModelIDKey = "selectedModelID"
     /// UserDefaults key for agent-driven search (AI chooses which tools to call)
     public static let useAgentSearchKey = "useAgentSearch"
     
@@ -17,12 +14,7 @@ public class SettingsManager: ObservableObject {
             UserDefaults.standard.set(searchRadius, forKey: "searchRadius")
         }
     }
-    
-    @Published public var selectedModelID: LLMModelID {
-        didSet {
-            UserDefaults.standard.set(selectedModelID.rawValue, forKey: Self.selectedModelIDKey)
-        }
-    }
+
     
     @Published public var useAgentSearch: Bool {
         didSet {
@@ -54,14 +46,7 @@ public class SettingsManager: ObservableObject {
         } else {
             searchRadius = 16093.0 // 10 miles default
         }
-        
-        // Load selected model ID from UserDefaults
-        if let rawValue = UserDefaults.standard.string(forKey: Self.selectedModelIDKey),
-           let modelID = LLMModelID(rawValue: rawValue) {
-            selectedModelID = modelID
-        } else {
-            selectedModelID = LLMModelCatalog.defaultModelID
-        }
+
         
         useAgentSearch = UserDefaults.standard.object(forKey: Self.useAgentSearchKey) as? Bool ?? false
     }

@@ -2,14 +2,12 @@ name: In the Neighborhood
 options:
   bundleIdPrefix: com.in-the-neighborhood
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
+    macOS: "26.0"
   developmentLanguage: en
   xcodeVersion: "16.0"
 
 packages:
-  llama:
-    path: .
-    # Using local Package.swift which references ggml-org/llama.cpp b7658 xcframework
   SwiftSoup:
     url: https://github.com/scinfu/SwiftSoup.git
     from: 2.7.6
@@ -37,7 +35,6 @@ schemes:
         - MetasearchCoreTests
         - SearchSourcesTests
         - LocationServicesTests
-        - LLMIntegrationTests
         - InTheNeighborhoodUITests
     archive:
       config: Release
@@ -47,7 +44,7 @@ targets:
   InTheNeighborhood:
     type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     configFiles:
       Debug: Config/Debug.xcconfig
       Release: Config/Release.xcconfig
@@ -59,10 +56,6 @@ targets:
       - target: MetasearchCore
       - target: SearchSources
       - target: LocationServices
-      - target: LLMIntegration
-      # Explicitly add llama package dependency to ensure framework is embedded
-      - package: llama
-        product: LlamaFramework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood
@@ -127,7 +120,7 @@ targets:
   MetasearchCore:
     type: framework
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Sources/MetasearchCore
     settings:
@@ -141,7 +134,7 @@ targets:
   SearchSources:
     type: framework
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Sources/SearchSources
     dependencies:
@@ -160,7 +153,7 @@ targets:
   LocationServices:
     type: framework
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Sources/LocationServices
     dependencies:
@@ -173,32 +166,12 @@ targets:
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
 
-  # LLMIntegration Framework
-  LLMIntegration:
-    type: framework
-    platform: iOS
-    deploymentTarget: "18.0"
-    sources:
-      - path: Sources/LLMIntegration
-    dependencies:
-      - target: MetasearchCore
-      - package: llama
-        product: LlamaFramework
-    frameworks:
-      - Accelerate.framework
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.LLMIntegration
-        SWIFT_VERSION: "6.0"
-        SWIFT_OBJC_INTEROP_MODE: objcxx
-        DEFINES_MODULE: true
-        GENERATE_INFOPLIST_FILE: true
 
   # Test Targets
   InTheNeighborhoodTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/InTheNeighborhoodTests
     dependencies:
@@ -218,7 +191,7 @@ targets:
   MetasearchCoreTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/MetasearchCoreTests
     dependencies:
@@ -233,7 +206,7 @@ targets:
   SearchSourcesTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/SearchSourcesTests
     dependencies:
@@ -248,7 +221,7 @@ targets:
   LocationServicesTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/LocationServicesTests
     dependencies:
@@ -260,28 +233,11 @@ targets:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
 
-  LLMIntegrationTests:
-    type: bundle.unit-test
-    platform: iOS
-    deploymentTarget: "18.0"
-    sources:
-      - path: Tests/LLMIntegrationTests
-    dependencies:
-      - target: LLMIntegration
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.LLMIntegrationTests
-        PRODUCT_NAME: $(TARGET_NAME)
-        SWIFT_VERSION: "6.0"
-        SWIFT_OBJC_INTEROP_MODE: objcxx
-        GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: KA5A6NN3PD
 
   InTheNeighborhoodUITests:
     type: bundle.ui-testing
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: Tests/InTheNeighborhoodUITests
     dependencies:

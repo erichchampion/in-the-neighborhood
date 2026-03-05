@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import MetasearchCore
-import LLMIntegration
 
 @MainActor
 public class SearchViewModel: ObservableObject {
@@ -20,12 +19,11 @@ public class SearchViewModel: ObservableObject {
     @Published public var localStoreCategories: [String] = []
     
     private let coordinator: MetasearchCoordinator
-    private let queryEnhancer: QueryEnhancer
+    private let queryEnhancer: QueryEnhancing
     private let amazonSource: any SearchSource
     private let googleBooksSource: any SearchSource
     private let bestBuySource: any SearchSource
     private let mapKitSource: any SearchSource
-    private let searchAgent: SearchAgent?
     private var searchTask: Task<Void, Never>?
     private let debounceDelay: TimeInterval = 0.5 // seconds
     
@@ -44,12 +42,11 @@ public class SearchViewModel: ObservableObject {
     
     public init(
         coordinator: MetasearchCoordinator,
-        queryEnhancer: QueryEnhancer,
+        queryEnhancer: QueryEnhancing,
         amazonSource: any SearchSource,
         googleBooksSource: any SearchSource,
         bestBuySource: any SearchSource,
-        mapKitSource: any SearchSource,
-        searchAgent: SearchAgent? = nil
+        mapKitSource: any SearchSource
     ) {
         self.coordinator = coordinator
         self.queryEnhancer = queryEnhancer
@@ -57,7 +54,6 @@ public class SearchViewModel: ObservableObject {
         self.googleBooksSource = googleBooksSource
         self.bestBuySource = bestBuySource
         self.mapKitSource = mapKitSource
-        self.searchAgent = searchAgent
     }
     
     /// Cancels any in-flight search (e.g. when app goes to background to avoid Metal GPU work).
@@ -98,135 +94,49 @@ public class SearchViewModel: ObservableObject {
         isLoadingLocal = true
         
         searchTask = Task {
-            if SettingsManager.shared.useAgentSearch, let agent = searchAgent {
-                // Agent-driven search: LLM chooses tools; fallback to classic on parse failure or max iterations
-                print("[SearchViewModel] Using agent search for query: '\(query)'")
-                // Run product search in parallel so we always get Best Buy, Amazon, Google Books results
-                // even when the LLM only calls search_web and never search_products
-                let productSearchTask = Task { [weak self] in
-                    guard let self else { return }
-                    let eq = EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
-                    _ = await self.searchAmazon(enhancedQuery: eq)
-                }
-                do {
-                    let result = try await agent.run(
-                        userQuery: query,
-                        metadata: nil,
-                        classicFallback: { [weak self] fallbackQuery in
-                            await self?.runClassicSearch(query: fallbackQuery) ?? AgentSearchResult(
-                                webResults: [], amazonResults: [], localResults: [], localStoreCategories: []
-                            )
-                        },
-                        onToolResult: { [weak self] tool, results in
-                            Task { @MainActor in
-                                guard let self else { return }
-                                switch tool {
-                                case "search_web":
-                                    self.webResults = results
-                                case "search_products":
-                                    self.amazonResults = results
-                                case "search_local_stores":
-                                    self.localResults = results
-                                default:
-                                    break
-                                }
-                                self.results = self.webResults + self.amazonResults + self.localResults
-                            }
-                        }
-                    )
-                    guard !Task.isCancelled else { return }
-                    await productSearchTask.value
-                    guard !Task.isCancelled else { return }
-                    // Prefer larger counts so we never overwrite incremental streaming with a stale snapshot
-                    applyFinalResults(
-                        webResults: result.webResults,
-                        amazonResults: result.amazonResults.isEmpty ? amazonResults : result.amazonResults,
-                        localResults: result.localResults,
-                        localStoreCategories: result.localStoreCategories
-                    )
-                } catch {
-                    guard !Task.isCancelled else { return }
-                    let fallback = await runClassicSearch(query: query)
-                    applyFinalResults(
-                        webResults: fallback.webResults,
-                        amazonResults: fallback.amazonResults,
-                        localResults: fallback.localResults,
-                        localStoreCategories: fallback.localStoreCategories
-                    )
-                    if webResults.isEmpty && amazonResults.isEmpty && localResults.isEmpty {
-                        errorMessage = error.localizedDescription
-                    }
-                }
-                isLoadingWeb = false
-                isLoadingAmazon = false
-                isLoadingLocal = false
-                state = .loaded
-                return
-            }
-            
-            // Classic path: shared enhance + determineStoreCategories, then three concurrent search threads
-            print("[SearchViewModel] Starting shared enhance and determineStoreCategories for query: '\(query)'")
-            async let enhancedTask = queryEnhancer.enhance(query: query)
-            async let storeCategoriesTask = queryEnhancer.determineStoreCategories(for: query)
-            
-            let enhancedQuery: EnhancedQuery
-            let storeCategories: [String]
-            do {
-                enhancedQuery = try await enhancedTask
-                storeCategories = await storeCategoriesTask
-                print("[SearchViewModel] Shared enhance done; store categories: \(storeCategories)")
-            } catch {
-                guard !Task.isCancelled else { return }
-                // Fallback to basic query on enhance failure
-                enhancedQuery = EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
-                storeCategories = []
-            }
+            // Use Foundation Models to securely parse input into an EnhancedQuery
+            let enhancedQuery = (try? await queryEnhancer.enhanceQuery(query)) ?? EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
             
             guard !Task.isCancelled else { return }
             
-            print("[SearchViewModel] Starting all three search threads concurrently for query: '\(query)'")
+            print("[SearchViewModel] Starting search threads concurrently for query: '\(query)'")
             async let webTask = searchWeb(enhancedQuery: enhancedQuery)
-            async let amazonTask = searchAmazon(enhancedQuery: enhancedQuery)
-            async let localTask = searchLocal(enhancedQuery: enhancedQuery, storeCategories: storeCategories)
+            
+            // Wait for Amazon / BestBuy to gather background product intelligence
+            let amazonResults = await searchAmazon(enhancedQuery: enhancedQuery)
+            await MainActor.run { updateStateAfterThreadCompletion() }
+            
+            // Extract the best recognized brand from online retailers to feed into MapKit
+            let extractedBrand = amazonResults.compactMap { $0.metadata["brand"] as? String }.first
+            let extractedAuthor = amazonResults.compactMap { $0.metadata["author"] as? String }.first
+            
+            print("[SearchViewModel] Extracted intelligence - Brand: \(extractedBrand ?? "None"), Author: \(extractedAuthor ?? "None")")
+            
+            var originalWithIntelligence = enhancedQuery.original
+            if let brand = extractedBrand, !originalWithIntelligence.lowercased().contains(brand.lowercased()) {
+                originalWithIntelligence = "\(brand) \(originalWithIntelligence)"
+            } else if let author = extractedAuthor, !originalWithIntelligence.lowercased().contains(author.lowercased()) {
+                originalWithIntelligence = "\(originalWithIntelligence) \(author)"
+            }
+            
+            // Re-construct MapKit local query passing the newly discovered intelligence
+            let intelligentLocalQuery = EnhancedQuery(
+                original: originalWithIntelligence,
+                productType: enhancedQuery.productType,
+                categories: enhancedQuery.categories,
+                priceMax: enhancedQuery.priceMax,
+                condition: enhancedQuery.condition
+            )
+            
+            // Now start MapKit
+            _ = await searchLocal(enhancedQuery: intelligentLocalQuery, storeCategories: intelligentLocalQuery.categories)
             
             _ = await webTask
             await MainActor.run { updateStateAfterThreadCompletion() }
-            _ = await amazonTask
-            await MainActor.run { updateStateAfterThreadCompletion() }
-            _ = await localTask
-            await MainActor.run { updateStateAfterThreadCompletion() }
         }
     }
     
-    /// Runs web, product, and local search for the given query and returns combined result (used for agent fallback).
-    private func runClassicSearch(query: String) async -> AgentSearchResult {
-        // Shared enhance + determineStoreCategories (same as classic path)
-        async let enhancedTask = queryEnhancer.enhance(query: query)
-        async let storeCategoriesTask = queryEnhancer.determineStoreCategories(for: query)
-        let enhancedQuery: EnhancedQuery
-        let storeCategories: [String]
-        do {
-            enhancedQuery = try await enhancedTask
-            storeCategories = await storeCategoriesTask
-        } catch {
-            enhancedQuery = EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
-            storeCategories = []
-        }
-        
-        async let w = searchWeb(enhancedQuery: enhancedQuery)
-        async let a = searchAmazon(enhancedQuery: enhancedQuery)
-        async let l = searchLocal(enhancedQuery: enhancedQuery, storeCategories: storeCategories)
-        _ = await w
-        _ = await a
-        _ = await l
-        return AgentSearchResult(
-            webResults: webResults,
-            amazonResults: amazonResults,
-            localResults: localResults,
-            localStoreCategories: localStoreCategories
-        )
-    }
-    
+
     /// Updates the overall state after a search thread completes
     /// Transitions to .loaded when all threads are done OR when we have results and at least one thread is done
     private func updateStateAfterThreadCompletion() {
@@ -516,103 +426,23 @@ public class SearchViewModel: ObservableObject {
         isLoadingLocal = true
         
         searchTask = Task {
-            if SettingsManager.shared.useAgentSearch, let agent = searchAgent {
-                let productSearchTask = Task { [weak self] in
-                    guard let self else { return }
-                    let eq = EnhancedQuery(original: refinedQuery, productType: nil, categories: [], priceMax: nil, condition: nil)
-                    _ = await self.searchAmazon(enhancedQuery: eq)
-                }
-                do {
-                    let result = try await agent.run(
-                        userQuery: refinedQuery,
-                        metadata: metadata,
-                        classicFallback: { [weak self] fallbackQuery in
-                            await self?.runClassicSearch(query: fallbackQuery) ?? AgentSearchResult(
-                                webResults: [], amazonResults: [], localResults: [], localStoreCategories: []
-                            )
-                        },
-                        onToolResult: { [weak self] tool, results in
-                            Task { @MainActor in
-                                guard let self else { return }
-                                switch tool {
-                                case "search_web":
-                                    self.webResults = results
-                                case "search_products":
-                                    self.amazonResults = results
-                                case "search_local_stores":
-                                    self.localResults = results
-                                default:
-                                    break
-                                }
-                                self.results = self.webResults + self.amazonResults + self.localResults
-                            }
-                        }
-                    )
-                    guard !Task.isCancelled else { return }
-                    await productSearchTask.value
-                    guard !Task.isCancelled else { return }
-                    let amazonToApply = result.amazonResults.isEmpty ? amazonResults : result.amazonResults
-                    applyFinalResults(
-                        webResults: result.webResults,
-                        amazonResults: amazonToApply,
-                        localResults: result.localResults,
-                        localStoreCategories: result.localStoreCategories
-                    )
-                } catch {
-                    guard !Task.isCancelled else { return }
-                    let fallback = await runClassicSearch(query: refinedQuery)
-                    applyFinalResults(
-                        webResults: fallback.webResults,
-                        amazonResults: fallback.amazonResults,
-                        localResults: fallback.localResults,
-                        localStoreCategories: fallback.localStoreCategories
-                    )
-                    if webResults.isEmpty && amazonResults.isEmpty && localResults.isEmpty {
-                        errorMessage = error.localizedDescription
-                    }
-                }
-                isLoadingWeb = false
-                isLoadingAmazon = false
-                isLoadingLocal = false
-                state = .loaded
-                return
-            }
-            
             do {
-                // Enhance query with LLM, passing structured metadata for better categorization
-                let enhancedQuery = try await queryEnhancer.enhance(query: refinedQuery, metadata: metadata)
-                
-                // For web search, use only the categories from enhance (not store categories)
-                // Store categories are only used for local MapKit search
-                let webQuery = enhancedQuery
-                
+                // Use Foundation Models to parse refined query
+                let enhancedQuery = (try? await queryEnhancer.enhanceQuery(refinedQuery)) ?? EnhancedQuery(original: refinedQuery, productType: nil, categories: [], priceMax: nil, condition: nil)
+
                 // Search using coordinator, excluding Amazon, MapKit, and Google Books sources
                 // MapKit results should only appear in Local Stores tab, not Web tab
                 // Google Books is handled in products section
-                let searchResults = try await coordinator.search(query: webQuery, excludingSources: ["amazon", "mapkit", "googlebooks"])
+                let searchResults = try await coordinator.search(query: enhancedQuery, excludingSources: ["amazon", "mapkit", "googlebooks"])
                 
                 // Check if task was cancelled
                 guard !Task.isCancelled else {
                     return
                 }
-                
-                // Also update local results using the same logic as initial search
-                // This ensures MapKit uses determineStoreCategories (not example categories from enhance)
+
                 Task {
                     do {
-                        // Step 1: Ask LLM what store types would carry this product
-                        // Pass metadata to help with better categorization
-                        let storeCategories = await queryEnhancer.determineStoreCategories(for: refinedQuery, metadata: metadata)
-                        
-                        // Step 2: Use store categories if available, otherwise fall back to enhancedQuery.categories
-                        // Filter out known example categories from enhance prompt
-                        let categoriesToUse: [String]
-                        if !storeCategories.isEmpty {
-                            categoriesToUse = storeCategories
-                        } else {
-                            let exampleCategories = Set(["furniture store", "electronics store"])
-                            categoriesToUse = enhancedQuery.categories.filter { !exampleCategories.contains($0.lowercased()) }
-                        }
+                        let categoriesToUse = enhancedQuery.categories
                         
                         // Create EnhancedQuery with selected categories
                         let localQuery = EnhancedQuery(

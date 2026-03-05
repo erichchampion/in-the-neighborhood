@@ -1,21 +1,18 @@
 import SwiftUI
 import MetasearchCore
-import LLMIntegration
 
 public struct SearchView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: SearchViewModel
-    @StateObject private var downloadManager = LLMModelDownloadManager.shared
     @State private var showSettings = false
     
     public init(
         coordinator: MetasearchCoordinator,
-        queryEnhancer: QueryEnhancer,
+        queryEnhancer: QueryEnhancing,
         amazonSource: any SearchSource,
         googleBooksSource: any SearchSource,
         bestBuySource: any SearchSource,
-        mapKitSource: any SearchSource,
-        searchAgent: SearchAgent? = nil
+        mapKitSource: any SearchSource
     ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel(
             coordinator: coordinator,
@@ -23,8 +20,7 @@ public struct SearchView: View {
             amazonSource: amazonSource,
             googleBooksSource: googleBooksSource,
             bestBuySource: bestBuySource,
-            mapKitSource: mapKitSource,
-            searchAgent: searchAgent
+            mapKitSource: mapKitSource
         ))
     }
     
@@ -51,29 +47,28 @@ public struct SearchView: View {
                     case .loading:
                         // Show results area with per-section progress indicators (same layout as loaded state)
                         ResultsView(
-                                webResults: viewModel.webResults,
-                                amazonResults: viewModel.amazonResults,
-                                localResults: viewModel.localResults,
-                                originalQuery: viewModel.originalQuery,
-                                selectedTab: $viewModel.selectedTab,
-                                isLoadingWeb: viewModel.isLoadingWeb,
-                                isLoadingAmazon: viewModel.isLoadingAmazon,
-                                isLoadingLocal: viewModel.isLoadingLocal,
-                                localStoreCategories: viewModel.localStoreCategories,
-                                downloadManager: downloadManager,
-                                onRefine: { result in
-                                    Task {
-                                        let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
-                                        await viewModel.refineSearch(
-                                            with: productMetadata,
-                                            originalQuery: viewModel.originalQuery,
-                                            resultTitle: result.title
-                                        )
-                                    }
+                            webResults: viewModel.webResults,
+                            amazonResults: viewModel.amazonResults,
+                            localResults: viewModel.localResults,
+                            originalQuery: viewModel.originalQuery,
+                            selectedTab: $viewModel.selectedTab,
+                            isLoadingWeb: viewModel.isLoadingWeb,
+                            isLoadingAmazon: viewModel.isLoadingAmazon,
+                            isLoadingLocal: viewModel.isLoadingLocal,
+                            localStoreCategories: viewModel.localStoreCategories,
+                            onRefine: { result in
+                                Task {
+                                    let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
+                                    await viewModel.refineSearch(
+                                        with: productMetadata,
+                                        originalQuery: viewModel.originalQuery,
+                                        resultTitle: result.title
+                                    )
                                 }
-                            )
-                            .accessibilityLabel("Search results")
-                            .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
+                            }
+                        )
+                        .accessibilityLabel("Search results")
+                        .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
                         
                     case .loaded:
                         if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
@@ -89,7 +84,6 @@ public struct SearchView: View {
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
                                 isLoadingLocal: viewModel.isLoadingLocal,
                                 localStoreCategories: viewModel.localStoreCategories,
-                                downloadManager: downloadManager,
                                 onRefine: { result in
                                     Task {
                                         let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
@@ -115,7 +109,6 @@ public struct SearchView: View {
                             }
                         )
                     }
-                    
                 }
             }
             .navigationTitle(NSLocalizedString("In the Neighborhood", comment: ""))

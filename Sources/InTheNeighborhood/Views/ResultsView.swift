@@ -1,6 +1,5 @@
 import SwiftUI
 import MetasearchCore
-import LLMIntegration
 
 public struct ResultsView: View {
     let webResults: [SearchResult]
@@ -13,7 +12,6 @@ public struct ResultsView: View {
     let isLoadingAmazon: Bool
     let isLoadingLocal: Bool
     let localStoreCategories: [String]
-    @ObservedObject var downloadManager: LLMModelDownloadManager
     
     public init(
         webResults: [SearchResult],
@@ -25,7 +23,6 @@ public struct ResultsView: View {
         isLoadingAmazon: Bool = false,
         isLoadingLocal: Bool = false,
         localStoreCategories: [String] = [],
-        downloadManager: LLMModelDownloadManager = .shared,
         onRefine: ((SearchResult) -> Void)? = nil
     ) {
         self.webResults = webResults
@@ -37,7 +34,6 @@ public struct ResultsView: View {
         self.isLoadingAmazon = isLoadingAmazon
         self.isLoadingLocal = isLoadingLocal
         self.localStoreCategories = localStoreCategories
-        self.downloadManager = downloadManager
         self.onRefine = onRefine
     }
     
@@ -62,16 +58,6 @@ public struct ResultsView: View {
                     productsTabContent
                 case .localStores:
                     localStoresTabContent
-                }
-                
-                if selectedTab == .localStores && downloadManager.downloadState == .downloading {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                    ModelDownloadView(
-                        downloadManager: downloadManager,
-                        onCancel: { downloadManager.cancelDownload() }
-                    )
-                    .padding()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
