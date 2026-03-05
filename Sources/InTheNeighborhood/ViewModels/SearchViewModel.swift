@@ -241,6 +241,9 @@ public class SearchViewModel: ObservableObject {
         
         startNewSearch(originalQuery: refinedQuery)
         
+        // Automatically switch back to the web tab to show new comprehensive results
+        selectedTab = .web
+        
         searchTask = Task {
             let enhancedQuery = (try? await queryEnhancer.enhanceQuery(refinedQuery)) ?? EnhancedQuery(original: refinedQuery, productType: nil, categories: [], priceMax: nil, condition: nil)
             await executeUnifiedSearch(query: enhancedQuery)
