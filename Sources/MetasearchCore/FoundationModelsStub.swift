@@ -20,5 +20,11 @@ public protocol GenerableProtocol {}
 @attached(peer)
 public macro Guide(description: String) = #externalMacro(module: "FoundationModelsMacros", type: "GuideMacro")
 
+/// A macro marker declaring a type as a tool callable by FoundationModels agent sessions.
+@attached(extension, conformances: ToolProtocol)
+public macro Tool(_ description: String = "") = #externalMacro(module: "FoundationModelsMacros", type: "ToolMacro")
+
+public protocol ToolProtocol {}
+
 #endif
 

@@ -72,7 +72,7 @@ public actor MetasearchCoordinator {
         }
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:66 - Before filter: total results: \(allResults.count), Amazon results: \(allResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:66 - Before filter: total results: \(allResults.count), Amazon results: \(allResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         // Aggregate, filter, and prioritize results
@@ -80,19 +80,19 @@ public actor MetasearchCoordinator {
         var filteredResults = resultAggregator.filter(results: allResults, denyList: denyListFilter)
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         filteredResults = resultAggregator.aggregate(results: filteredResults)
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         filteredResults = resultPrioritizer.prioritize(results: filteredResults)
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         return filteredResults
@@ -110,25 +110,23 @@ public actor MetasearchCoordinator {
         
         // Split sources into distinct phases
         // Phase 1: Web sources and Product Intelligence sources (Amazon, BestBuy)
-        let productSourceIDs: Set<String> = ["amazon", "bestbuy", "googlebooks"]
-        let localSourceIDs: Set<String> = ["mapkit"]
-        
-        let phase1Sources = sourcesToSearch.filter { !localSourceIDs.contains($0.identifier) }
-        let phase2Sources = sourcesToSearch.filter { localSourceIDs.contains($0.identifier) }
+        let phase1Sources = sourcesToSearch.filter { $0.category != .local }
+        let phase2Sources = sourcesToSearch.filter { $0.category == .local }
         
         var extractedBrand: String? = nil
         var extractedAuthor: String? = nil
         
         // Execute Phase 1
-        await withTaskGroup(of: (String, [SearchResult]).self) { group in
+        await withTaskGroup(of: (String, ResultCategory, [SearchResult]).self) { group in
             for source in phase1Sources {
                 let sourceIdentifier = source.identifier
+                let sourceCategory = source.category
                 
                 // If the product is detected as a book, inject bookshop.org into the online query
                 var effectiveQuery = query
-                let isBook = query.productType?.lowercased().contains("book") == true || query.categories.contains(where: { $0.lowercased().contains("book") }) || query.original.lowercased().contains("book")
+                let isBook = query.isBook
                 
-                if isBook && !productSourceIDs.contains(sourceIdentifier) && sourceIdentifier != "mapkit" {
+                if isBook && sourceCategory != .book && sourceCategory != .local {
                     effectiveQuery = EnhancedQuery(
                         original: "\(query.original) bookshop.org",
                         productType: query.productType,
@@ -147,16 +145,16 @@ public actor MetasearchCoordinator {
                         let results = try await self.withTimeout(seconds: timeoutValue) {
                             try await sourceToRun.search(query: runQuery)
                         }
-                        return (sourceIdentifier, results)
+                        return (sourceIdentifier, sourceCategory, results)
                     } catch {
-                        return (sourceIdentifier, [])
+                        return (sourceIdentifier, sourceCategory, [])
                     }
                 }
             }
             
-            for await (sourceIdentifier, rawResults) in group {
+            for await (sourceIdentifier, sourceCategory, rawResults) in group {
                 // Determine if this batch contains intelligence we can use
-                if productSourceIDs.contains(sourceIdentifier.lowercased()) && !rawResults.isEmpty {
+                if (sourceCategory == .product || sourceCategory == .book) && !rawResults.isEmpty {
                     if extractedBrand == nil {
                         extractedBrand = rawResults.compactMap { $0.metadata["brand"] as? String }.first
                     }

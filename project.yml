@@ -56,6 +56,9 @@ targets:
       - target: MetasearchCore
       - target: SearchSources
       - target: LocationServices
+      - target: SharedModels
+      - target: NearbyStoresWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood
@@ -115,6 +118,10 @@ targets:
         NSLocationAlwaysAndWhenInUseUsageDescription: "In the Neighborhood uses your location to find nearby local merchants and calculate distances."
         UIBackgroundModes:
           - fetch
+    entitlements:
+      path: Sources/InTheNeighborhood/InTheNeighborhood.entitlements
+      properties:
+        com.apple.security.application-groups: ["group.com.in-the-neighborhood.shared"]
 
   # MetasearchCore Framework
   MetasearchCore:
@@ -166,6 +173,56 @@ targets:
         DEFINES_MODULE: true
         GENERATE_INFOPLIST_FILE: true
 
+
+  # SharedModels Framework (accessed by both app and widget)
+  SharedModels:
+    type: framework
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Sources/SharedModels
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.SharedModels
+        SWIFT_VERSION: "6.0"
+        DEFINES_MODULE: true
+        GENERATE_INFOPLIST_FILE: true
+
+  # Widget Extension
+  NearbyStoresWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Sources/NearbyStoresWidget
+    dependencies:
+      - target: MetasearchCore
+      - target: SharedModels
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.in-the-neighborhood.NearbyStoresWidget
+        PRODUCT_MODULE_NAME: NearbyStoresWidget
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: false
+        INFOPLIST_FILE: Sources/NearbyStoresWidget/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: KA5A6NN3PD
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/Frameworks @executable_path/../../Frameworks
+    info:
+      path: Sources/NearbyStoresWidget/Info.plist
+      properties:
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Sources/NearbyStoresWidget/NearbyStoresWidget.entitlements
+      properties:
+        com.apple.security.application-groups: ["group.com.in-the-neighborhood.shared"]
 
   # Test Targets
   InTheNeighborhoodTests:

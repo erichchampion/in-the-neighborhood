@@ -7,7 +7,8 @@ final class SearchSourceProtocolTests: XCTestCase {
         // This test verifies the protocol exists and can be implemented
         let mockSource = MockSearchSource(
             identifier: "test-source",
-            sourceType: .online
+            sourceType: .online,
+            category: .web
         )
         
         XCTAssertEqual(mockSource.identifier, "test-source")
@@ -17,7 +18,8 @@ final class SearchSourceProtocolTests: XCTestCase {
     func test_SearchSource_SearchMethod() async throws {
         let mockSource = MockSearchSource(
             identifier: "test-source",
-            sourceType: .online
+            sourceType: .online,
+            category: .web
         )
         
         let query = EnhancedQuery(
@@ -40,12 +42,14 @@ final class SearchSourceProtocolTests: XCTestCase {
 final class MockSearchSource: SearchSource, @unchecked Sendable {
     let identifier: String
     let sourceType: SourceType
+    let category: ResultCategory
     var shouldThrow = false
     var delay: TimeInterval = 0.0
     
-    init(identifier: String, sourceType: SourceType) {
+    init(identifier: String, sourceType: SourceType, category: ResultCategory = .web) {
         self.identifier = identifier
         self.sourceType = sourceType
+        self.category = category
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -64,6 +68,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
                 description: "Mock description",
                 source: identifier,
                 sourceType: sourceType,
+                category: category,
                 url: URL(string: "https://example.com/\(identifier)"),
                 location: nil,
                 distance: nil,

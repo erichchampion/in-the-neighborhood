@@ -1,23 +1,37 @@
 import XCTest
 @testable import InTheNeighborhood
 import MetasearchCore
-import CoreLocation
 
-/// Thread-safe capture for executor callback args (tests run sequentially).
-private final class Capture<T>: @unchecked Sendable {
-    var value: T
-    init(_ value: T) { self.value = value }
+/// Mock search source for testing the executor
+private final class MockSearchSource: SearchSource, @unchecked Sendable {
+    let identifier: String
+    let sourceType: SourceType
+    let category: ResultCategory
+    var invokedQueries: [EnhancedQuery] = []
+    var stubbedResults: [SearchResult] = []
+    
+    init(identifier: String, sourceType: SourceType, category: ResultCategory = .web) {
+        self.identifier = identifier
+        self.sourceType = sourceType
+        self.category = category
+    }
+    
+    func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        invokedQueries.append(query)
+        return stubbedResults
+    }
 }
 
 final class SearchToolExecutorTests: XCTestCase {
 
-    private func makeResult(id: String, title: String, source: String) -> SearchResult {
+    private func makeResult(id: String, title: String, source: String, category: ResultCategory = .web) -> SearchResult {
         SearchResult(
             id: id,
             title: title,
             description: nil,
             source: source,
             sourceType: .online,
+            category: category,
             url: nil,
             location: nil,
             distance: nil,
@@ -25,76 +39,68 @@ final class SearchToolExecutorTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func test_executeSearchWeb_callsWebSearchWithExpectedQueryAndExcludingSources() async throws {
-        let lastQuery = Capture<EnhancedQuery?>(nil)
-        let lastExcluding = Capture<Set<String>?>(nil)
-        let webResults = [makeResult(id: "w1", title: "Web Result", source: "web")]
-        let executor = SearchToolExecutor(
-            webSearch: { (query: EnhancedQuery, excluding: Set<String>) async -> [SearchResult] in
-                lastQuery.value = query
-                lastExcluding.value = excluding
-                return webResults
-            },
-            productSearch: { (_: EnhancedQuery) async -> [SearchResult] in [] },
-            localSearch: { (_: EnhancedQuery) async -> [SearchResult] in [] }
-        )
-        let results = try await executor.execute(toolName: "search_web", arguments: ["query": "test"])
-        XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results[0].source, "web")
-        XCTAssertEqual(lastQuery.value?.original, "test")
-        XCTAssertEqual(lastExcluding.value, ["amazon", "mapkit", "googlebooks"])
+    func test_searchWeb_invokesBingAndDuckDuckGo() async {
+        let bing = MockSearchSource(identifier: "bing", sourceType: .online, category: .web)
+        bing.stubbedResults = [makeResult(id: "1", title: "Bing", source: "bing", category: .web)]
+        
+        let ddg = MockSearchSource(identifier: "duckduckgo", sourceType: .online, category: .web)
+        ddg.stubbedResults = [makeResult(id: "2", title: "DDG", source: "duckduckgo", category: .web)]
+        
+        let amazon = MockSearchSource(identifier: "amazon", sourceType: .online, category: .product)
+        
+        let executor = SearchToolExecutor(sources: [bing, ddg, amazon])
+        let results = await executor.searchWeb(query: "test query")
+        
+        XCTAssertEqual(results.count, 2)
+        XCTAssertEqual(bing.invokedQueries.count, 1)
+        XCTAssertEqual(ddg.invokedQueries.count, 1)
+        XCTAssertEqual(amazon.invokedQueries.count, 0) // Should not be invoked
+        XCTAssertEqual(bing.invokedQueries.first?.original, "test query")
     }
 
-    @MainActor
-    func test_executeSearchProducts_callsProductSearchAndReturnsCombinedResults() async throws {
-        let called = Capture(false)
-        let productResults = [makeResult(id: "p1", title: "Product", source: "amazon")]
-        let executor = SearchToolExecutor(
-            webSearch: { (_: EnhancedQuery, _: Set<String>) async -> [SearchResult] in [] },
-            productSearch: { (query: EnhancedQuery) async -> [SearchResult] in
-                called.value = true
-                XCTAssertEqual(query.original, "book")
-                return productResults
-            },
-            localSearch: { (_: EnhancedQuery) async -> [SearchResult] in [] }
-        )
-        let results = try await executor.execute(toolName: "search_products", arguments: ["query": "book"])
-        XCTAssertTrue(called.value)
+    func test_searchProducts_invokesProductSourcesAndPassesCondition() async {
+        let amazon = MockSearchSource(identifier: "amazon", sourceType: .online, category: .product)
+        amazon.stubbedResults = [makeResult(id: "1", title: "Amz", source: "amazon", category: .product)]
+        
+        let executor = SearchToolExecutor(sources: [amazon])
+        let results = await executor.searchProducts(query: "laptop", maxPrice: 500, condition: "used")
+        
         XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results[0].source, "amazon")
+        XCTAssertEqual(amazon.invokedQueries.count, 1)
+        let query = amazon.invokedQueries.first
+        XCTAssertEqual(query?.original, "laptop")
+        XCTAssertEqual(query?.priceMax, 500)
+        XCTAssertEqual(query?.condition, .used)
     }
 
-    @MainActor
-    func test_executeSearchLocalStores_callsLocalSearchWithCategories() async throws {
-        let lastQuery = Capture<EnhancedQuery?>(nil)
-        let localResults = [makeResult(id: "l1", title: "Store", source: "mapkit")]
-        let executor = SearchToolExecutor(
-            webSearch: { _, _ in [] },
-            productSearch: { _ in [] },
-            localSearch: { query in
-                lastQuery.value = query
-                return localResults
-            }
-        )
-        let results = try await executor.execute(toolName: "search_local_stores", arguments: ["query": "books", "categories": ["bookstore"]])
+    func test_searchLocalStores_invokesMapKitWithStoreType() async {
+        let mapkit = MockSearchSource(identifier: "mapkit", sourceType: .local, category: .local)
+        mapkit.stubbedResults = [makeResult(id: "1", title: "Local", source: "mapkit", category: .local)]
+        
+        let executor = SearchToolExecutor(sources: [mapkit])
+        let results = await executor.searchLocalStores(storeType: "bookstore", radiusKm: 10)
+        
         XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(lastQuery.value?.original, "books")
-        XCTAssertEqual(lastQuery.value?.categories, ["bookstore"])
+        XCTAssertEqual(mapkit.invokedQueries.count, 1)
+        let query = mapkit.invokedQueries.first
+        XCTAssertEqual(query?.original, "bookstore")
+        XCTAssertEqual(query?.categories, ["bookstore"])
     }
 
-    @MainActor
-    func test_unknownToolName_throws() async {
-        let executor = SearchToolExecutor(
-            webSearch: { (_: EnhancedQuery, _: Set<String>) async -> [SearchResult] in [] },
-            productSearch: { (_: EnhancedQuery) async -> [SearchResult] in [] },
-            localSearch: { (_: EnhancedQuery) async -> [SearchResult] in [] }
-        )
-        do {
-            _ = try await executor.execute(toolName: "unknown_tool", arguments: [:])
-            XCTFail("Expected error for unknown tool")
-        } catch {
-            // Expected
-        }
+    func test_searchBooks_invokesBookSources() async {
+        let googlebooks = MockSearchSource(identifier: "googlebooks", sourceType: .online, category: .book)
+        googlebooks.stubbedResults = [makeResult(id: "1", title: "GB", source: "googlebooks", category: .book)]
+        
+        let openlibrary = MockSearchSource(identifier: "openlibrary", sourceType: .online, category: .book)
+        
+        let executor = SearchToolExecutor(sources: [googlebooks, openlibrary])
+        let results = await executor.searchBooks(query: "swift programming")
+        
+        XCTAssertEqual(results.count, 1)
+        XCTAssertEqual(googlebooks.invokedQueries.count, 1)
+        XCTAssertEqual(openlibrary.invokedQueries.count, 1)
+        let query = googlebooks.invokedQueries.first
+        XCTAssertEqual(query?.original, "swift programming")
+        XCTAssertEqual(query?.productType, "book")
     }
 }

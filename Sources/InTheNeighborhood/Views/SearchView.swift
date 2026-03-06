@@ -9,18 +9,12 @@ public struct SearchView: View {
     public init(
         coordinator: MetasearchCoordinator,
         queryEnhancer: QueryEnhancing,
-        amazonSource: any SearchSource,
-        googleBooksSource: any SearchSource,
-        bestBuySource: any SearchSource,
-        mapKitSource: any SearchSource
+        allSources: [any SearchSource]
     ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel(
             coordinator: coordinator,
             queryEnhancer: queryEnhancer,
-            amazonSource: amazonSource,
-            googleBooksSource: googleBooksSource,
-            bestBuySource: bestBuySource,
-            mapKitSource: mapKitSource
+            allSources: allSources
         ))
     }
     
@@ -128,6 +122,22 @@ public struct SearchView: View {
                 if newPhase == .background {
                     viewModel.cancelInFlightSearch()
                 }
+            }
+            .onReceive(IntentManager.shared.$pendingSearch) { pending in
+                guard let pending = pending else { return }
+                viewModel.searchText = pending.query
+                switch pending.type {
+                case .localStores:
+                    viewModel.selectedTab = .localStores
+                case .products:
+                    viewModel.selectedTab = .products
+                case .general:
+                    viewModel.selectedTab = .web
+                }
+                Task {
+                    await viewModel.search(query: pending.query)
+                }
+                IntentManager.shared.clearPendingSearch()
             }
         }
     }

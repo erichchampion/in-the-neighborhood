@@ -2,8 +2,9 @@ import Foundation
 import MetasearchCore
 
 public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "googlebooks"
+    public let identifier: String = SourceIdentifier.googlebooks
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .book
     
     private let session: URLSession
     private let apiKey: String?
@@ -345,6 +346,7 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
                 description: description,
                 source: identifier,
                 sourceType: sourceType,
+                category: category,
                 url: url,
                 location: nil,
                 distance: nil,

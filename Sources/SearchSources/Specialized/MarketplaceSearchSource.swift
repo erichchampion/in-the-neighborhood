@@ -30,8 +30,9 @@ import MetasearchCore
 /// ## Implementation Status:
 /// This source currently returns empty results. Implementation is deferred pending legal review.
 public final class MarketplaceSearchSource: SearchSource {
-    public let identifier: String = "marketplace"
+    public let identifier: String = SourceIdentifier.marketplace
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .product
     
     private let session: URLSession
     

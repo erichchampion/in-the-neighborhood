@@ -3,12 +3,14 @@ import MetasearchCore
 import SwiftSoup
 
 public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "amazon"
+    public let identifier: String = SourceIdentifier.amazon
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .product
     
     
     private let session: URLSession
     private let scraper: AmazonProductScraper
+    private let webExtractor: FoundationModelWebExtractor
     private let maxRetries: Int
     private let retryDelay: TimeInterval
     private let maxProductsToScrape: Int
@@ -21,6 +23,7 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
     ) {
         self.session = session
         self.scraper = AmazonProductScraper(session: session)
+        self.webExtractor = FoundationModelWebExtractor()
         self.maxRetries = maxRetries
         self.retryDelay = retryDelay
         self.maxProductsToScrape = maxProductsToScrape
@@ -370,90 +373,86 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
         
         // Scrape products concurrently - process sequentially to avoid cancellation issues
         for productInfo in productInfos {
-            do {
-                let metadata = try await scraper.scrapeProduct(url: productInfo.url)
-                
-                // Use title from metadata or fallback
-                let title = metadata.title ?? extractTitleFromURL(url: productInfo.url) ?? "Amazon Product"
-                
-                // Validate relevance: check if product matches the search query
-                if !queryWords.isEmpty {
-                    let isRelevant = isProductRelevant(
-                        title: title,
-                        brand: metadata.brand,
-                        metadata: metadata,
-                        queryWords: queryWords
-                    )
-                    
-                    if !isRelevant {
-                        print("[AmazonSearchSource] Filtering out irrelevant product - title: '\(title)', query: '\(originalQuery)'")
-                        continue
-                    }
-                }
-                
-                // Build description from metadata
-                var descriptionParts: [String] = []
-                if let brand = metadata.brand {
-                    descriptionParts.append(brand)
-                }
-                if let price = metadata.price {
-                    descriptionParts.append(price)
-                }
-                if let ratings = metadata.ratings {
-                    descriptionParts.append("⭐ \(String(format: "%.1f", ratings))")
-                }
-                if let availability = metadata.availability {
-                    descriptionParts.append(availability)
-                }
-                
-                let description = descriptionParts.isEmpty ? nil : descriptionParts.joined(separator: " • ")
-                
-                // Build ProductMetadata
-                // Prefer image URL from search results, fall back to detail page image
-                let finalImageUrl = productInfo.imageUrl ?? metadata.imageUrl
-                
-                let productMetadata = ProductMetadata(
-                    isbn: metadata.isbn,
-                    author: metadata.author,
-                    sku: metadata.sku,
-                    asin: metadata.asin,
-                    brand: metadata.brand,
-                    artist: metadata.artist,
-                    price: metadata.price,
-                    imageUrl: finalImageUrl,
-                    availability: metadata.availability,
-                    ratings: metadata.ratings
-                )
-                
-                // Convert to dictionary for SearchResult (backward compatibility)
-                var metadataDict = productMetadata.toDictionary()
-                // Add ratings as Double if available (ProductMetadata stores it as Double)
-                if let ratings = metadata.ratings {
-                    metadataDict["ratings"] = ratings
-                }
-                
-                // #region agent log
-                print("[DEBUG] AmazonSearchSource.swift:265 - Metadata stored in SearchResult - url: \(productInfo.url.absoluteString), title: \(title), metadataKeys: \(Array(metadataDict.keys)), metadataDict: \(metadataDict.mapValues { String(describing: $0) })")
-                // #endregion
-                
-                let result = SearchResult(
-                    id: metadata.asin ?? UUID().uuidString,
+            // Try FoundationModels extraction first, fall back to SwiftSoup scraping
+            let metadata = await extractMetadata(url: productInfo.url)
+            
+            // Use title from metadata or fallback
+            let title = metadata.title ?? extractTitleFromURL(url: productInfo.url) ?? "Amazon Product"
+            
+            // Validate relevance: check if product matches the search query
+            if !queryWords.isEmpty {
+                let isRelevant = isProductRelevant(
                     title: title,
-                    description: description,
-                    source: identifier,
-                    sourceType: sourceType,
-                    url: productInfo.url,
-                    location: nil,
-                    distance: nil,
-                    metadata: metadataDict
+                    brand: metadata.brand,
+                    metadata: metadata,
+                    queryWords: queryWords
                 )
                 
-                results.append(result)
-            } catch {
-                // Skip failed products, continue with others
-                print("[AmazonSearchSource] Failed to scrape \(productInfo.url.absoluteString): \(error)")
-                continue
+                if !isRelevant {
+                    print("[AmazonSearchSource] Filtering out irrelevant product - title: '\(title)', query: '\(originalQuery)'")
+                    continue
+                }
             }
+            
+            // Build description from metadata
+            var descriptionParts: [String] = []
+            if let brand = metadata.brand {
+                descriptionParts.append(brand)
+            }
+            if let price = metadata.price {
+                descriptionParts.append(price)
+            }
+            if let ratings = metadata.ratings {
+                descriptionParts.append("⭐ \(String(format: "%.1f", ratings))")
+            }
+            if let availability = metadata.availability {
+                descriptionParts.append(availability)
+            }
+            
+            let description = descriptionParts.isEmpty ? nil : descriptionParts.joined(separator: " • ")
+            
+            // Build ProductMetadata
+            // Prefer image URL from search results, fall back to detail page image
+            let finalImageUrl = productInfo.imageUrl ?? metadata.imageUrl
+            
+            let productMetadata = ProductMetadata(
+                isbn: metadata.isbn,
+                author: metadata.author,
+                sku: metadata.sku,
+                asin: metadata.asin,
+                brand: metadata.brand,
+                artist: metadata.artist,
+                price: metadata.price,
+                imageUrl: finalImageUrl,
+                availability: metadata.availability,
+                ratings: metadata.ratings
+            )
+            
+            // Convert to dictionary for SearchResult (backward compatibility)
+            var metadataDict = productMetadata.toDictionary()
+            // Add ratings as Double if available (ProductMetadata stores it as Double)
+            if let ratings = metadata.ratings {
+                metadataDict["ratings"] = ratings
+            }
+            
+            // #region agent log
+            print("[DEBUG] AmazonSearchSource.swift:265 - Metadata stored in SearchResult - url: \(productInfo.url.absoluteString), title: \(title), metadataKeys: \(Array(metadataDict.keys)), metadataDict: \(metadataDict.mapValues { String(describing: $0) })")
+            // #endregion
+            
+            let result = SearchResult(
+                id: metadata.asin ?? UUID().uuidString,
+                title: title,
+                description: description,
+                source: identifier,
+                sourceType: sourceType,
+                category: category,
+                url: productInfo.url,
+                location: nil,
+                distance: nil,
+                metadata: metadataDict
+            )
+            
+            results.append(result)
         }
         
         return results
@@ -510,6 +509,54 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
         return isRelevant
     }
     
+    /// Tries FoundationModels extraction first; falls back to SwiftSoup scraping.
+    private func extractMetadata(url: URL) async -> AmazonProductMetadata {
+        // Phase 1: Try FoundationModels-powered extraction
+        if webExtractor.isAvailable {
+            do {
+                let html = try await fetchProductHTML(url: url)
+                if let metadata = await webExtractor.extract(html: html, url: url) {
+                    print("[AmazonSearchSource] FoundationModels extraction succeeded for \(url.absoluteString)")
+                    return metadata
+                }
+            } catch {
+                print("[AmazonSearchSource] HTML fetch for FoundationModels failed: \(error.localizedDescription)")
+            }
+        }
+
+        // Fallback: Use existing SwiftSoup scraper
+        do {
+            print("[AmazonSearchSource] Falling back to SwiftSoup scraping for \(url.absoluteString)")
+            return try await scraper.scrapeProduct(url: url)
+        } catch {
+            print("[AmazonSearchSource] SwiftSoup scraping also failed: \(error.localizedDescription)")
+            return AmazonProductMetadata(
+                title: nil, price: nil, brand: nil, ratings: nil,
+                availability: nil, asin: nil, imageUrl: nil,
+                isbn: nil, sku: nil, author: nil, artist: nil
+            )
+        }
+    }
+
+    /// Fetches raw HTML for a product page, reusing the same browser-like headers.
+    private func fetchProductHTML(url: URL) async throws -> String {
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.timeoutInterval = 15.0
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw AmazonScrapingError.invalidResponse
+        }
+        guard let html = String(data: data, encoding: .utf8) else {
+            throw AmazonScrapingError.invalidResponse
+        }
+        return html
+    }
+
     private func extractTitleFromURL(url: URL) -> String? {
         // Try to extract meaningful title from URL path
         let path = url.path

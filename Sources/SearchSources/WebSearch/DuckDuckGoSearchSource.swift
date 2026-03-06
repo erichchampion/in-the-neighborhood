@@ -3,8 +3,9 @@ import MetasearchCore
 
 /// SearchSource wrapping DuckDuckGo; enables incremental display when used as a separate coordinator source.
 public final class DuckDuckGoSearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "duckduckgo"
+    public let identifier: String = SourceIdentifier.duckduckgo
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .web
     
     private let provider: WebSearchProvider
     private let circuitBreaker: CircuitBreaker

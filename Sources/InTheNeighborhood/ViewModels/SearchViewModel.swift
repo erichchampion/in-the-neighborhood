@@ -18,12 +18,11 @@ public class SearchViewModel: ObservableObject {
     @Published public var originalQuery: String = ""
     @Published public var localStoreCategories: [String] = []
     
+    @Published public var agentSummary: String? = nil
+    
     private let coordinator: MetasearchCoordinator
+    private let agentCoordinator: AgentSearchCoordinator
     private let queryEnhancer: QueryEnhancing
-    private let amazonSource: any SearchSource
-    private let googleBooksSource: any SearchSource
-    private let bestBuySource: any SearchSource
-    private let mapKitSource: any SearchSource
     private var searchTask: Task<Void, Never>?
     private let debounceDelay: TimeInterval = 0.5 // seconds
     
@@ -42,18 +41,15 @@ public class SearchViewModel: ObservableObject {
     
     public init(
         coordinator: MetasearchCoordinator,
+        agentCoordinator: AgentSearchCoordinator? = nil,
         queryEnhancer: QueryEnhancing,
-        amazonSource: any SearchSource,
-        googleBooksSource: any SearchSource,
-        bestBuySource: any SearchSource,
-        mapKitSource: any SearchSource
+        allSources: [any SearchSource]
     ) {
         self.coordinator = coordinator
+        self.agentCoordinator = agentCoordinator ?? AgentSearchCoordinator(
+            executor: SearchToolExecutor(sources: allSources)
+        )
         self.queryEnhancer = queryEnhancer
-        self.amazonSource = amazonSource
-        self.googleBooksSource = googleBooksSource
-        self.bestBuySource = bestBuySource
-        self.mapKitSource = mapKitSource
     }
     
     /// Cancels any in-flight search (e.g. when app goes to background to avoid Metal GPU work).
@@ -71,11 +67,38 @@ public class SearchViewModel: ObservableObject {
         }
         
         startNewSearch(originalQuery: query)
+        agentSummary = nil
         
         searchTask = Task {
-            // Use Foundation Models to securely parse input into an EnhancedQuery
-            let enhancedQuery = (try? await queryEnhancer.enhanceQuery(query)) ?? EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
-            await executeUnifiedSearch(query: enhancedQuery)
+            if UserDefaults.standard.bool(forKey: SettingsManager.useAgentSearchKey) {
+                // Agent-driven search: LLM selects which tools to invoke
+                let agentResult = await agentCoordinator.search(query: query)
+                await MainActor.run {
+                    self.agentSummary = agentResult.summary
+                    if let plan = agentResult.plan, let localType = plan.localStoreType, !localType.isEmpty {
+                        self.localStoreCategories = [localType]
+                    }
+                    for result in agentResult.results {
+                        switch result.category {
+                        case .product, .book:
+                            self.amazonResults.append(result)
+                        case .local:
+                            self.localResults.append(result)
+                        case .web:
+                            self.webResults.append(result)
+                        }
+                    }
+                    self.results = self.webResults + self.amazonResults + self.localResults
+                    self.isLoadingWeb = false
+                    self.isLoadingAmazon = false
+                    self.isLoadingLocal = false
+                    self.updateStateAfterThreadCompletion()
+                }
+            } else {
+                // Standard parallel search via MetasearchCoordinator
+                let enhancedQuery = (try? await queryEnhancer.enhanceQuery(query)) ?? EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
+                await executeUnifiedSearch(query: enhancedQuery)
+            }
         }
     }
 
@@ -115,20 +138,20 @@ public class SearchViewModel: ObservableObject {
                 
                 guard !newResults.isEmpty else { return }
                 
-                // Route new results to visual buckets based on source
-                let isProductSource = ["amazon", "bestbuy", "googlebooks"].contains(sourceIdentifier.lowercased())
-                let isLocalSource = sourceIdentifier.lowercased() == "mapkit"
-                
-                if isProductSource {
-                    self.amazonResults.append(contentsOf: newResults)
-                    self.isLoadingAmazon = false
-                } else if isLocalSource {
-                    self.localResults.append(contentsOf: newResults)
-                    self.localStoreCategories = localStores
-                    self.isLoadingLocal = false
-                } else {
-                    self.webResults.append(contentsOf: newResults)
-                    self.isLoadingWeb = false
+                // Route new results to visual buckets based on category
+                if let first = newResults.first {
+                    switch first.category {
+                    case .product, .book:
+                        self.amazonResults.append(contentsOf: newResults)
+                        self.isLoadingAmazon = false
+                    case .local:
+                        self.localResults.append(contentsOf: newResults)
+                        self.localStoreCategories = localStores
+                        self.isLoadingLocal = false
+                    case .web:
+                        self.webResults.append(contentsOf: newResults)
+                        self.isLoadingWeb = false
+                    }
                 }
                 
                 self.results = self.webResults + self.amazonResults + self.localResults
@@ -251,25 +274,4 @@ public class SearchViewModel: ObservableObject {
         
         await searchTask?.value
     }
-    
-    // Check if a product is a book based on EnhancedQuery indicators
-    private func isBookProduct(enhancedQuery: EnhancedQuery) -> Bool {
-        // Check productType
-        if let productType = enhancedQuery.productType,
-           productType.lowercased().contains("book") {
-            return true
-        }
-        
-        // Check categories
-        if enhancedQuery.categories.contains(where: { $0.lowercased().contains("book") }) {
-            return true
-        }
-        
-        // Check original query
-        if enhancedQuery.original.lowercased().contains("book") {
-            return true
-        }
-        
-        return false
     }
-}

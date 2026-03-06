@@ -40,7 +40,7 @@ public struct ResultAggregator {
         return results.filter { result in
             // Allow results from AmazonSearchSource even if URL is amazon.com
             // The deny list is meant to filter Amazon results from OTHER sources
-            if result.source.lowercased() == "amazon" {
+            if result.source.lowercased() == SourceIdentifier.amazon {
                 return true
             }
             

@@ -1,7 +1,10 @@
 import SwiftUI
+import SwiftData
 import MetasearchCore
 import SearchSources
 import LocationServices
+import AppIntents
+import SharedModels
 
 @main
 struct InTheNeighborhoodApp: App {
@@ -15,6 +18,11 @@ struct InTheNeighborhoodApp: App {
     let queryEnhancer: QueryEnhancing
     
     init() {
+        // Register App Shortcuts
+        if #available(iOS 16.0, *) {
+            SearchShortcutsProvider.updateAppShortcutParameters()
+        }
+        
         // Initialize location service
         locationService = LocationService()
         
@@ -40,27 +48,41 @@ struct InTheNeighborhoodApp: App {
         bestBuySource = BestBuySearchSource(apiKey: APIKeys.bestbuyAPIKey)
         
         // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
-        coordinator = MetasearchCoordinator(sources: [
+        let allSources: [any SearchSource] = [
             mapKitSource,
             duckDuckGoSource,
             bingSource,
             bookshopSource,
             marketplaceSource,
             amazonSource,
-            googleBooksSource
-        ])
+            googleBooksSource,
+            OpenLibrarySearchSource()
+        ]
+        
+        coordinator = MetasearchCoordinator(sources: allSources)
+        self.allSources = allSources
     }
+    
+    private let allSources: [any SearchSource]
     
     var body: some Scene {
         WindowGroup {
-            SearchView(
-                coordinator: coordinator,
-                queryEnhancer: queryEnhancer,
-                amazonSource: amazonSource,
-                googleBooksSource: googleBooksSource,
-                bestBuySource: bestBuySource,
-                mapKitSource: mapKitSource
-            )
+            TabView {
+                SearchView(
+                    coordinator: coordinator,
+                    queryEnhancer: queryEnhancer,
+                    allSources: allSources
+                )
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+                
+                FavoritesView()
+                    .tabItem {
+                        Label("Favorites", systemImage: "star.fill")
+                    }
+            }
         }
+        .modelContainer(for: [SavedStore.self, SearchHistoryEntry.self, FavoriteResult.self])
     }
 }

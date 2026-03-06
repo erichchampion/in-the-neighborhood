@@ -4,8 +4,9 @@ import MetasearchCore
 /// Best Buy Products API search source.
 /// Requires an API key from https://developer.bestbuy.com/
 public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "bestbuy"
+    public let identifier: String = SourceIdentifier.bestbuy
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .product
     
     private let session: URLSession
     private let apiKey: String?
@@ -136,6 +137,7 @@ public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
             description: priceStr,
             source: identifier,
             sourceType: sourceType,
+            category: category,
             url: productURL,
             location: nil,
             distance: nil,

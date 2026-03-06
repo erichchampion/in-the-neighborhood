@@ -17,6 +17,7 @@ final class SearchResultSummaryTests: XCTestCase {
             description: description,
             source: source,
             sourceType: .online,
+            category: .web,
             url: url,
             location: nil,
             distance: nil,

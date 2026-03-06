@@ -46,4 +46,18 @@ public struct EnhancedQuery: Equatable, Hashable, Sendable {
         self.priceMax = priceMax
         self.condition = condition
     }
+
+    /// Centralized logic to determine if this query likely refers to a book.
+    public var isBook: Bool {
+        if let productType = productType, productType.lowercased().contains("book") {
+            return true
+        }
+        if categories.contains(where: { $0.lowercased().contains("book") }) {
+            return true
+        }
+        if original.lowercased().contains("book") {
+            return true
+        }
+        return false
+    }
 }

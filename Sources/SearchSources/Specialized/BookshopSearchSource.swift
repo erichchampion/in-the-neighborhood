@@ -2,8 +2,9 @@ import Foundation
 import MetasearchCore
 
 public final class BookshopSearchSource: SearchSource {
-    public let identifier: String = "bookshop"
+    public let identifier: String = SourceIdentifier.bookshop
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .book
     
     private let baseURL = "https://bookshop.org"
     private let session: URLSession
@@ -18,9 +19,7 @@ public final class BookshopSearchSource: SearchSource {
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
         // Filter to only book-related queries
-        guard query.productType?.lowercased().contains("book") == true ||
-              query.categories.contains(where: { $0.lowercased().contains("book") }) ||
-              query.original.lowercased().contains("book") else {
+        guard query.isBook else {
             return []
         }
         
@@ -217,6 +216,7 @@ public final class BookshopSearchSource: SearchSource {
                     description: description,
                     source: identifier,
                     sourceType: sourceType,
+                    category: category,
                     url: url,
                     location: nil,
                     distance: nil,

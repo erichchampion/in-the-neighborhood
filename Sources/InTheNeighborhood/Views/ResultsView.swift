@@ -12,6 +12,7 @@ public struct ResultsView: View {
     let isLoadingAmazon: Bool
     let isLoadingLocal: Bool
     let localStoreCategories: [String]
+    let agentSummary: String?
     
     public init(
         webResults: [SearchResult],
@@ -23,6 +24,7 @@ public struct ResultsView: View {
         isLoadingAmazon: Bool = false,
         isLoadingLocal: Bool = false,
         localStoreCategories: [String] = [],
+        agentSummary: String? = nil,
         onRefine: ((SearchResult) -> Void)? = nil
     ) {
         self.webResults = webResults
@@ -34,11 +36,28 @@ public struct ResultsView: View {
         self.isLoadingAmazon = isLoadingAmazon
         self.isLoadingLocal = isLoadingLocal
         self.localStoreCategories = localStoreCategories
+        self.agentSummary = agentSummary
         self.onRefine = onRefine
     }
     
     public var body: some View {
         VStack(spacing: 0) {
+            // Agent AI Summary Banner
+            if let summary = agentSummary, !summary.isEmpty {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "brain")
+                        .foregroundColor(.purple)
+                    Text(summary)
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(10)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            }
             // Tab selector - always visible so user can switch away from Local Stores while model downloads
             Picker("Results Tab", selection: $selectedTab) {
                 Text("Web").tag(SearchViewModel.TabSelection.web)
@@ -80,7 +99,7 @@ public struct ResultsView: View {
     
     /// Returns the URL to open for Best Buy cards when bestbuy.com is not in the deny list.
     private func urlToOpen(for result: SearchResult) -> URL? {
-        guard result.source.lowercased() == "bestbuy",
+        guard result.source.lowercased() == SourceIdentifier.bestbuy,
               let url = result.url,
               !SettingsManager.shared.denyList.isDenied("bestbuy.com") else {
             return nil
@@ -243,14 +262,14 @@ struct ResultRowView: View {
     
     var body: some View {
         Group {
-            // Check if this is a product result - use ProductCard if so
-            if result.source.lowercased() == "amazon" || result.source.lowercased() == "bestbuy" {
+            // Check if this is a product or book result - use ProductCard if so
+            if result.category == .product || result.category == .book {
                 // This shouldn't happen since product results are in the Products section,
                 // but handle it just in case
                 ProductCard(
                     result: result,
                     onRefine: nil,
-                    urlToOpen: result.source.lowercased() == "bestbuy" && result.url != nil && !SettingsManager.shared.denyList.isDenied("bestbuy.com") ? result.url : nil
+                    urlToOpen: result.source.lowercased() == SourceIdentifier.bestbuy && result.url != nil && !SettingsManager.shared.denyList.isDenied("bestbuy.com") ? result.url : nil
                 )
             } else {
                 switch result.sourceType {

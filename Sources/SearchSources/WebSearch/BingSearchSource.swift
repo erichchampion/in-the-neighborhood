@@ -3,8 +3,9 @@ import MetasearchCore
 
 /// SearchSource wrapping Bing; enables incremental display when used as a separate coordinator source.
 public final class BingSearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "bing"
+    public let identifier: String = SourceIdentifier.bing
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .web
     
     private let provider: WebSearchProvider
     private let circuitBreaker: CircuitBreaker

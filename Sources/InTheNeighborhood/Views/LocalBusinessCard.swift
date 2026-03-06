@@ -1,9 +1,13 @@
 import SwiftUI
+import SwiftData
 import MapKit
 import MetasearchCore
+import SharedModels
 
 struct LocalBusinessCard: View {
     let result: SearchResult
+    @Environment(\.modelContext) private var modelContext
+    @State private var isSaved = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -71,6 +75,18 @@ struct LocalBusinessCard: View {
                         .accessibilityLabel("Get directions to \(result.title)")
                         .accessibilityHint("Opens Maps app with directions to this business")
                     }
+                    // Save button
+                    Button(action: saveStore) {
+                        Label(isSaved ? "Saved" : "Save", systemImage: isSaved ? "bookmark.fill" : "bookmark")
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(isSaved ? Color.orange : Color(.systemGray5))
+                            .foregroundColor(isSaved ? .white : .primary)
+                            .cornerRadius(8)
+                    }
+                    .accessibilityLabel(isSaved ? "Saved \(result.title)" : "Save \(result.title)")
+                    .accessibilityHint("Saves this store to your favorites")
                 }
             }
             
@@ -127,6 +143,21 @@ struct LocalBusinessCard: View {
         return truncated + "..."
     }
     
+    private func saveStore() {
+        guard let location = result.location else { return }
+        let store = SavedStore(
+            id: result.id,
+            name: result.title,
+            address: result.description,
+            phone: result.metadata["phone"] as? String,
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude
+        )
+        modelContext.insert(store)
+        try? modelContext.save()
+        isSaved = true
+    }
+
     private func buildAccessibilityValue() -> String {
         var components: [String] = []
         if let description = result.description {

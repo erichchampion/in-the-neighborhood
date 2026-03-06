@@ -2,8 +2,9 @@ import Foundation
 import MetasearchCore
 
 public final class WebSearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "websearch"
+    public let identifier: String = SourceIdentifier.bing // Use bing as composite identifier or add a new one
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .web
     
     private let duckDuckGoProvider: WebSearchProvider
     private let bingProvider: WebSearchProvider
