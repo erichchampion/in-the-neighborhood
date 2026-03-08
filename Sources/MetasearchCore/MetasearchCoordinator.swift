@@ -104,6 +104,7 @@ public actor MetasearchCoordinator {
     public func searchStreaming(
         query: EnhancedQuery,
         excludingSources: Set<String> = [],
+        excludeLocal: Bool = false,
         onResults: @escaping @Sendable (String, [SearchResult]) -> Void
     ) async {
         let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
@@ -111,7 +112,7 @@ public actor MetasearchCoordinator {
         // Split sources into distinct phases
         // Phase 1: Web sources and Product Intelligence sources (Amazon, BestBuy)
         let phase1Sources = sourcesToSearch.filter { $0.category != .local }
-        let phase2Sources = sourcesToSearch.filter { $0.category == .local }
+        let phase2Sources = excludeLocal ? [] : sourcesToSearch.filter { $0.category == .local }
         
         var extractedBrand: String? = nil
         var extractedAuthor: String? = nil

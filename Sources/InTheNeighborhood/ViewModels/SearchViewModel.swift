@@ -118,16 +118,35 @@ public class SearchViewModel: ObservableObject {
         isLoadingLocal = true
     }
 
-    private func executeUnifiedSearch(query: EnhancedQuery) async {
+    private func startRefinedSearch(originalQuery: String) {
+        state = .loading
+        errorMessage = nil
+        self.originalQuery = originalQuery
+        
+        webResults = []
+        amazonResults = []
+        // PRESERVE localResults
+        // PRESERVE localStoreCategories
+        
+        // Remove old web and amazon results from `results`
+        results = localResults
+        
+        isLoadingWeb = true
+        isLoadingAmazon = true
+        isLoadingLocal = false // Do not show loading for local since we are skipping it
+    }
+
+    private func executeUnifiedSearch(query: EnhancedQuery, excludeLocal: Bool = false) async {
         guard !Task.isCancelled else { return }
         
         print("[SearchViewModel] Executing unified MetasearchCoordinator stream for query: '\(query.original)'")
         
-        let localStores = query.categories
+        let localStores = excludeLocal ? self.localStoreCategories : query.categories
         
         await coordinator.searchStreaming(
             query: query,
-            excludingSources: []
+            excludingSources: [],
+            excludeLocal: excludeLocal
         ) { [weak self] sourceIdentifier, batchResults in
             Task { @MainActor in
                 guard let self else { return }
@@ -262,14 +281,14 @@ public class SearchViewModel: ObservableObject {
         
         guard !refinedQuery.isEmpty else { return }
         
-        startNewSearch(originalQuery: refinedQuery)
+        startRefinedSearch(originalQuery: refinedQuery)
         
         // Automatically switch back to the web tab to show new comprehensive results
         selectedTab = .web
         
         searchTask = Task {
             let enhancedQuery = (try? await queryEnhancer.enhanceQuery(refinedQuery)) ?? EnhancedQuery(original: refinedQuery, productType: nil, categories: [], priceMax: nil, condition: nil)
-            await executeUnifiedSearch(query: enhancedQuery)
+            await executeUnifiedSearch(query: enhancedQuery, excludeLocal: true)
         }
         
         await searchTask?.value
