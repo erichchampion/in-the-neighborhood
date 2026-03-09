@@ -25,6 +25,16 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         print("[GoogleBooksSearchSource] Starting search for: \(query.original)")
         
         // Log bundle ID for iOS app restriction debugging
@@ -35,19 +45,15 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
         // Google Books API works without an API key for public searches, but using one
         // allows higher rate limits. If no key is provided, we'll search without it.
         do {
-            let results = try await searchWithRetry(query: query.original, apiKey: apiKey, attempt: 0)
-            print("[GoogleBooksSearchSource] Found \(results.count) results")
-            for result in results {
-                print("[GoogleBooksSearchSource] Result: title=\(result.title), author=\(result.metadata["author"] as? String ?? "nil"), isbn=\(result.metadata["isbn"] as? String ?? "nil")")
-            }
-            return results
+            try await searchWithRetry(query: query.original, apiKey: apiKey, attempt: 0, onResults: onResults)
+            print("[GoogleBooksSearchSource] Finished streaming results")
         } catch {
             print("[GoogleBooksSearchSource] Search failed with error: \(error)")
             throw error
         }
     }
     
-    private func searchWithRetry(query: String, apiKey: String?, attempt: Int) async throws -> [SearchResult] {
+    private func searchWithRetry(query: String, apiKey: String?, attempt: Int, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         var components = URLComponents(string: baseURL)
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "q", value: query),
@@ -86,7 +92,8 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
                 if attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
                 throw GoogleBooksError.rateLimitExceeded
             }
@@ -114,30 +121,36 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
                     // If we had an API key and got 403, try again without it
                     if let apiKey = apiKey, !apiKey.isEmpty, attempt == 0 {
                         print("[GoogleBooksSearchSource] Retrying without API key...")
-                        return try await searchWithRetry(query: query, apiKey: nil, attempt: attempt + 1)
+                        try await searchWithRetry(query: query, apiKey: nil, attempt: attempt + 1, onResults: onResults)
+                        return
                     }
                     
-                    return []
+                    return
                 }
                 
                 // For 5xx errors, retry
                 if httpResponse.statusCode >= 500 && attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
                 
                 throw GoogleBooksError.invalidResponse
             }
             
             // Parse Google Books API response
-            return try parseGoogleBooksResponse(data: data)
+            let results = try parseGoogleBooksResponse(data: data)
+            if !results.isEmpty {
+                onResults(results)
+            }
         } catch {
             // Retry on network errors
             if error is URLError && attempt < maxRetries {
                 let delay = retryDelay * pow(2.0, Double(attempt))
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1)
+                try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1, onResults: onResults)
+                return
             }
             
             if error is GoogleBooksError {

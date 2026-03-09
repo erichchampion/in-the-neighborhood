@@ -69,6 +69,29 @@ public final class SearchToolExecutor: @unchecked Sendable {
         return resultAggregator.aggregate(results: filtered)
     }
 
+    /// Execute all sources of a given `ResultCategory` incrementally.
+    public func executeStreaming(query: EnhancedQuery, category: ResultCategory, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async {
+        let matchedSources = sources.filter { $0.category == category }
+        
+        await withTaskGroup(of: Void.self) { group in
+            for source in matchedSources {
+                let identifier = source.identifier
+                group.addTask {
+                    do {
+                        try await source.searchStreaming(query: query) { results in
+                            if !results.isEmpty {
+                                onResults(identifier, results)
+                            }
+                        }
+                    } catch {
+                        // ignore error
+                    }
+                }
+            }
+            await group.waitForAll()
+        }
+    }
+
     /// Execute all sources of a given `SourceType`.
     public func execute(query: EnhancedQuery, sourceType: SourceType) async -> [SearchResult] {
         let ids = sources.filter { $0.sourceType == sourceType }.map { $0.identifier }
@@ -79,6 +102,12 @@ public final class SearchToolExecutor: @unchecked Sendable {
     public func searchWeb(query: String) async -> [SearchResult] {
         let enhancedQuery = EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
         return await execute(query: enhancedQuery, category: .web)
+    }
+
+    /// Execute web search sources streaming.
+    public func searchWebStreaming(query: String, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async {
+        let enhancedQuery = EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
+        await executeStreaming(query: enhancedQuery, category: .web, onResults: onResults)
     }
 
     /// Execute product search sources.
@@ -101,6 +130,26 @@ public final class SearchToolExecutor: @unchecked Sendable {
         return await execute(query: enhancedQuery, category: .product)
     }
 
+    /// Execute product search sources streaming.
+    public func searchProductsStreaming(query: String, maxPrice: Double?, condition: String?, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async {
+        var productCondition: ProductCondition?
+        if let cond = condition?.lowercased() {
+            switch cond {
+            case "used": productCondition = .used
+            case "refurbished": productCondition = .refurbished
+            default: productCondition = .new
+            }
+        }
+        let enhancedQuery = EnhancedQuery(
+            original: query,
+            productType: nil,
+            categories: ["electronics", "books", "clothing"],
+            priceMax: maxPrice,
+            condition: productCondition
+        )
+        await executeStreaming(query: enhancedQuery, category: .product, onResults: onResults)
+    }
+
     /// Execute local store search.
     public func searchLocalStores(storeType: String, radiusKm: Double?) async -> [SearchResult] {
         let enhancedQuery = EnhancedQuery(
@@ -113,6 +162,18 @@ public final class SearchToolExecutor: @unchecked Sendable {
         return await execute(query: enhancedQuery, category: .local)
     }
 
+    /// Execute local store search streaming.
+    public func searchLocalStoresStreaming(storeType: String, radiusKm: Double?, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async {
+        let enhancedQuery = EnhancedQuery(
+            original: storeType,
+            productType: nil,
+            categories: [storeType],
+            priceMax: nil,
+            condition: nil
+        )
+        await executeStreaming(query: enhancedQuery, category: .local, onResults: onResults)
+    }
+
     /// Execute book search sources.
     public func searchBooks(query: String) async -> [SearchResult] {
         let enhancedQuery = EnhancedQuery(
@@ -123,5 +184,17 @@ public final class SearchToolExecutor: @unchecked Sendable {
             condition: nil
         )
         return await execute(query: enhancedQuery, category: .book)
+    }
+
+    /// Execute book search sources streaming.
+    public func searchBooksStreaming(query: String, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async {
+        let enhancedQuery = EnhancedQuery(
+            original: query,
+            productType: "book",
+            categories: ["bookstore", "books"],
+            priceMax: nil,
+            condition: nil
+        )
+        await executeStreaming(query: enhancedQuery, category: .book, onResults: onResults)
     }
 }

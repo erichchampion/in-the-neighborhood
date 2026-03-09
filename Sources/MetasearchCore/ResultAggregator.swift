@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ResultAggregator {
+public struct ResultAggregator: Sendable {
     public init() {}
     
     public func aggregate(results: [SearchResult]) -> [SearchResult] {

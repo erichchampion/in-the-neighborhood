@@ -37,14 +37,28 @@ final class SearchSourceProtocolTests: XCTestCase {
     }
 }
 
+// MARK: - Mock Search Source State
+
+actor MockSearchSourceState {
+    var shouldThrow = false
+    var delay: TimeInterval = 0.0
+    
+    func setShouldThrow(_ throwError: Bool) {
+        shouldThrow = throwError
+    }
+    
+    func setDelay(_ d: TimeInterval) {
+        delay = d
+    }
+}
+
 // MARK: - Mock Search Source
 
 final class MockSearchSource: SearchSource, @unchecked Sendable {
     let identifier: String
     let sourceType: SourceType
     let category: ResultCategory
-    var shouldThrow = false
-    var delay: TimeInterval = 0.0
+    let state = MockSearchSourceState()
     
     init(identifier: String, sourceType: SourceType, category: ResultCategory = .web) {
         self.identifier = identifier
@@ -53,15 +67,42 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {
-        if delay > 0 {
-            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        let (stream, continuation) = AsyncStream.makeStream(of: [SearchResult].self)
+        let collector = SearchResultsCollector()
+        
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await self.searchStreaming(query: query) { partialResults in
+                    continuation.yield(partialResults)
+                }
+                continuation.finish()
+            }
+            
+            group.addTask {
+                for await partialResults in stream {
+                    await collector.append(partialResults)
+                }
+            }
+            
+            try await group.waitForAll()
         }
         
-        if shouldThrow {
+        return await collector.allResults
+    }
+    
+    func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        let d = await state.delay
+        if d > 0 {
+            try await Task.sleep(nanoseconds: UInt64(d * 1_000_000_000))
+        }
+        
+        let throwsErr = await state.shouldThrow
+        if throwsErr {
             throw NSError(domain: "MockError", code: 1)
         }
         
-        return [
+        await Task.yield() // Yield to allow collectors to attach
+        onResults([
             SearchResult(
                 id: "mock-\(identifier)",
                 title: "Mock Result",
@@ -74,6 +115,6 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
                 distance: nil,
                 metadata: [:]
             )
-        ]
+        ])
     }
 }

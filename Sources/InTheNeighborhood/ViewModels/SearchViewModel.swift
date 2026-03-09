@@ -14,6 +14,7 @@ public class SearchViewModel: ObservableObject {
     @Published public var isLoadingWeb: Bool = false
     @Published public var isLoadingAmazon: Bool = false
     @Published public var isLoadingLocal: Bool = false
+    @Published public var isRefining: Bool = false
     @Published public var errorMessage: String?
     @Published public var originalQuery: String = ""
     @Published public var localStoreCategories: [String] = []
@@ -72,23 +73,45 @@ public class SearchViewModel: ObservableObject {
         searchTask = Task {
             if UserDefaults.standard.bool(forKey: SettingsManager.useAgentSearchKey) {
                 // Agent-driven search: LLM selects which tools to invoke
-                let agentResult = await agentCoordinator.search(query: query)
+                let agentResult = await agentCoordinator.searchStreaming(
+                    query: query,
+                    onPlan: { [weak self] (plan: AgentSearchPlan) in
+                        Task { @MainActor in
+                            if let localType = plan.localStoreType, !localType.isEmpty {
+                                self?.localStoreCategories = [localType]
+                            }
+                        }
+                    },
+                    onResults: { [weak self] (sourceIdentifier: String, batchResults: [SearchResult]) in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        guard !Task.isCancelled else { return }
+                        
+                        let existingIds = Set(self.results.map { $0.id })
+                        let newResults = batchResults.filter { !existingIds.contains($0.id) }
+                        
+                        guard !newResults.isEmpty else { return }
+                        
+                        // Categorize and append new results
+                        for result in newResults {
+                            switch result.category {
+                            case .product, .book:
+                                self.amazonResults.append(result)
+                            case .local:
+                                self.localResults.append(result)
+                            case .web:
+                                self.webResults.append(result)
+                            }
+                            self.results.append(result)
+                        }
+                    }
+                })
+                
                 await MainActor.run {
                     self.agentSummary = agentResult.summary
                     if let plan = agentResult.plan, let localType = plan.localStoreType, !localType.isEmpty {
                         self.localStoreCategories = [localType]
                     }
-                    for result in agentResult.results {
-                        switch result.category {
-                        case .product, .book:
-                            self.amazonResults.append(result)
-                        case .local:
-                            self.localResults.append(result)
-                        case .web:
-                            self.webResults.append(result)
-                        }
-                    }
-                    self.results = self.webResults + self.amazonResults + self.localResults
                     self.isLoadingWeb = false
                     self.isLoadingAmazon = false
                     self.isLoadingLocal = false
@@ -97,6 +120,11 @@ public class SearchViewModel: ObservableObject {
             } else {
                 // Standard parallel search via MetasearchCoordinator
                 let enhancedQuery = (try? await queryEnhancer.enhanceQuery(query)) ?? EnhancedQuery(original: query, productType: nil, categories: [], priceMax: nil, condition: nil)
+                
+                await MainActor.run {
+                    self.localStoreCategories = enhancedQuery.categories
+                }
+                
                 await executeUnifiedSearch(query: enhancedQuery)
             }
         }
@@ -164,9 +192,12 @@ public class SearchViewModel: ObservableObject {
                         self.amazonResults.append(contentsOf: newResults)
                         self.isLoadingAmazon = false
                     case .local:
-                        self.localResults.append(contentsOf: newResults)
-                        self.localStoreCategories = localStores
-                        self.isLoadingLocal = false
+                        // Only update local if we are explicitly not excluding them (e.g not refining)
+                        if !excludeLocal {
+                            self.localResults.append(contentsOf: newResults)
+                            self.localStoreCategories = localStores
+                            self.isLoadingLocal = false
+                        }
                     case .web:
                         self.webResults.append(contentsOf: newResults)
                         self.isLoadingWeb = false
@@ -181,7 +212,9 @@ public class SearchViewModel: ObservableObject {
         await MainActor.run {
             self.isLoadingWeb = false
             self.isLoadingAmazon = false
-            self.isLoadingLocal = false
+            if !excludeLocal {
+                self.isLoadingLocal = false
+            }
             self.updateStateAfterThreadCompletion()
         }
     }

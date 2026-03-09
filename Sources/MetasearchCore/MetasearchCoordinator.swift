@@ -114,11 +114,21 @@ public actor MetasearchCoordinator {
         let phase1Sources = sourcesToSearch.filter { $0.category != .local }
         let phase2Sources = excludeLocal ? [] : sourcesToSearch.filter { $0.category == .local }
         
-        var extractedBrand: String? = nil
-        var extractedAuthor: String? = nil
+        // Create an actor to hold extraction state safely across tasks
+        actor IntelligenceExtractionState {
+            var extractedBrand: String? = nil
+            var extractedAuthor: String? = nil
+            func setBrand(_ brand: String?) {
+                if extractedBrand == nil { extractedBrand = brand }
+            }
+            func setAuthor(_ author: String?) {
+                if extractedAuthor == nil { extractedAuthor = author }
+            }
+        }
+        let intelligenceState = IntelligenceExtractionState()
         
         // Execute Phase 1
-        await withTaskGroup(of: (String, ResultCategory, [SearchResult]).self) { group in
+        await withTaskGroup(of: Void.self) { group in
             for source in phase1Sources {
                 let sourceIdentifier = source.identifier
                 let sourceCategory = source.category
@@ -143,40 +153,47 @@ public actor MetasearchCoordinator {
                 
                 group.addTask {
                     do {
-                        let results = try await self.withTimeout(seconds: timeoutValue) {
-                            try await sourceToRun.search(query: runQuery)
+                        try await self.withTimeout(seconds: timeoutValue) {
+                            try await sourceToRun.searchStreaming(query: runQuery) { rawResults in
+                                // Process and yield results immediately
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                filtered = self.resultAggregator.aggregate(results: filtered)
+                                
+                                if !filtered.isEmpty {
+                                    // Extract intelligence async if possible
+                                    let currentResults = rawResults
+                                    Task {
+                                        if (sourceCategory == .product || sourceCategory == .book) {
+                                            if await intelligenceState.extractedBrand == nil, let brand = currentResults.compactMap({ $0.metadata["brand"] as? String }).first {
+                                                await intelligenceState.setBrand(brand)
+                                            }
+                                            if await intelligenceState.extractedAuthor == nil, let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
+                                                await intelligenceState.setAuthor(author)
+                                            }
+                                        }
+                                    }
+                                    
+                                    onResults(sourceIdentifier, filtered)
+                                }
+                            }
                         }
-                        return (sourceIdentifier, sourceCategory, results)
                     } catch {
-                        return (sourceIdentifier, sourceCategory, [])
+                        // Ignore individual timeout or source failures
                     }
                 }
             }
             
-            for await (sourceIdentifier, sourceCategory, rawResults) in group {
-                // Determine if this batch contains intelligence we can use
-                if (sourceCategory == .product || sourceCategory == .book) && !rawResults.isEmpty {
-                    if extractedBrand == nil {
-                        extractedBrand = rawResults.compactMap { $0.metadata["brand"] as? String }.first
-                    }
-                    if extractedAuthor == nil {
-                        extractedAuthor = rawResults.compactMap { $0.metadata["author"] as? String }.first
-                    }
-                }
-                
-                var filtered = resultAggregator.filter(results: rawResults, denyList: denyListFilter)
-                filtered = resultAggregator.aggregate(results: filtered)
-                if !filtered.isEmpty {
-                    onResults(sourceIdentifier, filtered)
-                }
-            }
+            await group.waitForAll()
         }
         
         // Compile MapKit query with extracted intelligence
         var originalWithIntelligence = query.original
-        if let brand = extractedBrand, !originalWithIntelligence.lowercased().contains(brand.lowercased()) {
+        let finalBrand = await intelligenceState.extractedBrand
+        let finalAuthor = await intelligenceState.extractedAuthor
+        
+        if let brand = finalBrand, !originalWithIntelligence.lowercased().contains(brand.lowercased()) {
             originalWithIntelligence = "\(brand) \(originalWithIntelligence)"
-        } else if let author = extractedAuthor, !originalWithIntelligence.lowercased().contains(author.lowercased()) {
+        } else if let author = finalAuthor, !originalWithIntelligence.lowercased().contains(author.lowercased()) {
             originalWithIntelligence = "\(originalWithIntelligence) \(author)"
         }
         
@@ -193,29 +210,29 @@ public actor MetasearchCoordinator {
         )
         
         // Execute Phase 2 (Local)
-        await withTaskGroup(of: (String, [SearchResult]).self) { group in
+        await withTaskGroup(of: Void.self) { group in
             for source in phase2Sources {
                 let sourceIdentifier = source.identifier
                 let timeoutValue = timeout
+                let sourceToRun = source
                 group.addTask {
                     do {
-                        let results = try await self.withTimeout(seconds: timeoutValue) {
-                            try await source.search(query: mapKitQuery)
+                        try await self.withTimeout(seconds: timeoutValue) {
+                            try await sourceToRun.searchStreaming(query: mapKitQuery) { rawResults in
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                filtered = self.resultAggregator.aggregate(results: filtered)
+                                if !filtered.isEmpty {
+                                    onResults(sourceIdentifier, filtered)
+                                }
+                            }
                         }
-                        return (sourceIdentifier, results)
                     } catch {
-                        return (sourceIdentifier, [])
+                        // Ignore individual timeouts/errors
                     }
                 }
             }
             
-            for await (sourceIdentifier, rawResults) in group {
-                var filtered = resultAggregator.filter(results: rawResults, denyList: denyListFilter)
-                filtered = resultAggregator.aggregate(results: filtered)
-                if !filtered.isEmpty {
-                    onResults(sourceIdentifier, filtered)
-                }
-            }
+            await group.waitForAll()
         }
     }
     

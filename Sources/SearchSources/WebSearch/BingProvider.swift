@@ -25,15 +25,25 @@ public final class BingProvider: WebSearchProvider, @unchecked Sendable {
     }
     
     public func search(query: String) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    public func searchStreaming(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         guard let apiKey = apiKey else {
             // Without API key, return empty results
-            return []
+            return
         }
         
         // Enhance query for shopping if product intent is detected
         let enhancedQuery = enhanceQueryForShopping(query)
         
-        return try await searchWithRetry(query: enhancedQuery, apiKey: apiKey, attempt: 0)
+        try await searchWithRetry(query: enhancedQuery, apiKey: apiKey, attempt: 0, onResults: onResults)
     }
     
     /// Enhances query to improve shopping/product search results
@@ -82,7 +92,7 @@ public final class BingProvider: WebSearchProvider, @unchecked Sendable {
         }
     }
     
-    private func searchWithRetry(query: String, apiKey: String, attempt: Int) async throws -> [SearchResult] {
+    private func searchWithRetry(query: String, apiKey: String, attempt: Int, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         var components = URLComponents(string: baseURL)
         components?.queryItems = [
             URLQueryItem(name: "q", value: query),
@@ -112,7 +122,8 @@ public final class BingProvider: WebSearchProvider, @unchecked Sendable {
                     // Exponential backoff: delay = retryDelay * 2^attempt
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
                 throw WebSearchError.rateLimitExceeded
             }
@@ -128,7 +139,8 @@ public final class BingProvider: WebSearchProvider, @unchecked Sendable {
                 if httpResponse.statusCode >= 500 && attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
                 
                 throw WebSearchError.invalidResponse
@@ -136,13 +148,17 @@ public final class BingProvider: WebSearchProvider, @unchecked Sendable {
             
             // Parse Bing API response
             // First check raw JSON for ad indicators, then parse
-            return try parseBingResponse(data: data)
+            let results = try parseBingResponse(data: data)
+            if !results.isEmpty {
+                onResults(results)
+            }
         } catch {
             // Retry on network errors
             if error is URLError && attempt < maxRetries {
                 let delay = retryDelay * pow(2.0, Double(attempt))
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1)
+                try await searchWithRetry(query: query, apiKey: apiKey, attempt: attempt + 1, onResults: onResults)
+                return
             }
             
             if error is WebSearchError {

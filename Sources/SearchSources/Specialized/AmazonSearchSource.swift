@@ -30,21 +30,27 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
-        print("[AmazonSearchSource] Starting search for: \(query.original)")
-        do {
-            let results = try await searchWithRetry(query: query.original, attempt: 0)
-            print("[AmazonSearchSource] Found \(results.count) results")
-            for result in results {
-                print("[AmazonSearchSource] Result: source=\(result.source), title=\(result.title), url=\(result.url?.absoluteString ?? "nil")")
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
             }
-            return results
+        }
+        return await collector.allResults
+    }
+
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        print("[AmazonSearchSource] Starting streaming search for: \(query.original)")
+        do {
+            try await searchWithRetry(query: query.original, attempt: 0, onResults: onResults)
+            print("[AmazonSearchSource] Streaming search completed for: \(query.original)")
         } catch {
-            print("[AmazonSearchSource] Search failed with error: \(error)")
+            print("[AmazonSearchSource] Streaming search failed with error: \(error)")
             throw error
         }
     }
     
-    private func searchWithRetry(query: String, attempt: Int) async throws -> [SearchResult] {
+    private func searchWithRetry(query: String, attempt: Int, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         // Amazon search URL
         var components = URLComponents(string: "https://www.amazon.com/s")
         components?.queryItems = [
@@ -53,7 +59,7 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
         
         guard let url = components?.url else {
             print("[AmazonSearchSource] Failed to create URL")
-            return []
+            return
         }
         
         print("[AmazonSearchSource] Searching Amazon with URL: \(url.absoluteString)")
@@ -86,7 +92,7 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                return []
+                return
             }
             
             // Handle rate limiting
@@ -94,23 +100,25 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
                 if attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
-                return []
+                return
             }
             
             guard httpResponse.statusCode == 200 else {
                 if httpResponse.statusCode >= 500 && attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
-                return []
+                return
             }
             
             guard let html = String(data: data, encoding: .utf8) else {
                 print("[AmazonSearchSource] Failed to decode HTML")
-                return []
+                return
             }
             
             print("[AmazonSearchSource] HTML received, length: \(html.count)")
@@ -118,17 +126,16 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
             print("[AmazonSearchSource] Found \(productInfos.count) product URLs")
             
             // Scrape top products for detailed metadata
-            let results = try await scrapeProducts(productInfos: Array(productInfos.prefix(maxProductsToScrape)), originalQuery: query)
-            print("[AmazonSearchSource] Scraped \(results.count) products")
-            return results
+            try await scrapeProducts(productInfos: Array(productInfos.prefix(maxProductsToScrape)), originalQuery: query, onResults: onResults)
+            print("[AmazonSearchSource] Finished scraping products")
         } catch {
             // Retry on network errors
             if attempt < maxRetries {
                 let delay = retryDelay * pow(2.0, Double(attempt))
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return try await searchWithRetry(query: query, attempt: attempt + 1)
+                try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                return
             }
-            return []
         }
     }
     
@@ -359,8 +366,7 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
         return finalUrl
     }
     
-    private func scrapeProducts(productInfos: [ProductInfo], originalQuery: String = "") async throws -> [SearchResult] {
-        var results: [SearchResult] = []
+    private func scrapeProducts(productInfos: [ProductInfo], originalQuery: String = "", onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         print("[AmazonSearchSource] Scraping \(productInfos.count) product pages...")
         
         // Normalize search query for matching - extract meaningful words (skip common stop words)
@@ -452,10 +458,9 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
                 metadata: metadataDict
             )
             
-            results.append(result)
+            // Yield directly to the callback instead of waiting for the full array
+            onResults([result])
         }
-        
-        return results
     }
     
     /// Validates if a product is relevant to the search query by checking if search terms appear in product metadata

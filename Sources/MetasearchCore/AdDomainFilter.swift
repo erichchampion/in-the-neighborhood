@@ -2,7 +2,7 @@ import Foundation
 
 /// Filters URLs based on known advertising domains
 /// Loads ad domains from AdDomainListDownloadManager's cached list
-public struct AdDomainFilter {
+public struct AdDomainFilter: Sendable {
     private var adDomains: Set<String>
     
     /// Initialize with ad domains from download manager

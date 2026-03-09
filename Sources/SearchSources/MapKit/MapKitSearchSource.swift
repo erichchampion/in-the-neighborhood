@@ -17,11 +17,22 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         print("[MapKitSearchSource] Starting search for query: '\(query.original)', categories: \(query.categories)")
         
         guard let location = await locationService.getLocationOrFallback() else {
             print("[MapKitSearchSource] No location available, returning empty results")
-            return []
+            onResults([])
+            return
         }
         
         print("[MapKitSearchSource] Location available: \(location.coordinate.latitude), \(location.coordinate.longitude)")
@@ -49,7 +60,8 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
             )
             if !results.isEmpty {
                 print("[MapKitSearchSource] Attempt 1 succeeded with \(results.count) results")
-                return sortResultsByDistance(results)
+                onResults(sortResultsByDistance(results))
+                return
             }
             print("[MapKitSearchSource] Attempt 1 failed or returned no results, trying fallback")
         }
@@ -68,7 +80,8 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
                 )
                 if !results.isEmpty {
                     print("[MapKitSearchSource] Attempt 2a succeeded with \(results.count) results")
-                    return sortResultsByDistance(results)
+                    onResults(sortResultsByDistance(results))
+                    return
                 }
             }
             
@@ -83,7 +96,8 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
                 )
                 if !results.isEmpty {
                     print("[MapKitSearchSource] Attempt 2b succeeded with \(results.count) results")
-                    return sortResultsByDistance(results)
+                    onResults(sortResultsByDistance(results))
+                    return
                 }
             }
             
@@ -102,7 +116,8 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
                 )
                 if !results.isEmpty {
                     print("[MapKitSearchSource] Attempt 3a succeeded with \(results.count) results")
-                    return sortResultsByDistance(results)
+                    onResults(sortResultsByDistance(results))
+                    return
                 }
             }
         }
@@ -120,7 +135,7 @@ public final class MapKitSearchSource: SearchSource, @unchecked Sendable {
         results = sortResultsByDistance(results)
         
         print("[MapKitSearchSource] Total results: \(results.count)")
-        return results
+        onResults(results)
     }
     
     private func sortResultsByDistance(_ results: [SearchResult]) -> [SearchResult] {

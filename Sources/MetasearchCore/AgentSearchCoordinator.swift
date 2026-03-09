@@ -87,6 +87,23 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
         return await fallbackSearch(query: query)
     }
 
+    public func searchStreaming(
+        query: String,
+        onPlan: (@Sendable (AgentSearchPlan) -> Void)? = nil,
+        onResults: @escaping @Sendable (String, [SearchResult]) -> Void
+    ) async -> AgentSearchResult {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            let plan = await buildSearchPlan(for: query) ?? defaultPlan(for: query)
+            onPlan?(plan)
+            return await executeStreaming(plan: plan, originalQuery: query, onResults: onResults)
+        }
+        #endif
+        let plan = defaultPlan(for: query)
+        onPlan?(plan)
+        return await fallbackSearchStreaming(query: query, onResults: onResults)
+    }
+
     // MARK: - Plan Generation
 
     #if canImport(FoundationModels)
@@ -131,32 +148,98 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
     // MARK: - Execute Plan
 
     private func execute(plan: AgentSearchPlan, originalQuery: String) async -> AgentSearchResult {
-        let effectiveQuery = plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery
-        var allResults: [SearchResult] = []
+        let collector = SearchResultsCollector()
         var toolsUsed: [String] = []
 
-        await withTaskGroup(of: ([SearchResult], String).self) { group in
+        await withTaskGroup(of: String.self) { group in
             if plan.searchWeb {
-                group.addTask { (await self.executor.searchWeb(query: effectiveQuery), "web") }
+                group.addTask {
+                    let results = await self.executor.searchWeb(query: plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery)
+                    await collector.append(results)
+                    return "web"
+                }
             }
             if plan.searchProducts {
-                group.addTask { (await self.executor.searchProducts(query: effectiveQuery, maxPrice: nil, condition: nil), "products") }
+                group.addTask {
+                    let results = await self.executor.searchProducts(query: plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery, maxPrice: nil, condition: nil)
+                    await collector.append(results)
+                    return "products"
+                }
             }
             if plan.searchLocalStores {
-                let storeType = plan.localStoreType ?? effectiveQuery
-                group.addTask { (await self.executor.searchLocalStores(storeType: storeType, radiusKm: nil), "local_stores") }
+                let storeType = plan.localStoreType ?? (plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery)
+                group.addTask {
+                    let results = await self.executor.searchLocalStores(storeType: storeType, radiusKm: nil)
+                    await collector.append(results)
+                    return "local_stores"
+                }
             }
             if plan.searchBooks {
-                group.addTask { (await self.executor.searchBooks(query: effectiveQuery), "books") }
+                group.addTask {
+                    let results = await self.executor.searchBooks(query: plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery)
+                    await collector.append(results)
+                    return "books"
+                }
             }
 
-            for await (results, tool) in group {
-                allResults.append(contentsOf: results)
+            for await tool in group {
                 toolsUsed.append(tool)
             }
         }
 
-        return AgentSearchResult(results: allResults, summary: nil, toolsUsed: toolsUsed, plan: plan)
+        return AgentSearchResult(results: await collector.allResults, summary: nil, toolsUsed: toolsUsed, plan: plan)
+    }
+
+    private func executeStreaming(plan: AgentSearchPlan, originalQuery: String, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async -> AgentSearchResult {
+        let effectiveQuery = plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery
+        var toolsUsed: [String] = []
+        let collector = SearchResultsCollector()
+
+        await withTaskGroup(of: String.self) { group in
+            if plan.searchWeb {
+                group.addTask {
+                    await self.executor.searchWebStreaming(query: effectiveQuery) { sourceId, results in
+                        onResults(sourceId, results)
+                        Task { await collector.append(results) }
+                    }
+                    return "web"
+                }
+            }
+            if plan.searchProducts {
+                group.addTask {
+                    await self.executor.searchProductsStreaming(query: effectiveQuery, maxPrice: nil, condition: nil) { sourceId, results in
+                        onResults(sourceId, results)
+                        Task { await collector.append(results) }
+                    }
+                    return "products"
+                }
+            }
+            if plan.searchLocalStores {
+                let storeType = plan.localStoreType ?? effectiveQuery
+                group.addTask {
+                    await self.executor.searchLocalStoresStreaming(storeType: storeType, radiusKm: nil) { sourceId, results in
+                        onResults(sourceId, results)
+                        Task { await collector.append(results) }
+                    }
+                    return "local_stores"
+                }
+            }
+            if plan.searchBooks {
+                group.addTask {
+                    await self.executor.searchBooksStreaming(query: effectiveQuery) { sourceId, results in
+                        onResults(sourceId, results)
+                        Task { await collector.append(results) }
+                    }
+                    return "books"
+                }
+            }
+
+            for await tool in group {
+                toolsUsed.append(tool)
+            }
+        }
+
+        return AgentSearchResult(results: await collector.allResults, summary: nil, toolsUsed: toolsUsed, plan: plan)
     }
 
     // MARK: - Helpers
@@ -173,11 +256,50 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
     }
 
     private func fallbackSearch(query: String) async -> AgentSearchResult {
+        let collector = SearchResultsCollector()
         async let web = executor.searchWeb(query: query)
         async let products = executor.searchProducts(query: query, maxPrice: nil, condition: nil)
         async let local = executor.searchLocalStores(storeType: query, radiusKm: nil)
         let (w, p, l) = await (web, products, local)
-        return AgentSearchResult(results: w + p + l, summary: nil, toolsUsed: ["web", "products", "local_stores"])
+        await collector.append(w)
+        await collector.append(p)
+        await collector.append(l)
+        return AgentSearchResult(results: await collector.allResults, summary: nil, toolsUsed: ["web", "products", "local_stores"])
+    }
+
+    private func fallbackSearchStreaming(query: String, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async -> AgentSearchResult {
+        let collector = SearchResultsCollector()
+        var toolsUsed: [String] = []
+        
+        await withTaskGroup(of: String.self) { group in
+            group.addTask {
+                await self.executor.searchWebStreaming(query: query) { sourceId, results in
+                    onResults(sourceId, results)
+                    Task { await collector.append(results) }
+                }
+                return "web"
+            }
+            group.addTask {
+                await self.executor.searchProductsStreaming(query: query, maxPrice: nil, condition: nil) { sourceId, results in
+                    onResults(sourceId, results)
+                    Task { await collector.append(results) }
+                }
+                return "products"
+            }
+            group.addTask {
+                await self.executor.searchLocalStoresStreaming(storeType: query, radiusKm: nil) { sourceId, results in
+                    onResults(sourceId, results)
+                    Task { await collector.append(results) }
+                }
+                return "local_stores"
+            }
+            
+            for await tool in group {
+                toolsUsed.append(tool)
+            }
+        }
+        
+        return AgentSearchResult(results: await collector.allResults, summary: nil, toolsUsed: toolsUsed)
     }
 }
 

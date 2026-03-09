@@ -23,26 +23,35 @@ public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         guard let apiKey = apiKey, !apiKey.isEmpty else {
             print("[BestBuySearchSource] No API key configured, skipping search")
-            return []
+            return
         }
         
         print("[BestBuySearchSource] Starting search for: \(query.original)")
         
         do {
-            let results = try await performSearch(query: query.original, apiKey: apiKey)
-            print("[BestBuySearchSource] Found \(results.count) results")
-            return results
+            try await performSearch(query: query.original, apiKey: apiKey, onResults: onResults)
+            print("[BestBuySearchSource] Finished streaming results for: \(query.original)")
         } catch {
             print("[BestBuySearchSource] Search failed with error: \(error)")
             throw error
         }
     }
     
-    private func performSearch(query: String, apiKey: String) async throws -> [SearchResult] {
+    private func performSearch(query: String, apiKey: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return [] }
+        guard !trimmed.isEmpty else { return }
         
         // Build search terms: "wireless mouse" -> search=wireless&search=mouse
         let words = trimmed
@@ -69,7 +78,7 @@ public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
         
         guard let url = components?.url else {
             print("[BestBuySearchSource] Failed to build URL")
-            return []
+            return
         }
         
         var request = URLRequest(url: url)
@@ -86,15 +95,19 @@ public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
             if httpResponse.statusCode == 403 {
                 print("[BestBuySearchSource] API key invalid or rate limit exceeded (403)")
             }
-            return []
+            return
         }
         
         let decoder = JSONDecoder()
         let apiResponse = try decoder.decode(BestBuyProductsResponse.self, from: data)
         
-        return apiResponse.products?.compactMap { product -> SearchResult? in
+        let results = apiResponse.products?.compactMap { product -> SearchResult? in
             mapProductToSearchResult(product)
         } ?? []
+        
+        if !results.isEmpty {
+            onResults(results)
+        }
     }
     
     private func mapProductToSearchResult(_ product: BestBuyProduct) -> SearchResult? {

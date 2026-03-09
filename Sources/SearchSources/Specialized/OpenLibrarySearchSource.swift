@@ -20,13 +20,23 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
     }
 
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         guard query.isBook else {
             print("[OpenLibrarySearchSource] Skipping non-book query: \(query.original)")
-            return []
+            return
         }
 
         print("[OpenLibrarySearchSource] Searching for: \(query.original)")
-        return try await searchBooks(query: query.original)
+        try await searchBooks(query: query.original, onResults: onResults)
     }
 
     // MARK: - Private
@@ -53,7 +63,7 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
         return false
     }
 
-    private func searchBooks(query: String) async throws -> [SearchResult] {
+    private func searchBooks(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         var components = URLComponents(string: "https://openlibrary.org/search.json")
         components?.queryItems = [
             URLQueryItem(name: "q", value: query),
@@ -63,7 +73,7 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
 
         guard let url = components?.url else {
             print("[OpenLibrarySearchSource] Failed to build URL")
-            return []
+            return
         }
 
         print("[OpenLibrarySearchSource] Fetching: \(url.absoluteString)")
@@ -71,16 +81,19 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             print("[OpenLibrarySearchSource] Unexpected HTTP response")
-            return []
+            return
         }
 
         guard let json = try? JSONDecoder().decode(OpenLibraryResponse.self, from: data) else {
             print("[OpenLibrarySearchSource] Failed to decode Open Library response")
-            return []
+            return
         }
 
         print("[OpenLibrarySearchSource] Received \(json.docs.count) docs")
-        return json.docs.prefix(maxResults).compactMap { mapDocToSearchResult($0) }
+        let results = json.docs.prefix(maxResults).compactMap { mapDocToSearchResult($0) }
+        if !results.isEmpty {
+            onResults(Array(results))
+        }
     }
 
     private func mapDocToSearchResult(_ doc: OpenLibraryDoc) -> SearchResult? {

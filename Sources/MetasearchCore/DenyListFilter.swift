@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DenyListFilter {
+public struct DenyListFilter: Sendable {
     private var deniedDomains: Set<String>
     
     public init(defaultDomains: [String] = []) {

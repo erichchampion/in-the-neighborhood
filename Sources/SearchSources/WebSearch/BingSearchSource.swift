@@ -21,16 +21,25 @@ public final class BingSearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         let searchQuery = query.original
         
         guard await circuitBreaker.canAttempt() else {
-            return []
+            return
         }
         
         do {
-            let results = try await provider.search(query: searchQuery)
+            try await provider.searchStreaming(query: searchQuery, onResults: onResults)
             await circuitBreaker.recordSuccess()
-            return results
         } catch {
             await circuitBreaker.recordFailure()
             throw error
