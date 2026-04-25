@@ -72,7 +72,7 @@ public actor MetasearchCoordinator {
         }
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:66 - Before filter: total results: \(allResults.count), Amazon results: \(allResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:66 - Before filter: total results: \(allResults.count), Amazon results: \(allResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         // Aggregate, filter, and prioritize results
@@ -80,22 +80,160 @@ public actor MetasearchCoordinator {
         var filteredResults = resultAggregator.filter(results: allResults, denyList: denyListFilter)
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         filteredResults = resultAggregator.aggregate(results: filteredResults)
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         filteredResults = resultPrioritizer.prioritize(results: filteredResults)
         
         // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == "amazon" }.count)")
+        print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
         return filteredResults
+    }
+    
+    /// Streaming variant: yields (sourceIdentifier, results) as each source completes.
+    /// Applies filter and aggregate per batch; caller is responsible for merging/deduplicating across batches.
+    /// Integrates the intelligence pipeline: Amazon & BestBuy are used to extract accurate brand/author metadata before yielding to MapKit.
+    public func searchStreaming(
+        query: EnhancedQuery,
+        excludingSources: Set<String> = [],
+        excludeLocal: Bool = false,
+        onResults: @escaping @Sendable (String, [SearchResult]) -> Void
+    ) async {
+        let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
+        
+        // Split sources into distinct phases
+        // Phase 1: Web sources and Product Intelligence sources (Amazon, BestBuy)
+        let phase1Sources = sourcesToSearch.filter { $0.category != .local }
+        let phase2Sources = excludeLocal ? [] : sourcesToSearch.filter { $0.category == .local }
+        
+        // Create an actor to hold extraction state safely across tasks
+        actor IntelligenceExtractionState {
+            var extractedBrand: String? = nil
+            var extractedAuthor: String? = nil
+            func setBrand(_ brand: String?) {
+                if extractedBrand == nil { extractedBrand = brand }
+            }
+            func setAuthor(_ author: String?) {
+                if extractedAuthor == nil { extractedAuthor = author }
+            }
+        }
+        let intelligenceState = IntelligenceExtractionState()
+        
+        // Execute Phase 1
+        await withTaskGroup(of: Void.self) { group in
+            for source in phase1Sources {
+                let sourceIdentifier = source.identifier
+                let sourceCategory = source.category
+                
+                // If the product is detected as a book, inject bookshop.org into the online query
+                var effectiveQuery = query
+                let isBook = query.isBook
+                
+                if isBook && sourceCategory != .book && sourceCategory != .local {
+                    effectiveQuery = EnhancedQuery(
+                        original: "\(query.original) bookshop.org",
+                        productType: query.productType,
+                        categories: query.categories,
+                        priceMax: query.priceMax,
+                        condition: query.condition
+                    )
+                }
+                
+                let runQuery = effectiveQuery
+                let timeoutValue = timeout
+                let sourceToRun = source
+                
+                group.addTask {
+                    do {
+                        try await self.withTimeout(seconds: timeoutValue) {
+                            try await sourceToRun.searchStreaming(query: runQuery) { rawResults in
+                                // Process and yield results immediately
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                filtered = self.resultAggregator.aggregate(results: filtered)
+                                
+                                if !filtered.isEmpty {
+                                    // Extract intelligence async if possible
+                                    let currentResults = rawResults
+                                    Task {
+                                        if (sourceCategory == .product || sourceCategory == .book) {
+                                            if await intelligenceState.extractedBrand == nil, let brand = currentResults.compactMap({ $0.metadata["brand"] as? String }).first {
+                                                await intelligenceState.setBrand(brand)
+                                            }
+                                            if await intelligenceState.extractedAuthor == nil, let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
+                                                await intelligenceState.setAuthor(author)
+                                            }
+                                        }
+                                    }
+                                    
+                                    onResults(sourceIdentifier, filtered)
+                                }
+                            }
+                        }
+                    } catch {
+                        // Ignore individual timeout or source failures
+                    }
+                }
+            }
+            
+            await group.waitForAll()
+        }
+        
+        // Compile MapKit query with extracted intelligence
+        var originalWithIntelligence = query.original
+        let finalBrand = await intelligenceState.extractedBrand
+        let finalAuthor = await intelligenceState.extractedAuthor
+        
+        if let brand = finalBrand, !originalWithIntelligence.lowercased().contains(brand.lowercased()) {
+            originalWithIntelligence = "\(brand) \(originalWithIntelligence)"
+        } else if let author = finalAuthor, !originalWithIntelligence.lowercased().contains(author.lowercased()) {
+            originalWithIntelligence = "\(originalWithIntelligence) \(author)"
+        }
+        
+        // Filter out fuzzy categories before MapKit execution
+        let exampleCategories = Set(["furniture store", "electronics store"])
+        let categoriesToUse = query.categories.filter { !exampleCategories.contains($0.lowercased()) }
+        
+        let mapKitQuery = EnhancedQuery(
+            original: originalWithIntelligence,
+            productType: query.productType,
+            categories: categoriesToUse,
+            priceMax: query.priceMax,
+            condition: query.condition
+        )
+        
+        // Execute Phase 2 (Local)
+        await withTaskGroup(of: Void.self) { group in
+            for source in phase2Sources {
+                let sourceIdentifier = source.identifier
+                let timeoutValue = timeout
+                let sourceToRun = source
+                group.addTask {
+                    do {
+                        try await self.withTimeout(seconds: timeoutValue) {
+                            try await sourceToRun.searchStreaming(query: mapKitQuery) { rawResults in
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                filtered = self.resultAggregator.aggregate(results: filtered)
+                                if !filtered.isEmpty {
+                                    onResults(sourceIdentifier, filtered)
+                                }
+                            }
+                        }
+                    } catch {
+                        // Ignore individual timeouts/errors
+                    }
+                }
+            }
+            
+            await group.waitForAll()
+        }
     }
     
     private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escaping @Sendable () async throws -> T) async throws -> T {

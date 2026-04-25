@@ -17,6 +17,7 @@ final class ResultCacheTests: XCTestCase {
                 description: nil,
                 source: "test",
                 sourceType: .online,
+                category: .web,
                 url: nil,
                 location: nil,
                 distance: nil,

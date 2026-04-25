@@ -2,8 +2,9 @@ import Foundation
 import MetasearchCore
 
 public final class WebSearchSource: SearchSource, @unchecked Sendable {
-    public let identifier: String = "websearch"
+    public let identifier: String = SourceIdentifier.bing // Use bing as composite identifier or add a new one
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .web
     
     private let duckDuckGoProvider: WebSearchProvider
     private let bingProvider: WebSearchProvider
@@ -26,34 +27,48 @@ public final class WebSearchSource: SearchSource, @unchecked Sendable {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         let searchQuery = query.original
         
-        // Execute searches in parallel with circuit breaker protection
-        async let duckDuckGoResults = searchDuckDuckGo(query: searchQuery)
-        async let bingResults = searchBing(query: searchQuery)
-        
-        // Aggregate results (use try? to handle individual failures gracefully)
-        // This ensures one provider failing doesn't block the other
-        let duckDuckGo = try? await duckDuckGoResults
-        let bing = try? await bingResults
-        
-        var allResults: [SearchResult] = []
-        allResults.append(contentsOf: duckDuckGo ?? [])
-        allResults.append(contentsOf: bing ?? [])
-        
-        return allResults
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await self.searchDuckDuckGoStreaming(query: searchQuery, onResults: onResults)
+            }
+            group.addTask {
+                try await self.searchBingStreaming(query: searchQuery, onResults: onResults)
+            }
+            try await group.waitForAll()
+        }
     }
     
     private func searchDuckDuckGo(query: String) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchDuckDuckGoStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    private func searchDuckDuckGoStreaming(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         // Check circuit breaker
         guard await duckDuckGoBreaker.canAttempt() else {
-            return []
+            return
         }
         
         do {
-            let results = try await duckDuckGoProvider.search(query: query)
+            try await duckDuckGoProvider.searchStreaming(query: query, onResults: onResults)
             await duckDuckGoBreaker.recordSuccess()
-            return results
         } catch {
             await duckDuckGoBreaker.recordFailure()
             throw error
@@ -61,15 +76,24 @@ public final class WebSearchSource: SearchSource, @unchecked Sendable {
     }
     
     private func searchBing(query: String) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchBingStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    private func searchBingStreaming(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         // Check circuit breaker
         guard await bingBreaker.canAttempt() else {
-            return []
+            return
         }
         
         do {
-            let results = try await bingProvider.search(query: query)
+            try await bingProvider.searchStreaming(query: query, onResults: onResults)
             await bingBreaker.recordSuccess()
-            return results
         } catch {
             await bingBreaker.recordFailure()
             throw error

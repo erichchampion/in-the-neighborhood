@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import CoreLocation
+import MapKit
 
 public protocol LocationServiceProtocol: Sendable {
     func getCurrentLocation() async -> CLLocation?
@@ -10,7 +11,6 @@ public actor LocationService: LocationServiceProtocol {
     nonisolated private let locationManager: CLLocationManager
     private var lastKnownLocation: CLLocation?
     private var zipCodeLocation: CLLocation?
-    private let geocoder = CLGeocoder()
     
     public init(locationManager: CLLocationManager = CLLocationManager()) {
         self.locationManager = locationManager
@@ -74,13 +74,16 @@ public actor LocationService: LocationServiceProtocol {
     }
     
     public func setZipCode(_ zipCode: String) async throws {
-        // Geocode zip code to location
-        let placemarks = try await geocoder.geocodeAddressString(zipCode)
+        // Geocode zip code to location using MapKit (CLGeocoder deprecated in iOS 26)
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = zipCode
+        let search = MKLocalSearch(request: request)
+        let response = try await search.start()
         
-        guard let placemark = placemarks.first,
-              let location = placemark.location else {
+        guard let item = response.mapItems.first else {
             throw LocationServiceError.geocodingFailed
         }
+        let location = item.location
         
         zipCodeLocation = location
     }

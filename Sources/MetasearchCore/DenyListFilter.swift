@@ -1,10 +1,21 @@
 import Foundation
 
-public struct DenyListFilter {
+public struct DenyListFilter: Sendable {
     private var deniedDomains: Set<String>
     
     public init(defaultDomains: [String] = []) {
-        self.deniedDomains = Set(defaultDomains.map { $0.lowercased() })
+        let initialDomains = defaultDomains.isEmpty ? [
+            "amazon.com", "amazon.ca", "amazon.co.uk", "amazon.de", "amazon.fr", "amazon.co.jp",
+            "walmart.com", "walmart.ca",
+            "target.com",
+            "bestbuy.com", "bestbuy.ca", // Added BestBuy since we use it behind the scenes for metadata
+            "homedepot.com", "homedepot.ca",
+            "lowes.com", "lowes.ca",
+            "macys.com",
+            "costco.com", "costco.ca"
+        ] : defaultDomains
+        
+        self.deniedDomains = Set(initialDomains.map { $0.lowercased() })
     }
     
     public func shouldFilter(url: URL) -> Bool {

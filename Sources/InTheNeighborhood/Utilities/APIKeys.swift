@@ -37,4 +37,24 @@ enum APIKeys {
         print("[APIKeys] BING_API_KEY not found")
         return nil
     }
+    
+    /// Best Buy API key for product search
+    static var bestbuyAPIKey: String? {
+        // Method 1: Read from Info.plist (set via INFOPLIST_KEY_* in project.yml)
+        if let key = Bundle.main.object(forInfoDictionaryKey: "BESTBUY_API_KEY") as? String,
+           !key.isEmpty, key != "$(BESTBUY_API_KEY)" {
+            print("[APIKeys] Found BESTBUY_API_KEY in Info.plist")
+            return key
+        }
+        
+        // Method 2: Read from environment variable (for CI/CD or direct builds)
+        if let key = ProcessInfo.processInfo.environment["BESTBUY_API_KEY"],
+           !key.isEmpty {
+            print("[APIKeys] Found BESTBUY_API_KEY in environment")
+            return key
+        }
+        
+        print("[APIKeys] BESTBUY_API_KEY not found")
+        return nil
+    }
 }

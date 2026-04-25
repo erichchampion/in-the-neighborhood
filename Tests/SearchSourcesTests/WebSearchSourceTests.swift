@@ -12,7 +12,7 @@ final class WebSearchSourceTests: XCTestCase {
     
     func test_WebSearchSource_AggregatesMultipleProviders() async throws {
         // Verify source structure
-        XCTAssertEqual(source.identifier, "websearch")
+        XCTAssertEqual(source.identifier, "bing")
         XCTAssertEqual(source.sourceType, .online)
     }
     

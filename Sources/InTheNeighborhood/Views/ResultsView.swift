@@ -1,6 +1,5 @@
 import SwiftUI
 import MetasearchCore
-import LLMIntegration
 
 public struct ResultsView: View {
     let webResults: [SearchResult]
@@ -13,7 +12,7 @@ public struct ResultsView: View {
     let isLoadingAmazon: Bool
     let isLoadingLocal: Bool
     let localStoreCategories: [String]
-    @ObservedObject var downloadManager: LLMModelDownloadManager
+    let agentSummary: String?
     
     public init(
         webResults: [SearchResult],
@@ -25,7 +24,7 @@ public struct ResultsView: View {
         isLoadingAmazon: Bool = false,
         isLoadingLocal: Bool = false,
         localStoreCategories: [String] = [],
-        downloadManager: LLMModelDownloadManager = .shared,
+        agentSummary: String? = nil,
         onRefine: ((SearchResult) -> Void)? = nil
     ) {
         self.webResults = webResults
@@ -37,15 +36,32 @@ public struct ResultsView: View {
         self.isLoadingAmazon = isLoadingAmazon
         self.isLoadingLocal = isLoadingLocal
         self.localStoreCategories = localStoreCategories
-        self.downloadManager = downloadManager
+        self.agentSummary = agentSummary
         self.onRefine = onRefine
     }
     
     public var body: some View {
         VStack(spacing: 0) {
+            // Agent AI Summary Banner
+            if let summary = agentSummary, !summary.isEmpty {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "brain")
+                        .foregroundColor(.purple)
+                    Text(summary)
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(10)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            }
             // Tab selector - always visible so user can switch away from Local Stores while model downloads
             Picker("Results Tab", selection: $selectedTab) {
                 Text("Web").tag(SearchViewModel.TabSelection.web)
+                Text("Products").tag(SearchViewModel.TabSelection.products)
                 Text("Local Stores").tag(SearchViewModel.TabSelection.localStores)
             }
             .pickerStyle(.segmented)
@@ -54,43 +70,41 @@ public struct ResultsView: View {
             
             // Tab content with download overlay only over this area when on Local Stores
             ZStack {
-                if selectedTab == .web {
+                switch selectedTab {
+                case .web:
                     webTabContent
-                } else {
+                case .products:
+                    productsTabContent
+                case .localStores:
                     localStoresTabContent
-                }
-                
-                if selectedTab == .localStores && downloadManager.downloadState == .downloading {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                    ModelDownloadView(
-                        downloadManager: downloadManager,
-                        onCancel: { downloadManager.cancelDownload() }
-                    )
-                    .padding()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
     
-    // Filter Amazon results to only include those with at least one required metadata key
+    // Filter Amazon results to only include those with at least one metadata key useful for refinement
     private var filteredAmazonResults: [SearchResult] {
-        amazonResults.filter { result in
-            hasRefinementMetadata(result)
-        }
+        amazonResults.filter { hasRefinementMetadata($0) }
     }
     
-    // Check if a result has at least one of the required metadata keys for refinement
     private func hasRefinementMetadata(_ result: SearchResult) -> Bool {
         let brand = result.metadata["brand"] as? String
         let isbn = result.metadata["isbn"] as? String
         let sku = result.metadata["sku"] as? String
         let author = result.metadata["author"] as? String
         let artist = result.metadata["artist"] as? String
-        
-        // Return true if at least one metadata key is not nil
         return brand != nil || isbn != nil || sku != nil || author != nil || artist != nil
+    }
+    
+    /// Returns the URL to open for Best Buy cards when bestbuy.com is not in the deny list.
+    private func urlToOpen(for result: SearchResult) -> URL? {
+        guard result.source.lowercased() == SourceIdentifier.bestbuy,
+              let url = result.url,
+              !SettingsManager.shared.denyList.isDenied("bestbuy.com") else {
+            return nil
+        }
+        return url
     }
     
     private var webTabContent: some View {
@@ -121,29 +135,36 @@ public struct ResultsView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
+                } else {
+                    VStack {
+                        Text("No web results found")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 40)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                
-                // Amazon Results Section
+            }
+        }
+    }
+    
+    private var productsTabContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
                 if !filteredAmazonResults.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        if !webResults.isEmpty {
-                            Text("Products")
-                                .font(.headline)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-                                .padding(.bottom, 8)
-                        } else {
-                            Text("Products")
-                                .font(.headline)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-                                .padding(.bottom, 8)
-                        }
+                        Text("Products")
+                            .font(.headline)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                            .padding(.bottom, 8)
                         
                         ForEach(filteredAmazonResults) { result in
-                            AmazonProductCard(result: result) {
-                                onRefine?(result)
-                            }
+                            ProductCard(
+                                result: result,
+                                onRefine: { onRefine?(result) },
+                                urlToOpen: urlToOpen(for: result)
+                            )
                             .padding(.horizontal, 16)
                             .padding(.bottom, 8)
                         }
@@ -160,13 +181,10 @@ public struct ResultsView: View {
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, webResults.isEmpty ? 40 : 20)
-                }
-                
-                // Empty state
-                if !isLoadingWeb && !isLoadingAmazon && webResults.isEmpty && filteredAmazonResults.isEmpty {
+                    .padding(.top, 40)
+                } else {
                     VStack {
-                        Text("No web results found")
+                        Text("No products found")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .padding(.top, 40)
@@ -223,6 +241,17 @@ public struct ResultsView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
+                
+                // Link to Apple Business Connect
+                if let url = URL(string: "https://businessconnect.apple.com/") {
+                    Link(destination: url) {
+                        Text("Learn more about Apple Business Connect")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 24)
+                    .padding(.bottom, 16)
+                }
             }
         }
     }
@@ -233,11 +262,15 @@ struct ResultRowView: View {
     
     var body: some View {
         Group {
-            // Check if this is an Amazon result - use AmazonProductCard if so
-            if result.source.lowercased() == "amazon" {
-                // This shouldn't happen since Amazon results are filtered out,
+            // Check if this is a product or book result - use ProductCard if so
+            if result.category == .product || result.category == .book {
+                // This shouldn't happen since product results are in the Products section,
                 // but handle it just in case
-                AmazonProductCard(result: result, onRefine: nil)
+                ProductCard(
+                    result: result,
+                    onRefine: nil,
+                    urlToOpen: result.source.lowercased() == SourceIdentifier.bestbuy && result.url != nil && !SettingsManager.shared.denyList.isDenied("bestbuy.com") ? result.url : nil
+                )
             } else {
                 switch result.sourceType {
                 case .local:

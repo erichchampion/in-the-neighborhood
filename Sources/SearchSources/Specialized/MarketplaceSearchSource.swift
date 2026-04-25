@@ -30,8 +30,9 @@ import MetasearchCore
 /// ## Implementation Status:
 /// This source currently returns empty results. Implementation is deferred pending legal review.
 public final class MarketplaceSearchSource: SearchSource {
-    public let identifier: String = "marketplace"
+    public let identifier: String = SourceIdentifier.marketplace
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .product
     
     private let session: URLSession
     
@@ -40,21 +41,25 @@ public final class MarketplaceSearchSource: SearchSource {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+    
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         // LEGAL WARNING: Marketplace scraping is NOT implemented due to Terms of Service violations
         // and legal risks. See class documentation for details.
-        //
-        // This source would be ideal for used goods queries, but implementation requires:
-        // 1. Legal review and platform authorization
-        // 2. Compliance with ToS and robots.txt
-        // 3. Proper rate limiting and CAPTCHA handling
-        // 4. Respect for access controls and privacy
         
         // Filter to only used goods queries (if this were implemented)
         guard query.condition == .used else {
-            return []
+            return
         }
         
         // Return empty results - implementation deferred due to legal concerns
-        return []
+        onResults([])
     }
 }

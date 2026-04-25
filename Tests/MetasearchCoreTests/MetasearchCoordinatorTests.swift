@@ -33,7 +33,7 @@ final class MetasearchCoordinatorTests: XCTestCase {
     
     func test_MetasearchCoordinator_HandlesPartialFailures() async throws {
         let failingSource = MockSearchSource(identifier: "failing", sourceType: .online)
-        failingSource.shouldThrow = true
+        await failingSource.state.setShouldThrow(true)
         
         let sources: [any SearchSource] = [mockSources[0], failingSource]
         let coordinator = MetasearchCoordinator(sources: sources)
@@ -54,7 +54,7 @@ final class MetasearchCoordinatorTests: XCTestCase {
     
     func test_MetasearchCoordinator_RespectsTimeout() async throws {
         let slowSource = MockSearchSource(identifier: "slow", sourceType: .online)
-        slowSource.delay = 5.0 // 5 seconds delay
+        await slowSource.state.setDelay(5.0) // 5 seconds delay
         
         let coordinator = MetasearchCoordinator(
             sources: [slowSource],

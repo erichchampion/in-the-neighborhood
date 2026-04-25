@@ -1,25 +1,20 @@
 import SwiftUI
 import MetasearchCore
-import LLMIntegration
 
 public struct SearchView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: SearchViewModel
-    @StateObject private var downloadManager = LLMModelDownloadManager.shared
     @State private var showSettings = false
     
     public init(
         coordinator: MetasearchCoordinator,
-        queryEnhancer: QueryEnhancer,
-        amazonSource: any SearchSource,
-        googleBooksSource: any SearchSource,
-        mapKitSource: any SearchSource
+        queryEnhancer: QueryEnhancing,
+        allSources: [any SearchSource]
     ) {
         _viewModel = StateObject(wrappedValue: SearchViewModel(
             coordinator: coordinator,
             queryEnhancer: queryEnhancer,
-            amazonSource: amazonSource,
-            googleBooksSource: googleBooksSource,
-            mapKitSource: mapKitSource
+            allSources: allSources
         ))
     }
     
@@ -44,33 +39,30 @@ public struct SearchView: View {
                         EmptyStateView(message: NSLocalizedString("Search for products at local merchants and ethical online retailers", comment: ""))
                         
                     case .loading:
-                        // Show loading view only if no results yet
-                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
-                            LoadingView()
-                        } else {
-                            // Show results with loading indicators
-                            ResultsView(
-                                webResults: viewModel.webResults,
-                                amazonResults: viewModel.amazonResults,
-                                localResults: viewModel.localResults,
-                                originalQuery: viewModel.originalQuery,
-                                selectedTab: $viewModel.selectedTab,
-                                isLoadingWeb: viewModel.isLoadingWeb,
-                                isLoadingAmazon: viewModel.isLoadingAmazon,
-                                isLoadingLocal: viewModel.isLoadingLocal,
-                                localStoreCategories: viewModel.localStoreCategories,
-                                downloadManager: downloadManager,
-                                onRefine: { result in
-                                    Task {
-                                        if let productMetadata = ProductMetadata(from: result.metadata) {
-                                            await viewModel.refineSearch(with: productMetadata, originalQuery: viewModel.originalQuery)
-                                        }
-                                    }
+                        // Show results area with per-section progress indicators (same layout as loaded state)
+                        ResultsView(
+                            webResults: viewModel.webResults,
+                            amazonResults: viewModel.amazonResults,
+                            localResults: viewModel.localResults,
+                            originalQuery: viewModel.originalQuery,
+                            selectedTab: $viewModel.selectedTab,
+                            isLoadingWeb: viewModel.isLoadingWeb,
+                            isLoadingAmazon: viewModel.isLoadingAmazon,
+                            isLoadingLocal: viewModel.isLoadingLocal,
+                            localStoreCategories: viewModel.localStoreCategories,
+                            onRefine: { result in
+                                Task {
+                                    let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
+                                    await viewModel.refineSearch(
+                                        with: productMetadata,
+                                        originalQuery: viewModel.originalQuery,
+                                        resultTitle: result.title
+                                    )
                                 }
-                            )
-                            .accessibilityLabel("Search results")
-                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
-                        }
+                            }
+                        )
+                        .accessibilityLabel("Search results")
+                        .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
                         
                     case .loaded:
                         if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
@@ -86,12 +78,14 @@ public struct SearchView: View {
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
                                 isLoadingLocal: viewModel.isLoadingLocal,
                                 localStoreCategories: viewModel.localStoreCategories,
-                                downloadManager: downloadManager,
                                 onRefine: { result in
                                     Task {
-                                        if let productMetadata = ProductMetadata(from: result.metadata) {
-                                            await viewModel.refineSearch(with: productMetadata, originalQuery: viewModel.originalQuery)
-                                        }
+                                        let productMetadata = ProductMetadata(from: result.metadata) ?? ProductMetadata()
+                                        await viewModel.refineSearch(
+                                            with: productMetadata,
+                                            originalQuery: viewModel.originalQuery,
+                                            resultTitle: result.title
+                                        )
                                     }
                                 }
                             )
@@ -109,7 +103,6 @@ public struct SearchView: View {
                             }
                         )
                     }
-                    
                 }
             }
             .navigationTitle(NSLocalizedString("In the Neighborhood", comment: ""))
@@ -124,6 +117,27 @@ public struct SearchView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .background {
+                    viewModel.cancelInFlightSearch()
+                }
+            }
+            .onReceive(IntentManager.shared.$pendingSearch) { pending in
+                guard let pending = pending else { return }
+                viewModel.searchText = pending.query
+                switch pending.type {
+                case .localStores:
+                    viewModel.selectedTab = .localStores
+                case .products:
+                    viewModel.selectedTab = .products
+                case .general:
+                    viewModel.selectedTab = .web
+                }
+                Task {
+                    await viewModel.search(query: pending.query)
+                }
+                IntentManager.shared.clearPendingSearch()
             }
         }
     }

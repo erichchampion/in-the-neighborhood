@@ -1,34 +1,41 @@
 import SwiftUI
+import SwiftData
 import MetasearchCore
-import LLMIntegration
 import SearchSources
 import LocationServices
+import AppIntents
+import SharedModels
 
 @main
 struct InTheNeighborhoodApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let coordinator: MetasearchCoordinator
-    let queryEnhancer: QueryEnhancer
     let locationService: LocationService
     let amazonSource: any SearchSource
     let googleBooksSource: any SearchSource
+    let bestBuySource: any SearchSource
     let mapKitSource: any SearchSource
+    let queryEnhancer: QueryEnhancing
     
     init() {
+        // Register App Shortcuts
+        if #available(iOS 16.0, *) {
+            SearchShortcutsProvider.updateAppShortcutParameters()
+        }
+        
         // Initialize location service
         locationService = LocationService()
         
-        // Initialize LLM service (llama.cpp-based, falls back to rule-based parsing)
-        let llmService: LLMService = LlamaCppLLMService()
-        queryEnhancer = QueryEnhancer(llmService: llmService)
+        // Initialize intelligence services
+        queryEnhancer = FoundationModelQueryEnhancer()
         
         // Initialize search sources
         mapKitSource = MapKitSearchSource(locationService: locationService)
         
-        // Initialize web search source with Bing API key from build configuration
+        // Initialize web search sources (DuckDuckGo + Bing as separate sources for incremental display)
         let bingApiKey = APIKeys.bingAPIKey
-        let bingProvider = BingProvider(apiKey: bingApiKey)
-        let webSearchSource = WebSearchSource(bingProvider: bingProvider)
+        let duckDuckGoSource = DuckDuckGoSearchSource()
+        let bingSource = BingSearchSource(apiKey: bingApiKey)
         
         let bookshopSource = BookshopSearchSource()
         let marketplaceSource = MarketplaceSearchSource()
@@ -37,26 +44,45 @@ struct InTheNeighborhoodApp: App {
         // Initialize Google Books source (no API key required - works without authentication)
         googleBooksSource = GoogleBooksSearchSource(apiKey: nil)
         
-        // Initialize coordinator
-        coordinator = MetasearchCoordinator(sources: [
+        // Initialize Best Buy source (returns empty when no API key)
+        bestBuySource = BestBuySearchSource(apiKey: APIKeys.bestbuyAPIKey)
+        
+        // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
+        let allSources: [any SearchSource] = [
             mapKitSource,
-            webSearchSource,
+            duckDuckGoSource,
+            bingSource,
             bookshopSource,
             marketplaceSource,
             amazonSource,
-            googleBooksSource
-        ])
+            googleBooksSource,
+            OpenLibrarySearchSource()
+        ]
+        
+        coordinator = MetasearchCoordinator(sources: allSources)
+        self.allSources = allSources
     }
+    
+    private let allSources: [any SearchSource]
     
     var body: some Scene {
         WindowGroup {
-            SearchView(
-                coordinator: coordinator,
-                queryEnhancer: queryEnhancer,
-                amazonSource: amazonSource,
-                googleBooksSource: googleBooksSource,
-                mapKitSource: mapKitSource
-            )
+            TabView {
+                SearchView(
+                    coordinator: coordinator,
+                    queryEnhancer: queryEnhancer,
+                    allSources: allSources
+                )
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+                
+                FavoritesView()
+                    .tabItem {
+                        Label("Favorites", systemImage: "star.fill")
+                    }
+            }
         }
+        .modelContainer(for: [SavedStore.self, SearchHistoryEntry.self, FavoriteResult.self])
     }
 }

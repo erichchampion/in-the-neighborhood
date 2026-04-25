@@ -2,8 +2,9 @@ import Foundation
 import MetasearchCore
 
 public final class BookshopSearchSource: SearchSource {
-    public let identifier: String = "bookshop"
+    public let identifier: String = SourceIdentifier.bookshop
     public let sourceType: SourceType = .online
+    public let category: ResultCategory = .book
     
     private let baseURL = "https://bookshop.org"
     private let session: URLSession
@@ -17,17 +18,25 @@ public final class BookshopSearchSource: SearchSource {
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
+    }
+
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         // Filter to only book-related queries
-        guard query.productType?.lowercased().contains("book") == true ||
-              query.categories.contains(where: { $0.lowercased().contains("book") }) ||
-              query.original.lowercased().contains("book") else {
-            return []
+        guard query.isBook else {
+            return
         }
         
-        return try await searchWithRetry(query: query.original, attempt: 0)
+        try await searchWithRetry(query: query.original, attempt: 0, onResults: onResults)
     }
     
-    private func searchWithRetry(query: String, attempt: Int) async throws -> [SearchResult] {
+    private func searchWithRetry(query: String, attempt: Int, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         // Bookshop.org search URL format
         var components = URLComponents(string: "\(baseURL)/books")
         components?.queryItems = [
@@ -35,7 +44,7 @@ public final class BookshopSearchSource: SearchSource {
         ]
         
         guard let url = components?.url else {
-            return []
+            return
         }
         
         var request = URLRequest(url: url)
@@ -47,7 +56,7 @@ public final class BookshopSearchSource: SearchSource {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                return []
+                return
             }
             
             // Handle rate limiting
@@ -55,33 +64,38 @@ public final class BookshopSearchSource: SearchSource {
                 if attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
-                return []
+                return
             }
             
             guard httpResponse.statusCode == 200 else {
                 if httpResponse.statusCode >= 500 && attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
-                return []
+                return
             }
             
             guard let html = String(data: data, encoding: .utf8) else {
-                return []
+                return
             }
             
-            return parseHTMLResults(html: html)
+            let results = parseHTMLResults(html: html)
+            if !results.isEmpty {
+                onResults(results)
+            }
         } catch {
             // Retry on network errors
             if attempt < maxRetries {
                 let delay = retryDelay * pow(2.0, Double(attempt))
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return try await searchWithRetry(query: query, attempt: attempt + 1)
+                try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                return
             }
-            return []
         }
     }
     
@@ -217,6 +231,7 @@ public final class BookshopSearchSource: SearchSource {
                     description: description,
                     source: identifier,
                     sourceType: sourceType,
+                    category: category,
                     url: url,
                     location: nil,
                     distance: nil,

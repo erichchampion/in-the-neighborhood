@@ -14,10 +14,20 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
     }
     
     func search(query: String) async throws -> [SearchResult] {
-        return try await searchWithRetry(query: query, attempt: 0)
+        let collector = SearchResultsCollector()
+        try await searchStreaming(query: query) { results in
+            Task {
+                await collector.append(results)
+            }
+        }
+        return await collector.allResults
     }
     
-    private func searchWithRetry(query: String, attempt: Int) async throws -> [SearchResult] {
+    func searchStreaming(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        try await searchWithRetry(query: query, attempt: 0, onResults: onResults)
+    }
+    
+    private func searchWithRetry(query: String, attempt: Int, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         var components = URLComponents(string: searchURL)
         components?.queryItems = [
             URLQueryItem(name: "q", value: query)
@@ -44,7 +54,8 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                 if attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
                 throw WebSearchError.rateLimitExceeded
             }
@@ -53,7 +64,8 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                 if httpResponse.statusCode >= 500 && attempt < maxRetries {
                     let delay = retryDelay * pow(2.0, Double(attempt))
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    return try await searchWithRetry(query: query, attempt: attempt + 1)
+                    try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                    return
                 }
                 throw WebSearchError.invalidResponse
             }
@@ -61,8 +73,10 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
             guard let html = String(data: data, encoding: .utf8) else {
                 throw WebSearchError.invalidResponse
             }
-            
-            return parseHTMLResults(html: html)
+            let results = parseHTMLResults(html: html)
+            if !results.isEmpty {
+                onResults(results)
+            }
         } catch {
             if error is WebSearchError {
                 throw error
@@ -72,7 +86,8 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
             if attempt < maxRetries {
                 let delay = retryDelay * pow(2.0, Double(attempt))
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return try await searchWithRetry(query: query, attempt: attempt + 1)
+                try await searchWithRetry(query: query, attempt: attempt + 1, onResults: onResults)
+                return
             }
             
             throw WebSearchError.networkError(error)
@@ -252,8 +267,9 @@ final class DuckDuckGoProvider: WebSearchProvider, @unchecked Sendable {
                     id: UUID().uuidString,
                     title: title,
                     description: snippet,
-                    source: "duckduckgo",
+                    source: SourceIdentifier.duckduckgo,
                     sourceType: .online,
+                    category: .web,
                     url: url,
                     location: nil,
                     distance: nil,

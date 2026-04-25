@@ -7,6 +7,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
     public let description: String?
     public let source: String
     public let sourceType: SourceType
+    public let category: ResultCategory
     public let url: URL?
     public let location: CLLocation?
     public let distance: Double? // meters
@@ -18,6 +19,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
         description: String?,
         source: String,
         sourceType: SourceType,
+        category: ResultCategory,
         url: URL?,
         location: CLLocation?,
         distance: Double?,
@@ -28,6 +30,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
         self.description = description
         self.source = source
         self.sourceType = sourceType
+        self.category = category
         self.url = url
         self.location = location
         self.distance = distance
