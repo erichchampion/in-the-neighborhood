@@ -4,7 +4,7 @@
 
 The configuration is correct:
 - ✅ xcconfig files are properly referenced in `project.yml`
-- ✅ Build settings show `GOOGLE_BOOKS_API_KEY` is being read: `AIzaSyCDr3UFAvWVF-t7QyfexvypIjkcX8TuhPw`
+- ✅ Build settings show `GOOGLE_BOOKS_API_KEY` is being read
 - ✅ `INFOPLIST_KEY_GOOGLE_BOOKS_API_KEY` is set correctly
 - ✅ Info.plist has the keys with `$(GOOGLE_BOOKS_API_KEY)` variables
 
@@ -33,15 +33,15 @@ xcodebuild build -project "In the Neighborhood.xcodeproj" -scheme InTheNeighborh
 
 After rebuilding, check the debug output. You should see:
 ```
-[APIKeys] Found GOOGLE_BOOKS_API_KEY in Info.plist: AIzaSyCDr3UFAvWVF...
+[APIKeys] Found GOOGLE_BOOKS_API_KEY in Info.plist: ...
 [App] Google Books API key available: Yes
 ```
 
 ## How It Works
 
-1. **xcconfig files** define `GOOGLE_BOOKS_API_KEY = AIzaSyCDr3UFAvWVF-t7QyfexvypIjkcX8TuhPw`
-2. **Build settings** read from xcconfig: `GOOGLE_BOOKS_API_KEY = AIzaSyCDr3UFAvWVF-t7QyfexvypIjkcX8TuhPw`
-3. **INFOPLIST_KEY_*** setting injects the value: `INFOPLIST_KEY_GOOGLE_BOOKS_API_KEY = AIzaSyCDr3UFAvWVF-t7QyfexvypIjkcX8TuhPw`
+1. **xcconfig files** define `GOOGLE_BOOKS_API_KEY = ...`
+2. **Build settings** read from xcconfig: `GOOGLE_BOOKS_API_KEY = ...`
+3. **INFOPLIST_KEY_*** setting injects the value: `INFOPLIST_KEY_GOOGLE_BOOKS_API_KEY = ...`
 4. **Xcode processes Info.plist** at build time and replaces `$(GOOGLE_BOOKS_API_KEY)` with the actual value
 5. **Runtime** reads from the processed Info.plist in the app bundle
 
