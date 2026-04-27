@@ -3,3 +3,4 @@
 
 BING_API_KEY = your_bing_api_key_here
 BESTBUY_API_KEY = your_bestbuy_api_key_here
+GOOGLE_BOOKS_API_KEY = your_api_key_here
