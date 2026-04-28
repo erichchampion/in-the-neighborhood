@@ -123,13 +123,16 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
 
         Based on this query, determine:
         - Should we search local physical stores nearby?
-        - Should we search online product listings?
+        - Should we search online product listings? (DEFAULT: YES - always search products unless user explicitly says they don't want to buy online)
         - Is this specifically a book search?
         - Should we do a general web search? (Highly recommended for context, comparison, and verifying availability unless query is extremely specific).
-        - Provide a refined/clarified search query
+        - Provide a refined search query - but ONLY refine if you can make it明显ly better. Otherwise, keep the original query exactly as-is.
+        - Identify the specific local store type (e.g., 'bookstore', 'hardware store', 'grocery store', 'electronics store'). If unsure, use the main noun from the query.
 
-        For the 'localStoreType', identify the category of store to look for locally \
-        (e.g. 'bookstore', 'hardware store', 'grocery store', 'electronics store'). Leave it empty if not applicable.
+        IMPORTANT RULES:
+        1. Always set searchProducts to true unless user explicitly says they DON'T want to buy online.
+        2. For refinedQuery: Keep it simple. If user searches "On tyranny", refinedQuery should be "On tyranny" or "On tyranny book", NOT "products near me that start with 'On tyranny'".
+        3. For localStoreType: If user says "local bookstore", set localStoreType to "bookstore". If unsure, use the main product/category from the query.
         """
 
         do {
@@ -154,20 +157,20 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
         await withTaskGroup(of: String.self) { group in
             if plan.searchWeb {
                 group.addTask {
-                    let results = await self.executor.searchWeb(query: plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery)
+                    let results = await self.executor.searchWeb(query: self.resolveQuery(plan: plan, originalQuery: originalQuery))
                     await collector.append(results)
                     return "web"
                 }
             }
             if plan.searchProducts {
                 group.addTask {
-                    let results = await self.executor.searchProducts(query: plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery, maxPrice: nil, condition: nil)
+                    let results = await self.executor.searchProducts(query: self.resolveQuery(plan: plan, originalQuery: originalQuery), maxPrice: nil, condition: nil)
                     await collector.append(results)
                     return "products"
                 }
             }
             if plan.searchLocalStores {
-                let storeType = plan.localStoreType ?? (plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery)
+                let storeType = resolveLocalStoreType(plan: plan, originalQuery: originalQuery)
                 group.addTask {
                     let results = await self.executor.searchLocalStores(storeType: storeType, radiusKm: nil)
                     await collector.append(results)
@@ -176,7 +179,7 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
             }
             if plan.searchBooks {
                 group.addTask {
-                    let results = await self.executor.searchBooks(query: plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery)
+                    let results = await self.executor.searchBooks(query: self.resolveQuery(plan: plan, originalQuery: originalQuery))
                     await collector.append(results)
                     return "books"
                 }
@@ -191,14 +194,14 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
     }
 
     private func executeStreaming(plan: AgentSearchPlan, originalQuery: String, onResults: @escaping @Sendable (String, [SearchResult]) -> Void) async -> AgentSearchResult {
-        let effectiveQuery = plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery
         var toolsUsed: [String] = []
         let collector = SearchResultsCollector()
 
         await withTaskGroup(of: String.self) { group in
             if plan.searchWeb {
                 group.addTask {
-                    await self.executor.searchWebStreaming(query: effectiveQuery) { sourceId, results in
+                    let query = self.resolveQuery(plan: plan, originalQuery: originalQuery)
+                    await self.executor.searchWebStreaming(query: query) { sourceId, results in
                         onResults(sourceId, results)
                         Task { await collector.append(results) }
                     }
@@ -207,7 +210,8 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
             }
             if plan.searchProducts {
                 group.addTask {
-                    await self.executor.searchProductsStreaming(query: effectiveQuery, maxPrice: nil, condition: nil) { sourceId, results in
+                    let query = self.resolveQuery(plan: plan, originalQuery: originalQuery)
+                    await self.executor.searchProductsStreaming(query: query, maxPrice: nil, condition: nil) { sourceId, results in
                         onResults(sourceId, results)
                         Task { await collector.append(results) }
                     }
@@ -215,7 +219,7 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
                 }
             }
             if plan.searchLocalStores {
-                let storeType = plan.localStoreType ?? effectiveQuery
+                let storeType = resolveLocalStoreType(plan: plan, originalQuery: originalQuery)
                 group.addTask {
                     await self.executor.searchLocalStoresStreaming(storeType: storeType, radiusKm: nil) { sourceId, results in
                         onResults(sourceId, results)
@@ -225,8 +229,9 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
                 }
             }
             if plan.searchBooks {
+                let bookQuery = resolveQuery(plan: plan, originalQuery: originalQuery)
                 group.addTask {
-                    await self.executor.searchBooksStreaming(query: effectiveQuery) { sourceId, results in
+                    await self.executor.searchBooksStreaming(query: bookQuery) { sourceId, results in
                         onResults(sourceId, results)
                         Task { await collector.append(results) }
                     }
@@ -243,6 +248,47 @@ public final class AgentSearchCoordinator: @unchecked Sendable {
     }
 
     // MARK: - Helpers
+
+    private func resolveQuery(plan: AgentSearchPlan, originalQuery: String) -> String {
+        let refined = plan.refinedQuery.isEmpty ? originalQuery : plan.refinedQuery
+        if isValidQuery(refined, originalQuery: originalQuery) {
+            return refined
+        }
+        return originalQuery
+    }
+
+    private func isValidQuery(_ query: String, originalQuery: String) -> Bool {
+        let lowercased = query.lowercased()
+        let originalLower = originalQuery.lowercased()
+        let originalWords = Set(originalLower.split(separator: " ").map(String.init))
+        let queryWords = Set(lowercased.split(separator: " ").map(String.init))
+        if originalWords.isEmpty { return true }
+        let matches = originalWords.intersection(queryWords)
+        return matches.count >= min(2, originalWords.count)
+    }
+
+    private func resolveLocalStoreType(plan: AgentSearchPlan, originalQuery: String) -> String {
+        guard let storeType = plan.localStoreType, !storeType.isEmpty else {
+            return originalQuery
+        }
+        let invalidTypes = ["unknown", "none", "nil", "", "null"]
+        if invalidTypes.contains(storeType.lowercased()) {
+            return extractStoreTypeFromQuery(originalQuery)
+        }
+        return storeType
+    }
+
+    private func extractStoreTypeFromQuery(_ query: String) -> String {
+        let lowercased = query.lowercased()
+        let storeKeywords = ["bookstore", "book store", "hardware", "grocery", "supermarket", "electronics", "clothing", "shoes", "pharmacy", "restaurant", "cafe", "coffee", "pet", "toy", "furniture"]
+        for keyword in storeKeywords {
+            if lowercased.contains(keyword) {
+                if keyword == "book store" { return "bookstore" }
+                return keyword
+            }
+        }
+        return query
+    }
 
     private func defaultPlan(for query: String) -> AgentSearchPlan {
         AgentSearchPlan(
