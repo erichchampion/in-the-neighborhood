@@ -88,16 +88,53 @@ final class DPLASearchSourceTests: XCTestCase {
     
     // MARK: - Response Parsing
     func testSearchParsesValidResponse() async throws {
-        // Given - Note: This test may need real network or fixed mock implementation
-        // For now, just test that the source can be created and protocol methods exist
-        let query = EnhancedQuery(original: "To Kill a Mockingbird", productType: nil, categories: ["books"], priceMax: nil, condition: nil)
-        
-        // When - Just verify the source works without crashing
-        let results = try await sut.search(query: query)
-        
-        // Then - Results may be empty due to network/mock issues in test
-        // This test validates the implementation exists and doesn't crash
-        XCTAssertNotNil(results) // Just ensure we get a result array
+        // Given a valid DPLA-shaped response with one doc.
+        let sampleJSON = """
+        {
+          "count": 1,
+          "docs": [
+            {
+              "id": "abc123",
+              "title": "To Kill a Mockingbird",
+              "description": "A novel by Harper Lee.",
+              "isShownAt": "https://example.org/items/abc123",
+              "provider": [{ "name": "Library of Congress" }]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let testSession = MockURLSession(
+            data: sampleJSON,
+            response: HTTPURLResponse(
+                url: URL(string: "https://api.dp.la/v2/items")!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            ),
+            error: nil
+        )
+        let testSut = DPLASearchSource(apiKey: "test_dpla_key", urlSession: testSession)
+        let query = EnhancedQuery(
+            original: "To Kill a Mockingbird",
+            productType: nil,
+            categories: ["books"],
+            priceMax: nil,
+            condition: nil
+        )
+
+        // When
+        let results = try await testSut.search(query: query)
+
+        // Then
+        XCTAssertEqual(results.count, 1)
+        let result = try XCTUnwrap(results.first)
+        XCTAssertEqual(result.id, "abc123")
+        XCTAssertEqual(result.title, "To Kill a Mockingbird")
+        XCTAssertEqual(result.description, "A novel by Harper Lee.")
+        XCTAssertEqual(result.url?.absoluteString, "https://example.org/items/abc123")
+        XCTAssertEqual(result.source, "dpla")
+        XCTAssertEqual(result.category, .book)
     }
     
     func testSearchHandlesEmptyDocs() async throws {

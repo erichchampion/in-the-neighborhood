@@ -14,14 +14,13 @@ public final class DPLASearchSource: SearchSource, @unchecked Sendable {
         self.urlSession = urlSession
     }
     
-    public func search(query: EnhancedQuery) async throws -> [SearchResult] {
-        let collector = SearchResultsCollector()
-        try await searchStreaming(query: query) { results in
-            Task { await collector.append(results) }
-        }
-        return await collector.allResults
-    }
-    
+    // No `search()` override — the protocol's default extension wires the
+    // streaming source into a properly-synchronized collector via a task
+    // group. The hand-rolled override that used to live here scheduled an
+    // unstructured `Task { await collector.append(results) }` inside the
+    // callback, which races with the outer `await collector.allResults`
+    // and can return before the append lands.
+
     public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         guard let url = buildURL(query: query) else {
             onResults([])
