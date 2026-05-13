@@ -5,6 +5,7 @@ public struct SearchView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel: SearchViewModel
     @State private var showSettings = false
+    @State private var showBarcodeScanner = false
     
     public init(
         coordinator: MetasearchCoordinator,
@@ -28,7 +29,8 @@ public struct SearchView: View {
                         Task {
                             await viewModel.search(query: viewModel.searchText)
                         }
-                    }
+                    },
+                    onScanBarcode: { showBarcodeScanner = true }
                 )
                 .padding()
                 
@@ -122,6 +124,13 @@ public struct SearchView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showBarcodeScanner) {
+                BarcodeScannerView { payload in
+                    Task {
+                        await viewModel.handleScannedBarcode(payload)
+                    }
+                }
+            }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .background {
                     viewModel.cancelInFlightSearch()
@@ -150,13 +159,14 @@ public struct SearchView: View {
 struct SearchBarView: View {
     @Binding var searchText: String
     let onSearch: () -> Void
+    var onScanBarcode: (() -> Void)? = nil
     @FocusState private var isSearchFieldFocused: Bool
-    
+
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            
+
             TextField("Search for products...", text: $searchText)
                 .textFieldStyle(.plain)
                 .focused($isSearchFieldFocused)
@@ -165,7 +175,7 @@ struct SearchBarView: View {
                 .onSubmit {
                     onSearch()
                 }
-            
+
             if !searchText.isEmpty {
                 Button(action: {
                     searchText = ""
@@ -173,6 +183,16 @@ struct SearchBarView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
+                .accessibilityLabel("Clear search text")
+            }
+
+            if let onScanBarcode {
+                Button(action: onScanBarcode) {
+                    Image(systemName: "barcode.viewfinder")
+                        .foregroundColor(.secondary)
+                }
+                .accessibilityLabel("Scan barcode")
+                .accessibilityHint("Open the camera to scan a product barcode")
             }
         }
         .padding()

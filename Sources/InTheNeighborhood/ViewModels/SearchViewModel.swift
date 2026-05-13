@@ -285,6 +285,15 @@ public class SearchViewModel: ObservableObject {
         localStoreCategories = []
         errorMessage = nil
     }
+
+    /// Entry point for the barcode scanner. Routes the scanned payload to a
+    /// search-text string (ISBN-prefixed for books, raw otherwise) and runs
+    /// the normal search flow. Pulling the routing into BarcodeRouter keeps
+    /// it independently testable.
+    public func handleScannedBarcode(_ code: String) async {
+        searchText = BarcodeRouter.route(code)
+        await search(query: searchText)
+    }
     
     public func refineSearch(with metadata: ProductMetadata, originalQuery: String, resultTitle: String? = nil) async {
         print("[SearchViewModel] refineSearch called — originalQuery: '\(originalQuery)', resultTitle: '\(resultTitle ?? "")', hasMetadata: \(!metadata.isEmpty)")

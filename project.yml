@@ -121,6 +121,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         NSLocationWhenInUseUsageDescription: "In the Neighborhood uses your location to find nearby local merchants and calculate distances."
         NSLocationAlwaysAndWhenInUseUsageDescription: "In the Neighborhood uses your location to find nearby local merchants and calculate distances."
+        NSCameraUsageDescription: "In the Neighborhood uses the camera to scan product barcodes so it can find the item at local and ethical retailers."
         UIBackgroundModes:
           - fetch
     entitlements:

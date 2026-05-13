@@ -28,6 +28,8 @@
 	<string>$(DPLA_API_KEY)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>In the Neighborhood uses the camera to scan product barcodes so it can find the item at local and ethical retailers.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>In the Neighborhood uses your location to find nearby local merchants and calculate distances.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
