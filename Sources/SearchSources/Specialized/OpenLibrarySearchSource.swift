@@ -29,14 +29,35 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
         return await collector.allResults
     }
 
-    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
-        guard query.isBook else {
+public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        // Allow search if:
+        // 1. Query explicitly indicates book intent (isBook)
+        // 2. Query has ISBN-like pattern (10+ digit number)
+        // 3. Query has author-like pattern (capitalized words that could be names)
+        let allowSearch = query.isBook || looksLikeBookQuery(query.original)
+        
+        guard allowSearch else {
             print("[OpenLibrarySearchSource] Skipping non-book query: \(query.original)")
             return
         }
-
+        
         print("[OpenLibrarySearchSource] Searching for: \(query.original)")
         try await searchBooks(query: query.original, onResults: onResults)
+    }
+    
+    private func looksLikeBookQuery(_ query: String) -> Bool {
+        // Check for ISBN-like patterns (10+ digit numbers)
+        let digitsOnly = query.filter { $0.isNumber }
+        if digitsOnly.count >= 10 {
+            return true
+        }
+        // Check for author-like patterns (2+ capitalized words that could be names)
+        let words = query.components(separatedBy: .whitespaces)
+        let capitalizedWords = words.filter { $0.first?.isUppercase == true && $0.count > 1 }
+        if capitalizedWords.count >= 2 {
+            return true
+        }
+        return false
     }
 
     // MARK: - Private

@@ -78,9 +78,19 @@ public final class SearchToolExecutor: @unchecked Sendable {
                 let identifier = source.identifier
                 group.addTask {
                     do {
-                        try await source.searchStreaming(query: query) { results in
-                            if !results.isEmpty {
-                                onResults(identifier, results)
+                        try await source.searchStreaming(query: query) { rawResults in
+                            // Only filter by deny list for web and local results
+                            // Product results are scraped for metadata only (author, brand, etc.)
+                            // and are never turned into direct shopping links, so they shouldn't be filtered
+                            let finalResults: [SearchResult]
+                            if category == .product {
+                                finalResults = rawResults // Don't filter products
+                            } else {
+                                let filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                finalResults = self.resultAggregator.aggregate(results: filtered)
+                            }
+                            if !finalResults.isEmpty {
+                                onResults(identifier, finalResults)
                             }
                         }
                     } catch {

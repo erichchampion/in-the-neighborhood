@@ -78,7 +78,7 @@ struct ProductCard: View {
                     }
                     
                     // Price (for Best Buy, etc.)
-                    if let price = result.metadata["price"] as? String {
+                    if let price = result.price ?? result.metadata["price"] as? String {
                         Text(price)
                             .font(.subheadline)
                             .fontWeight(.semibold)

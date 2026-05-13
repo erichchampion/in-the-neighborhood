@@ -9,10 +9,12 @@ public class SearchViewModel: ObservableObject {
     @Published public var results: [SearchResult] = [] // Legacy - kept for backward compatibility
     @Published public var webResults: [SearchResult] = []
     @Published public var amazonResults: [SearchResult] = []
+    @Published public var libraryResults: [SearchResult] = []
     @Published public var localResults: [SearchResult] = []
     @Published public var selectedTab: TabSelection = .web
     @Published public var isLoadingWeb: Bool = false
     @Published public var isLoadingAmazon: Bool = false
+    @Published public var isLoadingLibrary: Bool = false
     @Published public var isLoadingLocal: Bool = false
     @Published public var isRefining: Bool = false
     @Published public var errorMessage: String?
@@ -37,6 +39,7 @@ public class SearchViewModel: ObservableObject {
     public enum TabSelection {
         case web
         case products
+        case library
         case localStores
     }
     
@@ -48,7 +51,7 @@ public class SearchViewModel: ObservableObject {
     ) {
         self.coordinator = coordinator
         self.agentCoordinator = agentCoordinator ?? AgentSearchCoordinator(
-            executor: SearchToolExecutor(sources: allSources)
+            executor: SearchToolExecutor(sources: allSources, denyListFilter: SettingsManager.shared.denyList)
         )
         self.queryEnhancer = queryEnhancer
     }
@@ -94,13 +97,19 @@ public class SearchViewModel: ObservableObject {
                         
                         // Categorize and append new results
                         for result in newResults {
-                            switch result.category {
-                            case .product, .book:
-                                self.amazonResults.append(result)
-                            case .local:
-                                self.localResults.append(result)
-                            case .web:
-                                self.webResults.append(result)
+                            // Always route library sources to library tab, regardless of category
+                            if result.source == SourceIdentifier.openlibrary || result.source == SourceIdentifier.dpla {
+                                self.libraryResults.append(result)
+                                self.isLoadingLibrary = false
+                            } else {
+                                switch result.category {
+                                case .product, .book:
+                                    self.amazonResults.append(result)
+                                case .local:
+                                    self.localResults.append(result)
+                                case .web:
+                                    self.webResults.append(result)
+                                }
                             }
                             self.results.append(result)
                         }
@@ -114,6 +123,7 @@ public class SearchViewModel: ObservableObject {
                     }
                     self.isLoadingWeb = false
                     self.isLoadingAmazon = false
+                    self.isLoadingLibrary = false
                     self.isLoadingLocal = false
                     self.updateStateAfterThreadCompletion()
                 }
@@ -137,12 +147,14 @@ public class SearchViewModel: ObservableObject {
         
         webResults = []
         amazonResults = []
+        libraryResults = []
         localResults = []
         results = []
         localStoreCategories = []
         
         isLoadingWeb = true
         isLoadingAmazon = true
+        isLoadingLibrary = true
         isLoadingLocal = true
     }
 
@@ -187,24 +199,30 @@ public class SearchViewModel: ObservableObject {
                 
                 // Route new results to visual buckets based on category
                 if let first = newResults.first {
-                    switch first.category {
-                    case .product, .book:
-                        self.amazonResults.append(contentsOf: newResults)
-                        self.isLoadingAmazon = false
-                    case .local:
-                        // Only update local if we are explicitly not excluding them (e.g not refining)
-                        if !excludeLocal {
-                            self.localResults.append(contentsOf: newResults)
-                            self.localStoreCategories = localStores
-                            self.isLoadingLocal = false
+                    // Always route library sources to library tab, regardless of category
+                    if first.source == SourceIdentifier.openlibrary || first.source == SourceIdentifier.dpla {
+                        self.libraryResults.append(contentsOf: newResults)
+                        self.isLoadingLibrary = false
+                    } else {
+                        switch first.category {
+                        case .product, .book:
+                            self.amazonResults.append(contentsOf: newResults)
+                            self.isLoadingAmazon = false
+                        case .local:
+                            // Only update local if we are explicitly not excluding them (e.g not refining)
+                            if !excludeLocal {
+                                self.localResults.append(contentsOf: newResults)
+                                self.localStoreCategories = localStores
+                                self.isLoadingLocal = false
+                            }
+                        case .web:
+                            self.webResults.append(contentsOf: newResults)
+                            self.isLoadingWeb = false
                         }
-                    case .web:
-                        self.webResults.append(contentsOf: newResults)
-                        self.isLoadingWeb = false
                     }
                 }
                 
-                self.results = self.webResults + self.amazonResults + self.localResults
+                self.results = self.webResults + self.amazonResults + self.libraryResults + self.localResults
                 self.updateStateAfterThreadCompletion()
             }
         }

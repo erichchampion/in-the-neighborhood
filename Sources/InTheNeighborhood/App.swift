@@ -15,6 +15,8 @@ struct InTheNeighborhoodApp: App {
     let googleBooksSource: any SearchSource
     let bestBuySource: any SearchSource
     let mapKitSource: any SearchSource
+    let dplaSource: any SearchSource
+    let nominatimSource: any SearchSource
     let queryEnhancer: QueryEnhancing
     
     init() {
@@ -47,19 +49,27 @@ struct InTheNeighborhoodApp: App {
         // Initialize Best Buy source (returns empty when no API key)
         bestBuySource = BestBuySearchSource(apiKey: APIKeys.bestbuyAPIKey)
         
+        // Initialize DPLA source (library search)
+        dplaSource = DPLASearchSource(apiKey: APIKeys.dplaAPIKey ?? "")
+        
+        // Initialize Nominatim (OpenStreetMap) source for local search
+        nominatimSource = NominatimSearchSource(locationService: locationService)
+        
         // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
         let allSources: [any SearchSource] = [
             mapKitSource,
+            nominatimSource,
             duckDuckGoSource,
             bingSource,
             bookshopSource,
             marketplaceSource,
             amazonSource,
             googleBooksSource,
-            OpenLibrarySearchSource()
+            OpenLibrarySearchSource(),
+            dplaSource
         ]
         
-        coordinator = MetasearchCoordinator(sources: allSources)
+        coordinator = MetasearchCoordinator(sources: allSources, denyListFilter: SettingsManager.shared.denyList)
         self.allSources = allSources
     }
     

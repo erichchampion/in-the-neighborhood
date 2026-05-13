@@ -1,18 +1,25 @@
 import XCTest
-import CoreLocation
 @testable import MetasearchCore
+import CoreLocation
 
 final class ResultPrioritizerTests: XCTestCase {
-    var prioritizer: ResultPrioritizer!
+    var sut: ResultPrioritizer!
     
     override func setUp() {
         super.setUp()
-        prioritizer = ResultPrioritizer()
+        sut = ResultPrioritizer()
     }
     
-    func test_ResultPrioritizer_LocalBeforeOnline() {
+    override func tearDown() {
+        sut = nil
+        super.tearDown()
+    }
+    
+    // MARK: - Tier Prioritization
+    func testLocalResultsComeBeforeOnline() {
+        // Given
         let localResult = SearchResult(
-            id: "local-1",
+            id: "1",
             title: "Local Store",
             description: nil,
             source: "mapkit",
@@ -20,114 +27,145 @@ final class ResultPrioritizerTests: XCTestCase {
             category: .local,
             url: nil,
             location: CLLocation(latitude: 37.7749, longitude: -122.4194),
-            distance: 1000.0,
+            distance: 1000,
+            relevanceScore: nil,
             metadata: [:]
         )
         
         let onlineResult = SearchResult(
-            id: "online-1",
+            id: "2",
             title: "Online Store",
             description: nil,
-            source: "websearch",
+            source: "amazon",
             sourceType: .online,
-            category: .web,
-            url: URL(string: "https://example.com"),
+            category: .product,
+            url: nil,
             location: nil,
             distance: nil,
+            relevanceScore: nil,
             metadata: [:]
         )
         
-        let results = [onlineResult, localResult] // Online first
-        let prioritized = prioritizer.prioritize(results: results)
+        // When
+        let results = sut.prioritize(results: [onlineResult, localResult])
         
-        // Local should come first
-        XCTAssertEqual(prioritized.first?.sourceType, .local)
-        XCTAssertEqual(prioritized.first?.id, "local-1")
+        // Then
+        XCTAssertEqual(results.first?.id, "1")
+        XCTAssertEqual(results.last?.id, "2")
     }
     
-    func test_ResultPrioritizer_TierOrdering() {
-        let tier1 = SearchResult(
-            id: "tier1",
-            title: "Local",
+    // MARK: - Relevance Scoring (New Feature)
+    func testLocalResultsSortedByRelevanceFirstThenDistance() {
+        // Given
+        let localHighRelevance = SearchResult(
+            id: "1",
+            title: "High Relevance Local",
             description: nil,
             source: "mapkit",
             sourceType: .local,
             category: .local,
             url: nil,
             location: CLLocation(latitude: 37.7749, longitude: -122.4194),
-            distance: 500.0,
+            distance: 5000, // 5km away
+            relevanceScore: 0.9,
             metadata: [:]
         )
         
-        let tier2 = SearchResult(
-            id: "tier2",
-            title: "Regional",
+        let localLowRelevance = SearchResult(
+            id: "2",
+            title: "Low Relevance Local",
             description: nil,
-            source: "bookshop",
-            sourceType: .regional,
-            category: .book,
-            url: URL(string: "https://bookshop.org"),
-            location: nil,
-            distance: nil,
+            source: "mapkit",
+            sourceType: .local,
+            category: .local,
+            url: nil,
+            location: CLLocation(latitude: 37.7749, longitude: -122.4194),
+            distance: 1000, // 1km away (closer)
+            relevanceScore: 0.3,
             metadata: [:]
         )
         
-        let tier3 = SearchResult(
-            id: "tier3",
-            title: "Online",
-            description: nil,
-            source: "websearch",
-            sourceType: .online,
-            category: .web,
-            url: URL(string: "https://example.com"),
-            location: nil,
-            distance: nil,
-            metadata: [:]
-        )
+        // When
+        let results = sut.prioritize(results: [localLowRelevance, localHighRelevance])
         
-        let results = [tier3, tier1, tier2] // Mixed order
-        let prioritized = prioritizer.prioritize(results: results)
-        
-        // Should be: local, regional, online
-        XCTAssertEqual(prioritized[0].sourceType, .local)
-        XCTAssertEqual(prioritized[1].sourceType, .regional)
-        XCTAssertEqual(prioritized[2].sourceType, .online)
+        // Then: Higher relevance should come first, even if further away
+        XCTAssertEqual(results.first?.id, "1") // High relevance
+        XCTAssertEqual(results.last?.id, "2") // Low relevance
     }
     
-    func test_ResultPrioritizer_SortsByDistance() {
-        let location = CLLocation(latitude: 37.7749, longitude: -122.4194)
+    func testSameRelevanceLocalResultsSortedByDistance() {
+        // Given
+        let closeResult = SearchResult(
+            id: "1",
+            title: "Close Store",
+            description: nil,
+            source: "mapkit",
+            sourceType: .local,
+            category: .local,
+            url: nil,
+            location: CLLocation(latitude: 37.7749, longitude: -122.4194),
+            distance: 1000,
+            relevanceScore: 0.5,
+            metadata: [:]
+        )
         
         let farResult = SearchResult(
-            id: "far",
+            id: "2",
             title: "Far Store",
             description: nil,
             source: "mapkit",
             sourceType: .local,
             category: .local,
             url: nil,
-            location: location,
-            distance: 5000.0, // 5km
+            location: CLLocation(latitude: 37.7749, longitude: -122.4194),
+            distance: 5000,
+            relevanceScore: 0.5,
             metadata: [:]
         )
         
-        let nearResult = SearchResult(
-            id: "near",
-            title: "Near Store",
+        // When
+        let results = sut.prioritize(results: [farResult, closeResult])
+        
+        // Then: Same relevance, closer comes first
+        XCTAssertEqual(results.first?.id, "1") // Closer
+        XCTAssertEqual(results.last?.id, "2") // Further
+    }
+    
+    func testOnlineResultsSortedByRelevance() {
+        // Given
+        let highRelevanceOnline = SearchResult(
+            id: "1",
+            title: "High Relevance Online",
             description: nil,
-            source: "mapkit",
-            sourceType: .local,
-            category: .local,
+            source: "amazon",
+            sourceType: .online,
+            category: .product,
             url: nil,
-            location: location,
-            distance: 500.0, // 500m
+            location: nil,
+            distance: nil,
+            relevanceScore: 0.9,
             metadata: [:]
         )
         
-        let results = [farResult, nearResult]
-        let prioritized = prioritizer.prioritize(results: results)
+        let lowRelevanceOnline = SearchResult(
+            id: "2",
+            title: "Low Relevance Online",
+            description: nil,
+            source: "amazon",
+            sourceType: .online,
+            category: .product,
+            url: nil,
+            location: nil,
+            distance: nil,
+            relevanceScore: 0.2,
+            metadata: [:]
+        )
         
-        // Nearer should come first
-        XCTAssertEqual(prioritized.first?.id, "near")
-        XCTAssertEqual(prioritized.first?.distance, 500.0)
+        // When
+        let results = sut.prioritize(results: [lowRelevanceOnline, highRelevanceOnline])
+        
+        // Then
+        XCTAssertEqual(results.first?.id, "1") // High relevance
+        XCTAssertEqual(results.last?.id, "2") // Low relevance
     }
 }

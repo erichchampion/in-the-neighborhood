@@ -43,11 +43,13 @@ public struct SearchView: View {
                         ResultsView(
                             webResults: viewModel.webResults,
                             amazonResults: viewModel.amazonResults,
+                            libraryResults: viewModel.libraryResults,
                             localResults: viewModel.localResults,
                             originalQuery: viewModel.originalQuery,
                             selectedTab: $viewModel.selectedTab,
                             isLoadingWeb: viewModel.isLoadingWeb,
                             isLoadingAmazon: viewModel.isLoadingAmazon,
+                            isLoadingLibrary: viewModel.isLoadingLibrary,
                             isLoadingLocal: viewModel.isLoadingLocal,
                             localStoreCategories: viewModel.localStoreCategories,
                             onRefine: { result in
@@ -62,20 +64,22 @@ public struct SearchView: View {
                             }
                         )
                         .accessibilityLabel("Search results")
-                        .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
+                        .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.libraryResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.libraryResults.count + viewModel.localResults.count) results found")
                         
                     case .loaded:
-                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.localResults.isEmpty {
+                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.libraryResults.isEmpty && viewModel.localResults.isEmpty {
                             EmptyStateView(message: NSLocalizedString("No results found. Try a different search term.", comment: ""))
                         } else {
                             ResultsView(
                                 webResults: viewModel.webResults,
                                 amazonResults: viewModel.amazonResults,
+                                libraryResults: viewModel.libraryResults,
                                 localResults: viewModel.localResults,
                                 originalQuery: viewModel.originalQuery,
                                 selectedTab: $viewModel.selectedTab,
                                 isLoadingWeb: viewModel.isLoadingWeb,
                                 isLoadingAmazon: viewModel.isLoadingAmazon,
+                                isLoadingLibrary: viewModel.isLoadingLibrary,
                                 isLoadingLocal: viewModel.isLoadingLocal,
                                 localStoreCategories: viewModel.localStoreCategories,
                                 onRefine: { result in
@@ -90,7 +94,7 @@ public struct SearchView: View {
                                 }
                             )
                             .accessibilityLabel("Search results")
-                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.localResults.count) results found")
+                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.libraryResults.count + viewModel.localResults.count) results found")
                         }
                         
                     case .error:

@@ -11,4 +11,5 @@ public enum SourceIdentifier {
     public static let marketplace = "marketplace"
     public static let googlebooks = "googlebooks"
     public static let openlibrary = "openlibrary"
+    public static let dpla = "dpla"
 }

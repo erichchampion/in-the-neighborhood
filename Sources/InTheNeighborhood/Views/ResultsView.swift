@@ -4,12 +4,14 @@ import MetasearchCore
 public struct ResultsView: View {
     let webResults: [SearchResult]
     let amazonResults: [SearchResult]
+    let libraryResults: [SearchResult]
     let localResults: [SearchResult]
     let originalQuery: String
     let onRefine: ((SearchResult) -> Void)?
     @Binding var selectedTab: SearchViewModel.TabSelection
     let isLoadingWeb: Bool
     let isLoadingAmazon: Bool
+    let isLoadingLibrary: Bool
     let isLoadingLocal: Bool
     let localStoreCategories: [String]
     let agentSummary: String?
@@ -17,11 +19,13 @@ public struct ResultsView: View {
     public init(
         webResults: [SearchResult],
         amazonResults: [SearchResult],
+        libraryResults: [SearchResult],
         localResults: [SearchResult],
         originalQuery: String = "",
         selectedTab: Binding<SearchViewModel.TabSelection>,
         isLoadingWeb: Bool = false,
         isLoadingAmazon: Bool = false,
+        isLoadingLibrary: Bool = false,
         isLoadingLocal: Bool = false,
         localStoreCategories: [String] = [],
         agentSummary: String? = nil,
@@ -29,11 +33,13 @@ public struct ResultsView: View {
     ) {
         self.webResults = webResults
         self.amazonResults = amazonResults
+        self.libraryResults = libraryResults
         self.localResults = localResults
         self.originalQuery = originalQuery
         self._selectedTab = selectedTab
         self.isLoadingWeb = isLoadingWeb
         self.isLoadingAmazon = isLoadingAmazon
+        self.isLoadingLibrary = isLoadingLibrary
         self.isLoadingLocal = isLoadingLocal
         self.localStoreCategories = localStoreCategories
         self.agentSummary = agentSummary
@@ -62,6 +68,7 @@ public struct ResultsView: View {
             Picker("Results Tab", selection: $selectedTab) {
                 Text("Web").tag(SearchViewModel.TabSelection.web)
                 Text("Products").tag(SearchViewModel.TabSelection.products)
+                Text("Library").tag(SearchViewModel.TabSelection.library)
                 Text("Local Stores").tag(SearchViewModel.TabSelection.localStores)
             }
             .pickerStyle(.segmented)
@@ -75,6 +82,8 @@ public struct ResultsView: View {
                     webTabContent
                 case .products:
                     productsTabContent
+                case .library:
+                    libraryTabContent
                 case .localStores:
                     localStoresTabContent
                 }
@@ -192,6 +201,60 @@ public struct ResultsView: View {
                     .frame(maxWidth: .infinity)
                 }
             }
+        }
+    }
+    
+    private var libraryTabContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if !filteredLibraryResults.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Library")
+                            .font(.headline)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                            .padding(.bottom, 8)
+                        
+                        ForEach(filteredLibraryResults) { result in
+                            LibraryCard(result: result)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemGray6))
+                    .padding(.bottom, 16)
+                } else if isLoadingLibrary {
+                    VStack {
+                        ProgressView()
+                            .padding()
+                        Text("Searching libraries...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    VStack {
+                        Text("No library results found")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 40)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+    
+    private var filteredLibraryResults: [SearchResult] {
+        libraryResults.filter { result in
+            let isbn = result.metadata["isbn"] as? String
+            let authors = result.metadata["author_name"] as? [String]
+            let providers = result.metadata["providers"] as? [[String: Any]]
+            let coverId = result.metadata["cover_i"] as? Int
+            let imageUrl = result.metadata["imageUrl"] as? String
+            return isbn != nil || authors != nil || providers != nil || coverId != nil || imageUrl != nil
         }
     }
     

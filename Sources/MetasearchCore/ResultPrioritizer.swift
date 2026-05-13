@@ -4,12 +4,8 @@ public struct ResultPrioritizer {
     public init() {}
     
     public func prioritize(results: [SearchResult]) -> [SearchResult] {
-        // Sort by tier priority: local > regional > online
-        // Within local, sort by distance (closer first)
-        // Within same tier, maintain original order (or by relevance score if available)
-        
         return results.sorted { lhs, rhs in
-            // First, prioritize by source type
+            // First, prioritize by source type tier
             let lhsTier = tierPriority(for: lhs.sourceType)
             let rhsTier = tierPriority(for: rhs.sourceType)
             
@@ -17,17 +13,22 @@ public struct ResultPrioritizer {
                 return lhsTier < rhsTier
             }
             
-            // Within same tier, if both are local, sort by distance
+            // Within same tier: sort by relevance score (higher first), then distance
+            let lhsRelevance = lhs.relevanceScore ?? 0.0
+            let rhsRelevance = rhs.relevanceScore ?? 0.0
+            
+            if lhsRelevance != rhsRelevance {
+                return lhsRelevance > rhsRelevance // Higher relevance first
+            }
+            
+            // Same relevance: sort by distance (closer first) for local results
             if lhs.sourceType == .local && rhs.sourceType == .local {
                 let lhsDistance = lhs.distance ?? Double.infinity
                 let rhsDistance = rhs.distance ?? Double.infinity
-                
-                if lhsDistance != rhsDistance {
-                    return lhsDistance < rhsDistance
-                }
+                return lhsDistance < rhsDistance
             }
             
-            // Maintain original order for same tier and distance
+            // Maintain original order for same tier, relevance, and distance
             return false
         }
     }

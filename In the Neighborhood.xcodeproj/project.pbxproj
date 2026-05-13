@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -44,8 +44,11 @@
 		56F222BFEF0BD77E096D063A /* LocationServices.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5761BD9FE7E86FBACD149C62 /* BingProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F4E04E9E5260293A812A2F /* BingProviderTests.swift */; };
 		59872B17B09C4EC639951A01 /* MetasearchCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 93A2459508E032CFDA7292CA /* MetasearchCore.framework */; };
+		5D02AD124A3CEB1FAB9BAD81 /* NominatimSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62EDCC9C9B3FCDBCA52C388B /* NominatimSearchSource.swift */; };
 		5D42706A891D29CEA86C8024 /* LocationServices.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5E56DF0F4BDDDB2A8E36B5CB /* SearchResultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33EC7EF1CAEA5214B3E6EC3C /* SearchResultTests.swift */; };
+		64610111D6ECE0BF81C1FD14 /* LibraryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */; };
+		64E8EFAA3F68DD30F81BFC3F /* NominatimSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */; };
 		660E51663BCD166A7F98ECD2 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE25AA993A0210D35FDB7ED7 /* SearchViewModel.swift */; };
 		66BEB74D06FB1A2975EF790E /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF2464ED8DB513B9CCFC9BB2 /* ResultsView.swift */; };
 		691D76ED1F67FC45145B2555 /* FavoriteResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F26687B280029E86BC9AFD6 /* FavoriteResult.swift */; };
@@ -64,12 +67,14 @@
 		7F03619EEF50D721686722FA /* FoundationModelsStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702ADFF3EBDF4CF483F476F9 /* FoundationModelsStub.swift */; };
 		7F744941CBE31B3F3E6CBF00 /* PersistenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E5FF33F66C53C8ABF0F7D8 /* PersistenceManager.swift */; };
 		828B7EF821BB64A9977A7AA9 /* ResultPrioritizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */; };
+		83240E0E20B643AB6C96FB81 /* RelevanceScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F764F46EACA9F318D26DE171 /* RelevanceScorer.swift */; };
 		838F07B1CDD7BC44E44C2441 /* SearchHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC39C5A4F672BC878A0FE66 /* SearchHistoryEntry.swift */; };
 		862FF399872D21611741B020 /* MetasearchCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 93A2459508E032CFDA7292CA /* MetasearchCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		88EBA419BD9E4E0685EA2BA3 /* SearchResultSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB54416BE5C5A3A678F27A6 /* SearchResultSummaryTests.swift */; };
 		8A7A2FDB0366C3361790F42D /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */; };
 		8B9E99BA792F4E22B51576C5 /* DenyListFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B19C06FE383083A13024E8 /* DenyListFilter.swift */; };
 		8BFB6BD8245E20DBABC2D835 /* SharedModels.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 34786922C577C9F3B21241DA /* SharedModels.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8CE8D0954648788460175F01 /* RelevanceScorerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */; };
 		8D4F277F3BA4770A24E9B1D1 /* AmazonSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */; };
 		8DE4A6A253D01A0DEDE49369 /* BingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78121379A73D042FCB7D0587 /* BingProvider.swift */; };
 		8DF48C1E6755725B095BA291 /* SearchIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F394A823C15DE1CDAB0AF23 /* SearchIntents.swift */; };
@@ -78,9 +83,12 @@
 		93F3D167C27AE3DFCC81F12C /* DuckDuckGoProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38925E057A95BBF3768FD4DA /* DuckDuckGoProvider.swift */; };
 		9476F363CB1DB4EFCFF970FE /* EnhancedQueryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 570B31361FF9E1C713544C46 /* EnhancedQueryTests.swift */; };
 		99673B25605C0B31236CC75A /* WebSearchProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0211205B5F76793E4C81D729 /* WebSearchProvider.swift */; };
+		9A8A400F4A0F8C99003159DD /* DPLASearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 564C6E174E9CAF508DABAE97 /* DPLASearchSourceTests.swift */; };
 		9AD524FFA3CD2C7307440087 /* ResultCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B47415AF857736FA4868DA3 /* ResultCacheTests.swift */; };
 		9B3091DA11F55AE69A1D2E52 /* AmazonProductCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4441FC91644334E53BCD786C /* AmazonProductCard.swift */; };
 		9CEFB587E29FFD98953948B6 /* MetasearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */; };
+		A32A7BD9B1F8854D3877C31F /* LibraryTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D73D27B5C0EC52167F18C87 /* LibraryTabTests.swift */; };
+		A36AC21282701CADB02EC774 /* URLSessionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB760E55D257076E198263D /* URLSessionProtocol.swift */; };
 		A496CB4716ED3D69B07A8C82 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A99C59F4177CDE3AA6DE31 /* App.swift */; };
 		A5299CC1C3B8122AFADEAC27 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0497F64900BDD2D6814695 /* LocationService.swift */; };
 		A8ADEA0E944B2D77CFC32119 /* ResultAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */; };
@@ -98,6 +106,7 @@
 		BC622F7A19D1799E99771A54 /* ProductCondition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87170702F20831507289E85A /* ProductCondition.swift */; };
 		BC7BD235B049FDED0C8877A3 /* ProductMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37617675AED4A26E9171B61D /* ProductMetadata.swift */; };
 		BC9F7451A8003B00C5129DF3 /* ResultAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */; };
+		BCA8F6F49660A1122104F12A /* DPLASearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2242193C3670C2F90A59C5B /* DPLASearchSource.swift */; };
 		BCEE6BD4BFBB3FA947FCD244 /* SearchSources.h in Headers */ = {isa = PBXBuildFile; fileRef = 9EB5AAEA771C98E78C1ECFF6 /* SearchSources.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BFA36BC9A26A245DB2AF90BA /* QueryEnhancing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820FB56B7ECB45F114E52915 /* QueryEnhancing.swift */; };
 		C4E24172F343DE563F7E431B /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
@@ -117,6 +126,7 @@
 		ED7A50E60AA137F91F038005 /* ErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B29927CCA2E7B386705AD6 /* ErrorView.swift */; };
 		F1254825FA4649F53C4B6B83 /* SettingsViewUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBAD1E688EC019564A5A55AA /* SettingsViewUITests.swift */; };
 		F17833087EA2FD4940500100 /* NearbyStoresWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3AC34EAF3AA7A8AD598D270E /* NearbyStoresWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F44E84DDFAEA5CD1387F4A09 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CA53BA17BCDF8BBE2BD09E5 /* Config.swift */; };
 		F4D2CC7FCD052FCC320AB87E /* AdDomainFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F1205B3990AEA6DAB0ACF51 /* AdDomainFilter.swift */; };
 		F66050680AF6881D669FE9A8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 65FB65231329D6066CD1E6BB /* Assets.xcassets */; };
 		FEEDC9DA5E193434E1C9CDD8 /* SearchSources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 128A43B633EE0E59A603AA7B /* SearchSources.framework */; };
@@ -311,15 +321,20 @@
 		34786922C577C9F3B21241DA /* SharedModels.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SharedModels.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		37617675AED4A26E9171B61D /* ProductMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductMetadata.swift; sourceTree = "<group>"; };
 		38925E057A95BBF3768FD4DA /* DuckDuckGoProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuckDuckGoProvider.swift; sourceTree = "<group>"; };
-		3AC34EAF3AA7A8AD598D270E /* NearbyStoresWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NearbyStoresWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		3DA3ECF235F8AF552D9189B8 /* SearchSourcesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SearchSourcesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AC34EAF3AA7A8AD598D270E /* NearbyStoresWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = NearbyStoresWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3CA53BA17BCDF8BBE2BD09E5 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		3DA3ECF235F8AF552D9189B8 /* SearchSourcesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SearchSourcesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4178FBF09D261BFBC3AC2D44 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NominatimSearchSourceTests.swift; sourceTree = "<group>"; };
 		4399D6E7DF02280B28EBCB4C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4441FC91644334E53BCD786C /* AmazonProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductCard.swift; sourceTree = "<group>"; };
 		46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBusinessCard.swift; sourceTree = "<group>"; };
 		4B6C9B58D210B802419526EE /* OnlineResultCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineResultCard.swift; sourceTree = "<group>"; };
+		4DB760E55D257076E198263D /* URLSessionProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionProtocol.swift; sourceTree = "<group>"; };
 		50851D395CF28F509C40A93F /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelevanceScorerTests.swift; sourceTree = "<group>"; };
+		564C6E174E9CAF508DABAE97 /* DPLASearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DPLASearchSourceTests.swift; sourceTree = "<group>"; };
 		570B31361FF9E1C713544C46 /* EnhancedQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedQueryTests.swift; sourceTree = "<group>"; };
 		5838AA6C681EE62E4CFF7687 /* SearchResultSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultSummary.swift; sourceTree = "<group>"; };
 		5B47415AF857736FA4868DA3 /* ResultCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultCacheTests.swift; sourceTree = "<group>"; };
@@ -329,6 +344,7 @@
 		60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetasearchCoordinator.swift; sourceTree = "<group>"; };
 		606828443062274BCEBC0091 /* IntentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentManager.swift; sourceTree = "<group>"; };
 		62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetasearchCoordinatorTests.swift; sourceTree = "<group>"; };
+		62EDCC9C9B3FCDBCA52C388B /* NominatimSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NominatimSearchSource.swift; sourceTree = "<group>"; };
 		6514CF03903759CA46BA48C8 /* IntentManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentManagerTests.swift; sourceTree = "<group>"; };
 		65FB65231329D6066CD1E6BB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6A0497F64900BDD2D6814695 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
@@ -339,7 +355,7 @@
 		71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDomainListDownloadManager.swift; sourceTree = "<group>"; };
 		78121379A73D042FCB7D0587 /* BingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProvider.swift; sourceTree = "<group>"; };
 		787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultPrioritizer.swift; sourceTree = "<group>"; };
-		798C5DD0EA4B954339D86B78 /* In the Neighborhood.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "In the Neighborhood.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = InTheNeighborhood.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AC7DD6A5036678BAF3BC492 /* LocationServices.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocationServices.h; sourceTree = "<group>"; };
 		7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSearchSourceTests.swift; sourceTree = "<group>"; };
 		7DBA43DBF8BFAA9E4E84E540 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -348,39 +364,41 @@
 		820FB56B7ECB45F114E52915 /* QueryEnhancing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEnhancing.swift; sourceTree = "<group>"; };
 		83DDC49623690F3C958DBF05 /* FoundationModelQueryEnhancer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelQueryEnhancer.swift; sourceTree = "<group>"; };
 		87170702F20831507289E85A /* ProductCondition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCondition.swift; sourceTree = "<group>"; };
-		8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InTheNeighborhoodTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = InTheNeighborhoodTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		93A2459508E032CFDA7292CA /* MetasearchCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MetasearchCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9763ABF3B65661EF68D1533A /* SearchToolExecutorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchToolExecutorTests.swift; sourceTree = "<group>"; };
 		991C0B507252AB52858D109B /* BestBuySearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestBuySearchSource.swift; sourceTree = "<group>"; };
 		9957955B01A13F9142CA99FC /* SearchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResult.swift; sourceTree = "<group>"; };
-		9961462098B5FCEFAF9F0E71 /* LocationServicesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LocationServicesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9961462098B5FCEFAF9F0E71 /* LocationServicesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LocationServicesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A87F3CF0D76981418B6C31A /* MapKitSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKitSearchSourceTests.swift; sourceTree = "<group>"; };
 		9AECC6BA1D0880A719A66C4E /* ResultCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultCache.swift; sourceTree = "<group>"; };
 		9B5D72F072A44053BEB5B62F /* BookshopSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshopSearchSource.swift; sourceTree = "<group>"; };
 		9CF9FECFA4788365EF472CED /* EnhancedQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedQuery.swift; sourceTree = "<group>"; };
+		9D73D27B5C0EC52167F18C87 /* LibraryTabTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryTabTests.swift; sourceTree = "<group>"; };
 		9EB5AAEA771C98E78C1ECFF6 /* SearchSources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SearchSources.h; sourceTree = "<group>"; };
 		9ECC101CD1AE041AC6E9EFED /* SearchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModelTests.swift; sourceTree = "<group>"; };
 		9F394A823C15DE1CDAB0AF23 /* SearchIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchIntents.swift; sourceTree = "<group>"; };
 		A03FD2236B1304610D58ED5A /* FoundationModelWebExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelWebExtractorTests.swift; sourceTree = "<group>"; };
 		A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleBooksSearchSource.swift; sourceTree = "<group>"; };
 		A3BB8459931E7F657BBAFA83 /* NearbyStoresWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NearbyStoresWidget.entitlements; sourceTree = "<group>"; };
-		A601E719D0B83DF997FEDD8F /* CoreLocation */ = {isa = PBXFileReference; lastKnownFileType = text; path = CoreLocation; sourceTree = "<group>"; };
+		A601E719D0B83DF997FEDD8F /* CoreLocation */ = {isa = PBXFileReference; path = CoreLocation; sourceTree = "<group>"; };
 		A8FDF257C790838D3D7B1EBE /* WebSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSource.swift; sourceTree = "<group>"; };
 		AF009B0DE246BD0A192579FB /* SearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSource.swift; sourceTree = "<group>"; };
 		B267F210530754102E40986D /* FoundationModelWebExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelWebExtractor.swift; sourceTree = "<group>"; };
 		B2BFED7ACEB86096CA125A8C /* AgentSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSearchCoordinator.swift; sourceTree = "<group>"; };
-		B35531AE74D9E3459B280A03 /* MetasearchCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MetasearchCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B35531AE74D9E3459B280A03 /* MetasearchCoreTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MetasearchCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B678FE11A64305F3993DDCAB /* SettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManagerTests.swift; sourceTree = "<group>"; };
-		BB5D8DF9F7DC34D995B4F256 /* Foundation */ = {isa = PBXFileReference; lastKnownFileType = text; path = Foundation; sourceTree = "<group>"; };
+		BB5D8DF9F7DC34D995B4F256 /* Foundation */ = {isa = PBXFileReference; path = Foundation; sourceTree = "<group>"; };
 		BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductScraper.swift; sourceTree = "<group>"; };
 		BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultAggregator.swift; sourceTree = "<group>"; };
 		BE25AA993A0210D35FDB7ED7 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		C35A427A7452541A3C326E89 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
-		C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InTheNeighborhoodUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = InTheNeighborhoodUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB2234677CF4CB2CB1F4EDBE /* DenyListFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenyListFilterTests.swift; sourceTree = "<group>"; };
 		CF2464ED8DB513B9CCFC9BB2 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
 		CF9D676FC5640A0BCF652813 /* LocationServices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LocationServices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CFB54416BE5C5A3A678F27A6 /* SearchResultSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultSummaryTests.swift; sourceTree = "<group>"; };
+		D2242193C3670C2F90A59C5B /* DPLASearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DPLASearchSource.swift; sourceTree = "<group>"; };
 		DE5A9D76260791772F421287 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		DF25DFFFD6E505CFD71D33B5 /* SavedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedStore.swift; sourceTree = "<group>"; };
 		E12CE8A3B38B28C8ACBF785B /* LocationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationServiceTests.swift; sourceTree = "<group>"; };
@@ -389,10 +407,12 @@
 		E651E8B7683F2C970877A493 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		E6B29927CCA2E7B386705AD6 /* ErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorView.swift; sourceTree = "<group>"; };
 		E8F4E04E9E5260293A812A2F /* BingProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProviderTests.swift; sourceTree = "<group>"; };
+		EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCard.swift; sourceTree = "<group>"; };
 		EEC39C5A4F672BC878A0FE66 /* SearchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryEntry.swift; sourceTree = "<group>"; };
 		F3349062230C15686D213C47 /* WebSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSourceTests.swift; sourceTree = "<group>"; };
 		F4888A0B4A52D2C70CCA1B04 /* CircuitBreakerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreakerTests.swift; sourceTree = "<group>"; };
 		F70D1AE22ED4879CC49A6E03 /* MapKitSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKitSearchSource.swift; sourceTree = "<group>"; };
+		F764F46EACA9F318D26DE171 /* RelevanceScorer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelevanceScorer.swift; sourceTree = "<group>"; };
 		FA012EDE20812DDE18A84F24 /* SearchSourceProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSourceProtocolTests.swift; sourceTree = "<group>"; };
 		FBAD1E688EC019564A5A55AA /* SettingsViewUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -484,10 +504,12 @@
 				E8F4E04E9E5260293A812A2F /* BingProviderTests.swift */,
 				6EF2A1B962815C6186C69EC8 /* BookshopSearchSourceTests.swift */,
 				F4888A0B4A52D2C70CCA1B04 /* CircuitBreakerTests.swift */,
+				564C6E174E9CAF508DABAE97 /* DPLASearchSourceTests.swift */,
 				260455D2BDD7C60B137E40A4 /* DuckDuckGoProviderTests.swift */,
 				A03FD2236B1304610D58ED5A /* FoundationModelWebExtractorTests.swift */,
 				9A87F3CF0D76981418B6C31A /* MapKitSearchSourceTests.swift */,
 				7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */,
+				42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */,
 				F3349062230C15686D213C47 /* WebSearchSourceTests.swift */,
 			);
 			name = SearchSourcesTests;
@@ -506,7 +528,7 @@
 		169127663F96CA16F069F2D3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				798C5DD0EA4B954339D86B78 /* In the Neighborhood.app */,
+				798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */,
 				8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */,
 				C411492E365A58444691CB4B /* InTheNeighborhoodUITests.xctest */,
 				CF9D676FC5640A0BCF652813 /* LocationServices.framework */,
@@ -545,6 +567,7 @@
 			isa = PBXGroup;
 			children = (
 				6514CF03903759CA46BA48C8 /* IntentManagerTests.swift */,
+				9D73D27B5C0EC52167F18C87 /* LibraryTabTests.swift */,
 				9763ABF3B65661EF68D1533A /* SearchToolExecutorTests.swift */,
 				9ECC101CD1AE041AC6E9EFED /* SearchViewModelTests.swift */,
 				B678FE11A64305F3993DDCAB /* SettingsManagerTests.swift */,
@@ -564,6 +587,7 @@
 		56FAD18B02690B4F39821B83 /* SharedModels */ = {
 			isa = PBXGroup;
 			children = (
+				3CA53BA17BCDF8BBE2BD09E5 /* Config.swift */,
 				5F26687B280029E86BC9AFD6 /* FavoriteResult.swift */,
 				DF25DFFFD6E505CFD71D33B5 /* SavedStore.swift */,
 				EEC39C5A4F672BC878A0FE66 /* SearchHistoryEntry.swift */,
@@ -579,6 +603,7 @@
 				5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */,
 				991C0B507252AB52858D109B /* BestBuySearchSource.swift */,
 				9B5D72F072A44053BEB5B62F /* BookshopSearchSource.swift */,
+				D2242193C3670C2F90A59C5B /* DPLASearchSource.swift */,
 				7E60B8EED951FE9AF0068A3E /* ExtractedProductInfo.swift */,
 				B267F210530754102E40986D /* FoundationModelWebExtractor.swift */,
 				A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */,
@@ -642,6 +667,7 @@
 				50851D395CF28F509C40A93F /* EmptyStateView.swift */,
 				E6B29927CCA2E7B386705AD6 /* ErrorView.swift */,
 				2FBEA5568DD9B1CB8FE1EB45 /* FavoritesView.swift */,
+				EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */,
 				46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */,
 				4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */,
 				4B6C9B58D210B802419526EE /* OnlineResultCard.swift */,
@@ -703,6 +729,7 @@
 				87170702F20831507289E85A /* ProductCondition.swift */,
 				37617675AED4A26E9171B61D /* ProductMetadata.swift */,
 				820FB56B7ECB45F114E52915 /* QueryEnhancing.swift */,
+				F764F46EACA9F318D26DE171 /* RelevanceScorer.swift */,
 				BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */,
 				9AECC6BA1D0880A719A66C4E /* ResultCache.swift */,
 				01A4CFFFF4362273ADD11C4F /* ResultCategory.swift */,
@@ -727,6 +754,14 @@
 			path = Config;
 			sourceTree = "<group>";
 		};
+		BCAA5B6DFD4B83BD2C87AA12 /* OpenStreetMap */ = {
+			isa = PBXGroup;
+			children = (
+				62EDCC9C9B3FCDBCA52C388B /* NominatimSearchSource.swift */,
+			);
+			path = OpenStreetMap;
+			sourceTree = "<group>";
+		};
 		DB6795FB501D0C81426340EA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -741,7 +776,9 @@
 			children = (
 				83DDC49623690F3C958DBF05 /* FoundationModelQueryEnhancer.swift */,
 				9EB5AAEA771C98E78C1ECFF6 /* SearchSources.h */,
+				4DB760E55D257076E198263D /* URLSessionProtocol.swift */,
 				9A90C951037A5E8A465D50FC /* MapKit */,
+				BCAA5B6DFD4B83BD2C87AA12 /* OpenStreetMap */,
 				5F25705437ADFEFCBBF586D1 /* Specialized */,
 				007886503814A0479385C86E /* WebSearch */,
 			);
@@ -755,6 +792,7 @@
 				CB2234677CF4CB2CB1F4EDBE /* DenyListFilterTests.swift */,
 				570B31361FF9E1C713544C46 /* EnhancedQueryTests.swift */,
 				62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */,
+				510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */,
 				E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */,
 				5B47415AF857736FA4868DA3 /* ResultCacheTests.swift */,
 				2B0F23568BE9E0358CB15D0E /* ResultPrioritizerTests.swift */,
@@ -908,7 +946,7 @@
 			packageProductDependencies = (
 			);
 			productName = InTheNeighborhood;
-			productReference = 798C5DD0EA4B954339D86B78 /* In the Neighborhood.app */;
+			productReference = 798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */;
 			productType = "com.apple.product-type.application";
 		};
 		625DD5A1DD8003291E1F7120 /* LocationServicesTests */ = {
@@ -1030,9 +1068,17 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					152C947D53CBDA5220AF28E8 = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
+					2B8102322861DCE5D2799204 = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
+					45C8C27BC0584CA905752527 = {
 						DevelopmentTeam = KA5A6NN3PD;
 						ProvisioningStyle = Automatic;
 					};
@@ -1045,15 +1091,34 @@
 						DevelopmentTeam = KA5A6NN3PD;
 						ProvisioningStyle = Automatic;
 					};
+					625DD5A1DD8003291E1F7120 = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
+					62FEEE34AF34E764EAC93391 = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
+					923671068C96310950111A8D = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
 					9C5883039F47493F7E83D341 = {
 						DevelopmentTeam = KA5A6NN3PD;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 60CBEB9ED28C5EA94EFEFFD4;
 					};
+					B2A94F8F71179E3692064B29 = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
+					B763D36435001BC1B31E9ECC = {
+						DevelopmentTeam = KA5A6NN3PD;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 4A12F663B133A8682E58A78C /* Build configuration list for PBXProject "In the Neighborhood" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -1065,6 +1130,8 @@
 			packageReferences = (
 				E597DC82D7EE2E5D0247FDE0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 169127663F96CA16F069F2D3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -1108,6 +1175,7 @@
 				ED7A50E60AA137F91F038005 /* ErrorView.swift in Sources */,
 				E9E0EAF06F52537643B4EAF3 /* FavoritesView.swift in Sources */,
 				1B36E0111983FB67E76B85E6 /* IntentManager.swift in Sources */,
+				64610111D6ECE0BF81C1FD14 /* LibraryCard.swift in Sources */,
 				8A7A2FDB0366C3361790F42D /* LoadingView.swift in Sources */,
 				AB32A016860800B45C8A154F /* LocalBusinessCard.swift in Sources */,
 				03FB0F8532BCB8ED4927375D /* LoggingService.swift in Sources */,
@@ -1129,10 +1197,12 @@
 				5761BD9FE7E86FBACD149C62 /* BingProviderTests.swift in Sources */,
 				C8372E68651120B9380E1ED4 /* BookshopSearchSourceTests.swift in Sources */,
 				91CA365F6BA59DC072393155 /* CircuitBreakerTests.swift in Sources */,
+				9A8A400F4A0F8C99003159DD /* DPLASearchSourceTests.swift in Sources */,
 				E594C538949D360F2FD40FFA /* DuckDuckGoProviderTests.swift in Sources */,
 				0E821A284113D03D00C1A469 /* FoundationModelWebExtractorTests.swift in Sources */,
 				7C7AF589232AF52A789E4A99 /* MapKitSearchSourceTests.swift in Sources */,
 				E18C3C3CA56A5655920C3575 /* MarketplaceSearchSourceTests.swift in Sources */,
+				64E8EFAA3F68DD30F81BFC3F /* NominatimSearchSourceTests.swift in Sources */,
 				22D50482BB19B1A5284D0A3A /* WebSearchSourceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1149,6 +1219,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F44E84DDFAEA5CD1387F4A09 /* Config.swift in Sources */,
 				691D76ED1F67FC45145B2555 /* FavoriteResult.swift in Sources */,
 				DBA1D490E4A5835B9E867016 /* SavedStore.swift in Sources */,
 				838F07B1CDD7BC44E44C2441 /* SearchHistoryEntry.swift in Sources */,
@@ -1160,6 +1231,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				53B4F570D5C7A9563D54E304 /* IntentManagerTests.swift in Sources */,
+				A32A7BD9B1F8854D3877C31F /* LibraryTabTests.swift in Sources */,
 				7EE3C36069057BF24DEFC337 /* SearchToolExecutorTests.swift in Sources */,
 				42597DF3461EB73041805086 /* SearchViewModelTests.swift in Sources */,
 				6FD0976A73251AED3E68B944 /* SettingsManagerTests.swift in Sources */,
@@ -1190,6 +1262,7 @@
 				AEA60F3E27C2F8A054A90F4F /* DenyListFilterTests.swift in Sources */,
 				9476F363CB1DB4EFCFF970FE /* EnhancedQueryTests.swift in Sources */,
 				D6F6CC1656059D859E30B60D /* MetasearchCoordinatorTests.swift in Sources */,
+				8CE8D0954648788460175F01 /* RelevanceScorerTests.swift in Sources */,
 				A8ADEA0E944B2D77CFC32119 /* ResultAggregatorTests.swift in Sources */,
 				9AD524FFA3CD2C7307440087 /* ResultCacheTests.swift in Sources */,
 				E7807F07585CD3234A74315F /* ResultPrioritizerTests.swift in Sources */,
@@ -1218,6 +1291,7 @@
 				E2B95D7E3FEDAB664FE72E29 /* BingSearchSource.swift in Sources */,
 				3A52D50609BAD0BF4E4CB7E5 /* BookshopSearchSource.swift in Sources */,
 				925EAF2CF14FE7D6DFA5E7AB /* CircuitBreaker.swift in Sources */,
+				BCA8F6F49660A1122104F12A /* DPLASearchSource.swift in Sources */,
 				93F3D167C27AE3DFCC81F12C /* DuckDuckGoProvider.swift in Sources */,
 				DBC571C8B7D8BB7C5F4A7B3D /* DuckDuckGoSearchSource.swift in Sources */,
 				6D2A6A26703CAC74D7CD70A0 /* ExtractedProductInfo.swift in Sources */,
@@ -1226,7 +1300,9 @@
 				B15CE9B451A664A62D8D0221 /* GoogleBooksSearchSource.swift in Sources */,
 				0D3FFB081F09E900D141F387 /* MapKitSearchSource.swift in Sources */,
 				7B4C9A9905A08010EAAB0260 /* MarketplaceSearchSource.swift in Sources */,
+				5D02AD124A3CEB1FAB9BAD81 /* NominatimSearchSource.swift in Sources */,
 				49F2DB9BB053B4A949C07250 /* OpenLibrarySearchSource.swift in Sources */,
+				A36AC21282701CADB02EC774 /* URLSessionProtocol.swift in Sources */,
 				99673B25605C0B31236CC75A /* WebSearchProvider.swift in Sources */,
 				4BEA507953444B3801B3C048 /* WebSearchSource.swift in Sources */,
 			);
@@ -1246,6 +1322,7 @@
 				BC622F7A19D1799E99771A54 /* ProductCondition.swift in Sources */,
 				BC7BD235B049FDED0C8877A3 /* ProductMetadata.swift in Sources */,
 				BFA36BC9A26A245DB2AF90BA /* QueryEnhancing.swift in Sources */,
+				83240E0E20B643AB6C96FB81 /* RelevanceScorer.swift in Sources */,
 				BC9F7451A8003B00C5129DF3 /* ResultAggregator.swift in Sources */,
 				4F395D9B9BE6151AF2598BFB /* ResultCache.swift in Sources */,
 				AC5B0016DC134F7F90EADF9B /* ResultCategory.swift in Sources */,
@@ -1339,7 +1416,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1364,7 +1440,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1372,7 +1447,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.SearchSources";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1386,7 +1460,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1409,9 +1482,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sources/InTheNeighborhood/InTheNeighborhood.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				EXECUTABLE_NAME = InTheNeighborhood;
 				INFOPLIST_FILE = Sources/InTheNeighborhood/Info.plist;
 				INFOPLIST_KEY_BESTBUY_API_KEY = "$(BESTBUY_API_KEY)";
@@ -1443,7 +1514,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1451,7 +1521,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.SearchSources";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1465,7 +1534,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1485,8 +1553,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1509,17 +1575,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/NearbyStoresWidget/NearbyStoresWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/NearbyStoresWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.NearbyStoresWidget";
 				PRODUCT_MODULE_NAME = NearbyStoresWidget;
@@ -1563,11 +1623,12 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1582,7 +1643,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -1593,7 +1653,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1618,7 +1677,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1626,7 +1684,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.SharedModels";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1645,7 +1702,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\".\"",
@@ -1657,7 +1713,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.LocationServices";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1676,7 +1731,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1684,7 +1738,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.SharedModels";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1701,9 +1754,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sources/InTheNeighborhood/InTheNeighborhood.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				EXECUTABLE_NAME = InTheNeighborhood;
 				INFOPLIST_FILE = Sources/InTheNeighborhood/Info.plist;
 				INFOPLIST_KEY_BESTBUY_API_KEY = "$(BESTBUY_API_KEY)";
@@ -1729,8 +1780,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1757,7 +1806,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\".\"",
@@ -1769,7 +1817,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.LocationServices";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1783,8 +1830,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1806,17 +1851,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Sources/NearbyStoresWidget/NearbyStoresWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/NearbyStoresWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.NearbyStoresWidget";
 				PRODUCT_MODULE_NAME = NearbyStoresWidget;
@@ -1835,7 +1874,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1843,7 +1881,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.MetasearchCore";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1857,7 +1894,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1882,7 +1918,6 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1890,7 +1925,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.in-the-neighborhood.MetasearchCore";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1934,11 +1968,12 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1960,7 +1995,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1971,7 +2005,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1991,8 +2024,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KA5A6NN3PD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (

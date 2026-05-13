@@ -147,13 +147,14 @@ public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
         return SearchResult(
             id: id,
             title: product.name ?? "Best Buy Product",
-            description: priceStr,
+            description: product.manufacturer.map { "Brand: \($0)" } ?? nil,
             source: identifier,
             sourceType: sourceType,
             category: category,
             url: productURL,
             location: nil,
             distance: nil,
+            price: priceStr,
             metadata: metadata
         )
     }

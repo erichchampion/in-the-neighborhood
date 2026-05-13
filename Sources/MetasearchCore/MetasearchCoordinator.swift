@@ -5,25 +5,26 @@ public actor MetasearchCoordinator {
     private let timeout: TimeInterval
     private let resultAggregator: ResultAggregator
     private let resultPrioritizer: ResultPrioritizer
-    private let denyListFilter: DenyListFilter
+    private nonisolated(unsafe) var denyListFilter: DenyListFilter
     
     public init(
         sources: [any SearchSource],
-        timeout: TimeInterval = 60.0, // Increased timeout to allow Amazon scraping with series page detection to complete
-        denyListFilter: DenyListFilter = DenyListFilter(defaultDomains: [
-            "amazon.com",
-            "walmart.com",
-            "target.com",
-            "homedepot.com",
-            "lowes.com",
-            "bestbuy.com"
-        ])
+        timeout: TimeInterval = 60.0,
+        denyListFilter: DenyListFilter = DenyListFilter()
     ) {
         self.sources = sources
         self.timeout = timeout
         self.resultAggregator = ResultAggregator()
         self.resultPrioritizer = ResultPrioritizer()
         self.denyListFilter = denyListFilter
+    }
+    
+    public func updateDenyList(_ denyList: DenyListFilter) {
+        self.denyListFilter = denyList
+    }
+    
+    private nonisolated func getEffectiveDenyList() -> DenyListFilter {
+        return denyListFilter
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -77,7 +78,7 @@ public actor MetasearchCoordinator {
         
         // Aggregate, filter, and prioritize results
         // Even if some sources failed, we return what we have
-        var filteredResults = resultAggregator.filter(results: allResults, denyList: denyListFilter)
+        var filteredResults = resultAggregator.filter(results: allResults, denyList: getEffectiveDenyList())
         
         // #region agent log
         print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
@@ -156,7 +157,7 @@ public actor MetasearchCoordinator {
                         try await self.withTimeout(seconds: timeoutValue) {
                             try await sourceToRun.searchStreaming(query: runQuery) { rawResults in
                                 // Process and yield results immediately
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 
                                 if !filtered.isEmpty {
@@ -219,7 +220,7 @@ public actor MetasearchCoordinator {
                     do {
                         try await self.withTimeout(seconds: timeoutValue) {
                             try await sourceToRun.searchStreaming(query: mapKitQuery) { rawResults in
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.denyListFilter)
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 if !filtered.isEmpty {
                                     onResults(sourceIdentifier, filtered)

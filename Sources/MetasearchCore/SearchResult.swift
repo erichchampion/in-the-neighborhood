@@ -11,6 +11,8 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
     public let url: URL?
     public let location: CLLocation?
     public let distance: Double? // meters
+    public let relevanceScore: Double? // 0.0 to 1.0, higher = more relevant
+    public let price: String? // Display price (e.g., "$199.99", "$10-20")
     public let metadata: [String: AnyHashable]
     
     public init(
@@ -23,6 +25,8 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
         url: URL?,
         location: CLLocation?,
         distance: Double?,
+        relevanceScore: Double? = nil,
+        price: String? = nil,
         metadata: [String: AnyHashable]
     ) {
         self.id = id
@@ -34,6 +38,8 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
         self.url = url
         self.location = location
         self.distance = distance
+        self.relevanceScore = relevanceScore
+        self.price = price
         self.metadata = metadata
     }
     

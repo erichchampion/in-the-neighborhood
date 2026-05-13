@@ -38,9 +38,10 @@ public struct ResultAggregator: Sendable {
         let adFilter = AdDomainFilter()
         
         return results.filter { result in
-            // Allow results from AmazonSearchSource even if URL is amazon.com
-            // The deny list is meant to filter Amazon results from OTHER sources
-            if result.source.lowercased() == SourceIdentifier.amazon {
+            // Allow AmazonSearchSource results ONLY for product category (for metadata extraction)
+            // Web category Amazon results should be filtered (no direct shopping links)
+            // Product results are scraped for brand/author/ISBN to improve local search refinement
+            if result.source.lowercased() == SourceIdentifier.amazon && result.category == .product {
                 return true
             }
             
