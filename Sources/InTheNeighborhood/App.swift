@@ -17,6 +17,7 @@ struct InTheNeighborhoodApp: App {
     let mapKitSource: any SearchSource
     let dplaSource: any SearchSource
     let nominatimSource: any SearchSource
+    let overpassSource: any SearchSource
     let queryEnhancer: QueryEnhancing
     
     init() {
@@ -54,11 +55,16 @@ struct InTheNeighborhoodApp: App {
         
         // Initialize Nominatim (OpenStreetMap) source for local search
         nominatimSource = NominatimSearchSource(locationService: locationService)
-        
+
+        // Initialize Overpass (OpenStreetMap) source for tag-based local discovery
+        // — finds specialty shops by their OSM `shop=…` / `amenity=…` tags.
+        overpassSource = OverpassSearchSource(locationService: locationService)
+
         // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
         let allSources: [any SearchSource] = [
             mapKitSource,
             nominatimSource,
+            overpassSource,
             duckDuckGoSource,
             bingSource,
             bookshopSource,
