@@ -1,5 +1,10 @@
 import SwiftUI
-import AVFoundation
+// AVFoundation's Swift 6 audit isn't complete — AVCaptureSession in
+// particular isn't yet marked Sendable, but is safe to use from a
+// dedicated serial queue. `@preconcurrency` downgrades the resulting
+// non-Sendable-capture warnings to a quieter form until Apple completes
+// the audit.
+@preconcurrency import AVFoundation
 import Vision
 
 /// SwiftUI sheet view that asks for camera permission and presents a live

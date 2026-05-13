@@ -23,7 +23,12 @@ struct EthicsBadgeView: View {
 
     /// The pills that the body will render. Empty when the entry has no
     /// recognizable signal (unknown ownership, no recognized certs).
-    var displayedItems: [BadgeItem] {
+    ///
+    /// `nonisolated` because the computation is a pure function of `entry`
+    /// and the static lookup tables — it never touches main-actor state.
+    /// Marking it explicitly nonisolated lets tests call it from XCTest
+    /// methods (which run off the main actor by default).
+    nonisolated var displayedItems: [BadgeItem] {
         var items: [BadgeItem] = []
         if let primary = Self.ownershipBadge(entry.ownership) {
             items.append(primary)
@@ -74,9 +79,13 @@ struct EthicsBadgeView: View {
         }
     }
 
-    // MARK: - Lookup tables (static so they're also accessible in tests)
+    // MARK: - Lookup tables (static so they're also accessible in tests).
+    // `nonisolated` because the lookup is a pure function of its argument;
+    // marking it explicit lets `displayedItems` (also nonisolated) call them
+    // without crossing the main-actor boundary that `View` would otherwise
+    // impose.
 
-    static func ownershipBadge(_ ownership: EthicsEntry.Ownership) -> BadgeItem? {
+    nonisolated static func ownershipBadge(_ ownership: EthicsEntry.Ownership) -> BadgeItem? {
         switch ownership {
         case .indie:
             return BadgeItem(label: "Indie", systemImage: "house", tint: .positive)
@@ -93,7 +102,7 @@ struct EthicsBadgeView: View {
         }
     }
 
-    static func certificationBadge(_ certification: String) -> BadgeItem? {
+    nonisolated static func certificationBadge(_ certification: String) -> BadgeItem? {
         switch certification.lowercased() {
         case "b-corp":
             return BadgeItem(label: "B-Corp", systemImage: "leaf", tint: .positive)
