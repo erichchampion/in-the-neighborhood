@@ -18,18 +18,25 @@ public struct DenyListFilter: Sendable {
         self.deniedDomains = Set(initialDomains.map { $0.lowercased() })
     }
     
-    public func shouldFilter(url: URL) -> Bool {
+    public func shouldFilter(url: URL, scorer: EthicsScorer? = nil) -> Bool {
         guard let host = url.host?.lowercased() else {
             return false
         }
-        
+
+        // If an ethics scorer is provided and classifies this host as a
+        // mega-retailer, filter it out — the ledger takes precedence over the
+        // hard-coded list because it's curated and easier to update.
+        if let scorer, scorer.isBlocked(host: host) {
+            return true
+        }
+
         // Check exact match
         if deniedDomains.contains(host) {
             return true
         }
-        
+
         // Extract base domain from host (e.g., "amazon" from "www.amazon.ca")
-        let hostBaseDomain = extractBaseDomain(from: host)
+        let hostBaseDomain = Self.extractBaseDomain(from: host)
         
         // Check if any denied domain matches this host
         for deniedDomain in deniedDomains {
@@ -39,7 +46,7 @@ public struct DenyListFilter: Sendable {
             }
             
             // Extract base domain from denied domain (e.g., "amazon" from "amazon.com")
-            let deniedBaseDomain = extractBaseDomain(from: deniedDomain)
+            let deniedBaseDomain = Self.extractBaseDomain(from: deniedDomain)
             
             // Match if base domains are the same (handles different TLDs and subdomains)
             // e.g., "amazon.com" will match "amazon.ca", "www.amazon.com", "www.amazon.ca", etc.
@@ -57,13 +64,15 @@ public struct DenyListFilter: Sendable {
         return false
     }
     
-    /// Extracts the base domain name from a full domain
+    /// Extracts the base domain name from a full domain. Promoted to `static`
+    /// so `EthicsScorer` (and any future hostname-keyed lookup) can reuse the
+    /// same TLD handling without duplicating it.
     /// Examples:
     /// - "amazon.com" -> "amazon"
     /// - "www.amazon.com" -> "amazon"
     /// - "amazon.ca" -> "amazon"
     /// - "www.amazon.co.uk" -> "amazon"
-    private func extractBaseDomain(from domain: String) -> String {
+    static func extractBaseDomain(from domain: String) -> String {
         let components = domain.components(separatedBy: ".")
         
         guard components.count >= 2 else {

@@ -57,6 +57,7 @@ targets:
       - path: Sources/InTheNeighborhood
     resources:
       - path: Sources/InTheNeighborhood/Resources/Localizable.strings
+      - path: Sources/InTheNeighborhood/Resources/EthicsLedger.json
     dependencies:
       - target: MetasearchCore
       - target: SearchSources

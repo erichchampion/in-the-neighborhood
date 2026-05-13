@@ -198,6 +198,102 @@ final class DenyListFilterTests: XCTestCase {
         let filteredProduct = aggregator.filter(results: productResults, denyList: denyList)
         XCTAssertEqual(filteredProduct.count, 1, "Product results from denied domains should NOT be filtered")
     }
+
+    // MARK: - A4: Ethics-scorer-driven blocking
+
+    func testShouldFilter_DelegatesToScorerForMegaHosts() {
+        // Empty deny list — only the scorer can drive the block decision.
+        let denyList = DenyListFilter(defaultDomains: [""])
+        let scorer = EthicsScorer(ledger: EthicsLedger(version: "t", entries: [
+            "shadycorp.com": EthicsEntry(ownership: .mega)
+        ]))
+
+        XCTAssertTrue(
+            denyList.shouldFilter(url: URL(string: "https://shadycorp.com/page")!, scorer: scorer),
+            "Scorer-classified mega host must be filtered even if not in the hard-coded deny list"
+        )
+        XCTAssertFalse(
+            denyList.shouldFilter(url: URL(string: "https://shadycorp.com/page")!),
+            "Without a scorer, the same host passes (it's not in the hard-coded list)"
+        )
+    }
+
+    func testShouldFilter_ScorerDoesNotBlockNonMega() {
+        let denyList = DenyListFilter(defaultDomains: [""])
+        let scorer = EthicsScorer(ledger: EthicsLedger(version: "t", entries: [
+            "bookshop.org": EthicsEntry(ownership: .bCorp),
+            "powells.com":  EthicsEntry(ownership: .indie)
+        ]))
+
+        XCTAssertFalse(denyList.shouldFilter(url: URL(string: "https://bookshop.org")!, scorer: scorer))
+        XCTAssertFalse(denyList.shouldFilter(url: URL(string: "https://powells.com")!, scorer: scorer))
+    }
+
+    func testShouldFilter_HardCodedListStillAppliesWithoutScorer() {
+        // Existing semantics survive when no scorer is supplied.
+        let denyList = DenyListFilter(defaultDomains: ["amazon.com"])
+        XCTAssertTrue(denyList.shouldFilter(url: URL(string: "https://amazon.com/dp/xxx")!))
+        XCTAssertTrue(denyList.shouldFilter(url: URL(string: "https://www.amazon.ca/dp/xxx")!))
+    }
+
+    // MARK: - A4: Ethics metadata injection in ResultAggregator
+
+    func testAggregator_AttachesEthicsMetadataWhenScorerKnowsHost() {
+        let aggregator = ResultAggregator()
+        let denyList = DenyListFilter(defaultDomains: [""])
+        let scorer = EthicsScorer(ledger: EthicsLedger(version: "t", entries: [
+            "bookshop.org": EthicsEntry(ownership: .bCorp, certifications: ["b-corp"])
+        ]))
+
+        let input = [
+            SearchResult(
+                id: "1",
+                title: "A book",
+                description: nil,
+                source: "test",
+                sourceType: .online,
+                category: .web,
+                url: URL(string: "https://bookshop.org/p/books/foo"),
+                location: nil,
+                distance: nil,
+                relevanceScore: nil,
+                price: nil,
+                metadata: [:]
+            )
+        ]
+
+        let filtered = aggregator.filter(results: input, denyList: denyList, scorer: scorer)
+        XCTAssertEqual(filtered.count, 1)
+        let entry = filtered.first?.metadata["ethics"] as? EthicsEntry
+        XCTAssertEqual(entry?.ownership, .bCorp, "Aggregator should inject the ledger entry into result metadata")
+    }
+
+    func testAggregator_NoEthicsMetadataWhenHostUnknown() {
+        let aggregator = ResultAggregator()
+        let denyList = DenyListFilter(defaultDomains: [""])
+        let scorer = EthicsScorer(ledger: EthicsLedger(version: "t", entries: [:]))
+
+        let input = [
+            SearchResult(
+                id: "1",
+                title: "Unknown",
+                description: nil,
+                source: "test",
+                sourceType: .online,
+                category: .web,
+                url: URL(string: "https://example.com/x"),
+                location: nil,
+                distance: nil,
+                relevanceScore: nil,
+                price: nil,
+                metadata: [:]
+            )
+        ]
+
+        let filtered = aggregator.filter(results: input, denyList: denyList, scorer: scorer)
+        XCTAssertEqual(filtered.count, 1)
+        XCTAssertNil(filtered.first?.metadata["ethics"], "No metadata should be attached when the scorer has no entry")
+    }
 }
 
 // MARK: - Mock Search Source for Testing

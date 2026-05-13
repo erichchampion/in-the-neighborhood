@@ -6,25 +6,32 @@ public actor MetasearchCoordinator {
     private let resultAggregator: ResultAggregator
     private let resultPrioritizer: ResultPrioritizer
     private nonisolated(unsafe) var denyListFilter: DenyListFilter
-    
+    private let ethicsScorer: EthicsScorer
+
     public init(
         sources: [any SearchSource],
         timeout: TimeInterval = 60.0,
-        denyListFilter: DenyListFilter = DenyListFilter()
+        denyListFilter: DenyListFilter = DenyListFilter(),
+        ethicsScorer: EthicsScorer = EthicsScorer()
     ) {
         self.sources = sources
         self.timeout = timeout
         self.resultAggregator = ResultAggregator()
         self.resultPrioritizer = ResultPrioritizer()
         self.denyListFilter = denyListFilter
+        self.ethicsScorer = ethicsScorer
     }
-    
+
     public func updateDenyList(_ denyList: DenyListFilter) {
         self.denyListFilter = denyList
     }
-    
+
     private nonisolated func getEffectiveDenyList() -> DenyListFilter {
         return denyListFilter
+    }
+
+    private nonisolated func getEthicsScorer() -> EthicsScorer {
+        return ethicsScorer
     }
     
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -79,7 +86,7 @@ public actor MetasearchCoordinator {
         
         // Aggregate, filter, and prioritize results
         // Even if some sources failed, we return what we have
-        var filteredResults = resultAggregator.filter(results: allResults, denyList: getEffectiveDenyList())
+        var filteredResults = resultAggregator.filter(results: allResults, denyList: getEffectiveDenyList(), scorer: ethicsScorer)
         
         // #region agent log
         print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
@@ -91,7 +98,7 @@ public actor MetasearchCoordinator {
         print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
         // #endregion
         
-        filteredResults = resultPrioritizer.prioritize(results: filteredResults)
+        filteredResults = resultPrioritizer.prioritize(results: filteredResults, scorer: ethicsScorer)
         
         // #region agent log
         print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
@@ -176,7 +183,7 @@ public actor MetasearchCoordinator {
                         try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: runQuery) { rawResults in
                                 // Process and yield results immediately
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
 
                                 if !filtered.isEmpty {
@@ -215,7 +222,7 @@ public actor MetasearchCoordinator {
                     do {
                         try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: query) { rawResults in
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 if !filtered.isEmpty {
                                     Task {
@@ -275,7 +282,7 @@ public actor MetasearchCoordinator {
                     do {
                         try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: mapKitQuery) { rawResults in
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 if !filtered.isEmpty {
                                     Task {

@@ -33,53 +33,65 @@ public struct ResultAggregator: Sendable {
         return finalResults
     }
     
-    public func filter(results: [SearchResult], denyList: DenyListFilter) -> [SearchResult] {
+    public func filter(
+        results: [SearchResult],
+        denyList: DenyListFilter,
+        scorer: EthicsScorer? = nil
+    ) -> [SearchResult] {
         // Create ad domain filter (returns empty set if list not downloaded yet - graceful degradation)
         let adFilter = AdDomainFilter()
-        
-        return results.filter { result in
+
+        return results.compactMap { result -> SearchResult? in
             // Allow AmazonSearchSource results ONLY for product category (for metadata extraction)
             // Web category Amazon results should be filtered (no direct shopping links)
             // Product results are scraped for brand/author/ISBN to improve local search refinement
             if result.source.lowercased() == SourceIdentifier.amazon && result.category == .product {
-                return true
+                return result
             }
-            
+
             guard let url = result.url else {
                 // Results without URLs (e.g., local businesses) are allowed
-                return true
+                return result
             }
-            
+
             // Resolve redirect URLs before filtering
             let resolvedURL = resolveRedirectURL(url)
-            
+
             // Check for search provider ad URLs
             let resolvedURLString = resolvedURL.absoluteString.lowercased()
             let originalURLString = url.absoluteString.lowercased()
-            
+
             // DuckDuckGo ad URLs (y.js?ad_domain= pattern)
             if (resolvedURLString.contains("duckduckgo.com/y.js") && resolvedURLString.contains("ad_domain=")) ||
                (originalURLString.contains("duckduckgo.com/y.js") && originalURLString.contains("ad_domain=")) {
-                return false
+                return nil
             }
-            
+
             // Bing ad URLs (aclk, clk patterns)
             if resolvedURLString.contains("bing.com/aclk") || resolvedURLString.contains("bing.com/clk") ||
                originalURLString.contains("bing.com/aclk") || originalURLString.contains("bing.com/clk") {
-                return false
+                return nil
             }
-            
-            // Check deny list first
-            if denyList.shouldFilter(url: resolvedURL) {
-                return false
+
+            // Check deny list (delegates mega-retailer blocking to the scorer
+            // when one is provided; otherwise falls back to the hard-coded list).
+            if denyList.shouldFilter(url: resolvedURL, scorer: scorer) {
+                return nil
             }
-            
+
             // Check ad domain filter (may have empty set if list not downloaded yet)
             if adFilter.shouldFilter(url: resolvedURL) {
-                return false
+                return nil
             }
-            
-            return true
+
+            // Attach the ethics-ledger entry (if any) so downstream
+            // ranking and UI badges can read it from result.metadata["ethics"].
+            if let scorer,
+               let host = resolvedURL.host?.lowercased(),
+               let entry = scorer.entry(forHost: host) {
+                return result.withMetadata(["ethics": entry])
+            }
+            return result
         }
     }
     

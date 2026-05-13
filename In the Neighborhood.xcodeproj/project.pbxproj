@@ -13,6 +13,7 @@
 		13A8DDBD2D66EA5F84D062E8 /* LocationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CE8A3B38B28C8ACBF785B /* LocationServiceTests.swift */; };
 		15A99BAE25FBE24DF7CBFAE5 /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
 		1B36E0111983FB67E76B85E6 /* IntentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606828443062274BCEBC0091 /* IntentManager.swift */; };
+		1C5F904A3D2972928D45D6AC /* EthicsLedger.json in Resources */ = {isa = PBXBuildFile; fileRef = 7157FF32EA4EE93A7A12A7F5 /* EthicsLedger.json */; };
 		20E85E1BE4DB5061306703F4 /* AdDomainListDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */; };
 		218A7D9CE336EA969ACE9403 /* NearbyStoresWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201F9199A4D0D20328A77321 /* NearbyStoresWidget.swift */; };
 		22D50482BB19B1A5284D0A3A /* WebSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3349062230C15686D213C47 /* WebSearchSourceTests.swift */; };
@@ -31,6 +32,7 @@
 		42597DF3461EB73041805086 /* SearchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ECC101CD1AE041AC6E9EFED /* SearchViewModelTests.swift */; };
 		42C668A91480775056678E29 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 71B8098BE2ACB7D6BC63EAEA /* SwiftSoup */; };
 		441072BD5E96562FEA46476C /* SearchSourceProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA012EDE20812DDE18A84F24 /* SearchSourceProtocolTests.swift */; };
+		442A69DA9DBE565099BE3020 /* EthicsScorerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEA766F0A998BE7B963E2518 /* EthicsScorerTests.swift */; };
 		455A8D027838ECD87ECBA68D /* SourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3247F88426C16AAF3EF1D969 /* SourceType.swift */; };
 		491C98D5294E69A2D08A51B4 /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
 		49F2DB9BB053B4A949C07250 /* OpenLibrarySearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F5BE359CB183DFE5354ED7 /* OpenLibrarySearchSource.swift */; };
@@ -89,6 +91,7 @@
 		9CEFB587E29FFD98953948B6 /* MetasearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */; };
 		A32A7BD9B1F8854D3877C31F /* LibraryTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D73D27B5C0EC52167F18C87 /* LibraryTabTests.swift */; };
 		A36AC21282701CADB02EC774 /* URLSessionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB760E55D257076E198263D /* URLSessionProtocol.swift */; };
+		A397F1BDE3E5DE5126205A83 /* EthicsLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8FCF861B4C9BB4E82BD95 /* EthicsLedger.swift */; };
 		A496CB4716ED3D69B07A8C82 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A99C59F4177CDE3AA6DE31 /* App.swift */; };
 		A5299CC1C3B8122AFADEAC27 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0497F64900BDD2D6814695 /* LocationService.swift */; };
 		A6A417DE574C1364733627FA /* OverpassSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F92308014D8CC04C2EAE60 /* OverpassSearchSourceTests.swift */; };
@@ -132,6 +135,7 @@
 		F44E84DDFAEA5CD1387F4A09 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CA53BA17BCDF8BBE2BD09E5 /* Config.swift */; };
 		F4D2CC7FCD052FCC320AB87E /* AdDomainFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F1205B3990AEA6DAB0ACF51 /* AdDomainFilter.swift */; };
 		F66050680AF6881D669FE9A8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 65FB65231329D6066CD1E6BB /* Assets.xcassets */; };
+		F8A61E6877A330C18D10FF9A /* EthicsScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FB60DAFB13AF4FDC81388F3 /* EthicsScorer.swift */; };
 		FEEDC9DA5E193434E1C9CDD8 /* SearchSources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 128A43B633EE0E59A603AA7B /* SearchSources.framework */; };
 /* End PBXBuildFile section */
 
@@ -328,6 +332,7 @@
 		3AC34EAF3AA7A8AD598D270E /* NearbyStoresWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = NearbyStoresWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CA53BA17BCDF8BBE2BD09E5 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		3DA3ECF235F8AF552D9189B8 /* SearchSourcesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SearchSourcesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3FB60DAFB13AF4FDC81388F3 /* EthicsScorer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthicsScorer.swift; sourceTree = "<group>"; };
 		4178FBF09D261BFBC3AC2D44 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NominatimSearchSourceTests.swift; sourceTree = "<group>"; };
 		4399D6E7DF02280B28EBCB4C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -356,6 +361,7 @@
 		6EF2A1B962815C6186C69EC8 /* BookshopSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshopSearchSourceTests.swift; sourceTree = "<group>"; };
 		6FA682B75D24A2B42F6878A9 /* DuckDuckGoSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuckDuckGoSearchSource.swift; sourceTree = "<group>"; };
 		702ADFF3EBDF4CF483F476F9 /* FoundationModelsStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsStub.swift; sourceTree = "<group>"; };
+		7157FF32EA4EE93A7A12A7F5 /* EthicsLedger.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EthicsLedger.json; sourceTree = "<group>"; };
 		71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDomainListDownloadManager.swift; sourceTree = "<group>"; };
 		78121379A73D042FCB7D0587 /* BingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProvider.swift; sourceTree = "<group>"; };
 		787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultPrioritizer.swift; sourceTree = "<group>"; };
@@ -368,6 +374,7 @@
 		820FB56B7ECB45F114E52915 /* QueryEnhancing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEnhancing.swift; sourceTree = "<group>"; };
 		83DDC49623690F3C958DBF05 /* FoundationModelQueryEnhancer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelQueryEnhancer.swift; sourceTree = "<group>"; };
 		87170702F20831507289E85A /* ProductCondition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCondition.swift; sourceTree = "<group>"; };
+		89A8FCF861B4C9BB4E82BD95 /* EthicsLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthicsLedger.swift; sourceTree = "<group>"; };
 		8BD1A0FD49B39AC6E6E6C796 /* InTheNeighborhoodTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = InTheNeighborhoodTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		93A2459508E032CFDA7292CA /* MetasearchCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MetasearchCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9763ABF3B65661EF68D1533A /* SearchToolExecutorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchToolExecutorTests.swift; sourceTree = "<group>"; };
@@ -388,6 +395,7 @@
 		A3BB8459931E7F657BBAFA83 /* NearbyStoresWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NearbyStoresWidget.entitlements; sourceTree = "<group>"; };
 		A601E719D0B83DF997FEDD8F /* CoreLocation */ = {isa = PBXFileReference; path = CoreLocation; sourceTree = "<group>"; };
 		A8FDF257C790838D3D7B1EBE /* WebSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSource.swift; sourceTree = "<group>"; };
+		AEA766F0A998BE7B963E2518 /* EthicsScorerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthicsScorerTests.swift; sourceTree = "<group>"; };
 		AF009B0DE246BD0A192579FB /* SearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSource.swift; sourceTree = "<group>"; };
 		B267F210530754102E40986D /* FoundationModelWebExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelWebExtractor.swift; sourceTree = "<group>"; };
 		B2BFED7ACEB86096CA125A8C /* AgentSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSearchCoordinator.swift; sourceTree = "<group>"; };
@@ -730,6 +738,8 @@
 				B2BFED7ACEB86096CA125A8C /* AgentSearchCoordinator.swift */,
 				06B19C06FE383083A13024E8 /* DenyListFilter.swift */,
 				9CF9FECFA4788365EF472CED /* EnhancedQuery.swift */,
+				89A8FCF861B4C9BB4E82BD95 /* EthicsLedger.swift */,
+				3FB60DAFB13AF4FDC81388F3 /* EthicsScorer.swift */,
 				702ADFF3EBDF4CF483F476F9 /* FoundationModelsStub.swift */,
 				60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */,
 				21A5AE51DC65F92B94C7EE2C /* MetasearchCore.h */,
@@ -775,6 +785,7 @@
 			isa = PBXGroup;
 			children = (
 				65FB65231329D6066CD1E6BB /* Assets.xcassets */,
+				7157FF32EA4EE93A7A12A7F5 /* EthicsLedger.json */,
 				C35A427A7452541A3C326E89 /* Localizable.strings */,
 			);
 			path = Resources;
@@ -800,6 +811,7 @@
 			children = (
 				CB2234677CF4CB2CB1F4EDBE /* DenyListFilterTests.swift */,
 				570B31361FF9E1C713544C46 /* EnhancedQueryTests.swift */,
+				AEA766F0A998BE7B963E2518 /* EthicsScorerTests.swift */,
 				62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */,
 				510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */,
 				E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */,
@@ -1165,6 +1177,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F66050680AF6881D669FE9A8 /* Assets.xcassets in Resources */,
+				1C5F904A3D2972928D45D6AC /* EthicsLedger.json in Resources */,
 				AD0EE9ABCC5EFF53D10AF337 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1271,6 +1284,7 @@
 			files = (
 				AEA60F3E27C2F8A054A90F4F /* DenyListFilterTests.swift in Sources */,
 				9476F363CB1DB4EFCFF970FE /* EnhancedQueryTests.swift in Sources */,
+				442A69DA9DBE565099BE3020 /* EthicsScorerTests.swift in Sources */,
 				D6F6CC1656059D859E30B60D /* MetasearchCoordinatorTests.swift in Sources */,
 				8CE8D0954648788460175F01 /* RelevanceScorerTests.swift in Sources */,
 				A8ADEA0E944B2D77CFC32119 /* ResultAggregatorTests.swift in Sources */,
@@ -1329,6 +1343,8 @@
 				B044207FB17D15669F2B2452 /* AgentSearchCoordinator.swift in Sources */,
 				8B9E99BA792F4E22B51576C5 /* DenyListFilter.swift in Sources */,
 				73F4D2592054EFACAB66BE38 /* EnhancedQuery.swift in Sources */,
+				A397F1BDE3E5DE5126205A83 /* EthicsLedger.swift in Sources */,
+				F8A61E6877A330C18D10FF9A /* EthicsScorer.swift in Sources */,
 				7F03619EEF50D721686722FA /* FoundationModelsStub.swift in Sources */,
 				9CEFB587E29FFD98953948B6 /* MetasearchCoordinator.swift in Sources */,
 				BC622F7A19D1799E99771A54 /* ProductCondition.swift in Sources */,

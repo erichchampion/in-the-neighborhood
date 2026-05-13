@@ -50,6 +50,28 @@ public struct SearchResult: Identifiable, Equatable, Hashable {
     public static func == (lhs: SearchResult, rhs: SearchResult) -> Bool {
         lhs.id == rhs.id
     }
+
+    /// Returns a copy with the given metadata keys merged into the existing
+    /// metadata dictionary. New keys overwrite existing ones with the same
+    /// name. All other fields are preserved.
+    public func withMetadata(_ additions: [String: AnyHashable]) -> SearchResult {
+        var merged = metadata
+        for (key, value) in additions { merged[key] = value }
+        return SearchResult(
+            id: id,
+            title: title,
+            description: description,
+            source: source,
+            sourceType: sourceType,
+            category: category,
+            url: url,
+            location: location,
+            distance: distance,
+            relevanceScore: relevanceScore,
+            price: price,
+            metadata: merged
+        )
+    }
 }
 
 // Note: Using @unchecked Sendable because metadata contains AnyHashable which can hold non-Sendable types

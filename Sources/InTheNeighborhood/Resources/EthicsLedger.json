@@ -1,0 +1,35 @@
+{
+  "version": "2026-05-12",
+  "entries": {
+    "amazon.com":           { "ownership": "mega", "region": "global" },
+    "amazon.ca":            { "ownership": "mega", "region": "global" },
+    "amazon.co.uk":         { "ownership": "mega", "region": "global" },
+    "amazon.de":            { "ownership": "mega", "region": "global" },
+    "amazon.fr":            { "ownership": "mega", "region": "global" },
+    "amazon.co.jp":         { "ownership": "mega", "region": "global" },
+    "walmart.com":          { "ownership": "mega", "region": "national" },
+    "walmart.ca":           { "ownership": "mega", "region": "national" },
+    "target.com":           { "ownership": "mega", "region": "national" },
+    "bestbuy.com":          { "ownership": "mega", "region": "national" },
+    "bestbuy.ca":           { "ownership": "mega", "region": "national" },
+    "homedepot.com":        { "ownership": "mega", "region": "national" },
+    "homedepot.ca":         { "ownership": "mega", "region": "national" },
+    "lowes.com":            { "ownership": "mega", "region": "national" },
+    "lowes.ca":             { "ownership": "mega", "region": "national" },
+    "macys.com":            { "ownership": "mega", "region": "national" },
+    "costco.com":           { "ownership": "mega", "region": "national" },
+    "costco.ca":            { "ownership": "mega", "region": "national" },
+
+    "bookshop.org":         { "ownership": "b-corp",          "region": "national", "certifications": ["b-corp"], "notes": "Online bookstore supporting independent booksellers." },
+    "powells.com":          { "ownership": "indie",           "region": "regional", "certifications": ["unionized"], "notes": "Independent bookstore based in Portland, OR." },
+    "rei.com":              { "ownership": "coop",            "region": "national", "certifications": ["coop"], "notes": "Consumer cooperative — member-owned." },
+    "kingarthurbaking.com": { "ownership": "employee-owned",  "region": "national", "certifications": ["b-corp", "esop"] },
+    "patagonia.com":        { "ownership": "b-corp",          "region": "global",   "certifications": ["b-corp", "1-percent-for-the-planet"] },
+    "bobsredmill.com":      { "ownership": "employee-owned",  "region": "national", "certifications": ["esop"] },
+    "eileenfisher.com":     { "ownership": "employee-owned",  "region": "national", "certifications": ["b-corp", "esop"] },
+    "newseasonsmarket.com": { "ownership": "b-corp",          "region": "regional", "certifications": ["b-corp"] },
+    "mcnallyjackson.com":   { "ownership": "indie",           "region": "local",    "notes": "Independent bookstore in NYC." },
+    "thestrand.com":        { "ownership": "indie",           "region": "local",    "certifications": ["unionized"], "notes": "Independent bookstore in NYC." },
+    "citylightsbooks.com":  { "ownership": "indie",           "region": "local",    "notes": "Independent bookstore in San Francisco." }
+  }
+}
