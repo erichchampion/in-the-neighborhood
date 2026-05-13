@@ -59,11 +59,22 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     let sourceType: SourceType
     let category: ResultCategory
     let state = MockSearchSourceState()
-    
-    init(identifier: String, sourceType: SourceType, category: ResultCategory = .web) {
+    private let customTimeoutBudget: TimeInterval?
+
+    var timeoutBudget: TimeInterval {
+        if let customTimeoutBudget { return customTimeoutBudget }
+        switch sourceType {
+        case .local:    return 2.5
+        case .regional: return 4.0
+        case .online:   return 4.0
+        }
+    }
+
+    init(identifier: String, sourceType: SourceType, category: ResultCategory = .web, timeoutBudget: TimeInterval? = nil) {
         self.identifier = identifier
         self.sourceType = sourceType
         self.category = category
+        self.customTimeoutBudget = timeoutBudget
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {

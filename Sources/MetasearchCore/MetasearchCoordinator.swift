@@ -42,9 +42,10 @@ public actor MetasearchCoordinator {
         try await withThrowingTaskGroup(of: [SearchResult].self) { group in
             for i in sourcesToSearch.indices {
                 let source = sourcesToSearch[i]
+                let sourceBudget = min(source.timeoutBudget, timeoutValue)
                 group.addTask {
                     do {
-                        return try await self.withTimeout(seconds: timeoutValue) {
+                        return try await self.withTimeout(seconds: sourceBudget) {
                             try await source.search(query: queryToSearch)
                         }
                     } catch {
@@ -151,10 +152,11 @@ public actor MetasearchCoordinator {
                 let runQuery = effectiveQuery
                 let timeoutValue = timeout
                 let sourceToRun = source
-                
+                let sourceBudget = min(sourceToRun.timeoutBudget, timeoutValue)
+
                 group.addTask {
                     do {
-                        try await self.withTimeout(seconds: timeoutValue) {
+                        try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: runQuery) { rawResults in
                                 // Process and yield results immediately
                                 var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
@@ -216,9 +218,10 @@ public actor MetasearchCoordinator {
                 let sourceIdentifier = source.identifier
                 let timeoutValue = timeout
                 let sourceToRun = source
+                let sourceBudget = min(sourceToRun.timeoutBudget, timeoutValue)
                 group.addTask {
                     do {
-                        try await self.withTimeout(seconds: timeoutValue) {
+                        try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: mapKitQuery) { rawResults in
                                 var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
                                 filtered = self.resultAggregator.aggregate(results: filtered)

@@ -5,7 +5,8 @@ public final class BookshopSearchSource: SearchSource {
     public let identifier: String = SourceIdentifier.bookshop
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .book
-    
+    public let timeoutBudget: TimeInterval = 6.0  // HTML scrape with retries
+
     private let baseURL = "https://bookshop.org"
     private let session: URLSession
     private let maxRetries: Int

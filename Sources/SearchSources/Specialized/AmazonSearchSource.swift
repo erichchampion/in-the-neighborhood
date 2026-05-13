@@ -6,8 +6,9 @@ public final class AmazonSearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String = SourceIdentifier.amazon
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .product
-    
-    
+    public let timeoutBudget: TimeInterval = 6.0  // HTML scrape + per-product detail fetch
+
+
     private let session: URLSession
     private let scraper: AmazonProductScraper
     private let webExtractor: FoundationModelWebExtractor
