@@ -75,6 +75,7 @@
 		88EBA419BD9E4E0685EA2BA3 /* SearchResultSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB54416BE5C5A3A678F27A6 /* SearchResultSummaryTests.swift */; };
 		8A7A2FDB0366C3361790F42D /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */; };
 		8B9E99BA792F4E22B51576C5 /* DenyListFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B19C06FE383083A13024E8 /* DenyListFilter.swift */; };
+		8BC305BCE6E5CA336F3C8558 /* EthicsBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7ADC741BC33AC29E2E6E8A8 /* EthicsBadgeView.swift */; };
 		8BFB6BD8245E20DBABC2D835 /* SharedModels.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 34786922C577C9F3B21241DA /* SharedModels.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8CE8D0954648788460175F01 /* RelevanceScorerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */; };
 		8D4F277F3BA4770A24E9B1D1 /* AmazonSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B796640CD0B39CFDA150E54 /* AmazonSearchSource.swift */; };
@@ -136,6 +137,7 @@
 		F4D2CC7FCD052FCC320AB87E /* AdDomainFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F1205B3990AEA6DAB0ACF51 /* AdDomainFilter.swift */; };
 		F66050680AF6881D669FE9A8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 65FB65231329D6066CD1E6BB /* Assets.xcassets */; };
 		F8A61E6877A330C18D10FF9A /* EthicsScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FB60DAFB13AF4FDC81388F3 /* EthicsScorer.swift */; };
+		FBACB13D4F41E60B1D0D744D /* EthicsBadgeViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D36D9DDA36AB96F419299EF /* EthicsBadgeViewTests.swift */; };
 		FEEDC9DA5E193434E1C9CDD8 /* SearchSources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 128A43B633EE0E59A603AA7B /* SearchSources.framework */; };
 /* End PBXBuildFile section */
 
@@ -340,6 +342,7 @@
 		46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBusinessCard.swift; sourceTree = "<group>"; };
 		4B6C9B58D210B802419526EE /* OnlineResultCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineResultCard.swift; sourceTree = "<group>"; };
+		4D36D9DDA36AB96F419299EF /* EthicsBadgeViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthicsBadgeViewTests.swift; sourceTree = "<group>"; };
 		4DB760E55D257076E198263D /* URLSessionProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionProtocol.swift; sourceTree = "<group>"; };
 		50851D395CF28F509C40A93F /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelevanceScorerTests.swift; sourceTree = "<group>"; };
@@ -401,6 +404,7 @@
 		B2BFED7ACEB86096CA125A8C /* AgentSearchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSearchCoordinator.swift; sourceTree = "<group>"; };
 		B35531AE74D9E3459B280A03 /* MetasearchCoreTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MetasearchCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B678FE11A64305F3993DDCAB /* SettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManagerTests.swift; sourceTree = "<group>"; };
+		B7ADC741BC33AC29E2E6E8A8 /* EthicsBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthicsBadgeView.swift; sourceTree = "<group>"; };
 		BB5D8DF9F7DC34D995B4F256 /* Foundation */ = {isa = PBXFileReference; path = Foundation; sourceTree = "<group>"; };
 		BDA2ABC307A5BE9B9F29DBF6 /* AmazonProductScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductScraper.swift; sourceTree = "<group>"; };
 		BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultAggregator.swift; sourceTree = "<group>"; };
@@ -581,6 +585,7 @@
 		45A202078573B372EBFB9ABC /* InTheNeighborhoodTests */ = {
 			isa = PBXGroup;
 			children = (
+				4D36D9DDA36AB96F419299EF /* EthicsBadgeViewTests.swift */,
 				6514CF03903759CA46BA48C8 /* IntentManagerTests.swift */,
 				9D73D27B5C0EC52167F18C87 /* LibraryTabTests.swift */,
 				9763ABF3B65661EF68D1533A /* SearchToolExecutorTests.swift */,
@@ -681,6 +686,7 @@
 				4441FC91644334E53BCD786C /* AmazonProductCard.swift */,
 				50851D395CF28F509C40A93F /* EmptyStateView.swift */,
 				E6B29927CCA2E7B386705AD6 /* ErrorView.swift */,
+				B7ADC741BC33AC29E2E6E8A8 /* EthicsBadgeView.swift */,
 				2FBEA5568DD9B1CB8FE1EB45 /* FavoritesView.swift */,
 				EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */,
 				46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */,
@@ -1195,6 +1201,7 @@
 				2C93B9B024A912211AECEDEC /* AppDelegate.swift in Sources */,
 				4D8A3E0A3E347B7924F78E38 /* EmptyStateView.swift in Sources */,
 				ED7A50E60AA137F91F038005 /* ErrorView.swift in Sources */,
+				8BC305BCE6E5CA336F3C8558 /* EthicsBadgeView.swift in Sources */,
 				E9E0EAF06F52537643B4EAF3 /* FavoritesView.swift in Sources */,
 				1B36E0111983FB67E76B85E6 /* IntentManager.swift in Sources */,
 				64610111D6ECE0BF81C1FD14 /* LibraryCard.swift in Sources */,
@@ -1253,6 +1260,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FBACB13D4F41E60B1D0D744D /* EthicsBadgeViewTests.swift in Sources */,
 				53B4F570D5C7A9563D54E304 /* IntentManagerTests.swift in Sources */,
 				A32A7BD9B1F8854D3877C31F /* LibraryTabTests.swift in Sources */,
 				7EE3C36069057BF24DEFC337 /* SearchToolExecutorTests.swift in Sources */,

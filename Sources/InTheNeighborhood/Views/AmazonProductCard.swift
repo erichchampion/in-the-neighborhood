@@ -95,8 +95,12 @@ struct ProductCard: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+
+                    if let ethics = result.metadata["ethics"] as? EthicsEntry {
+                        EthicsBadgeView(entry: ethics)
+                    }
                 }
-                
+
                 Spacer()
             }
             

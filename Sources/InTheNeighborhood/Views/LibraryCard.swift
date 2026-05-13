@@ -53,7 +53,11 @@ struct LibraryCard: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
+                if let ethics = result.metadata["ethics"] as? EthicsEntry {
+                    EthicsBadgeView(entry: ethics)
+                }
+
                 if let isbn = result.metadata["isbn"] as? String, let firstISBN = isbn.components(separatedBy: ",").first {
                     Text("ISBN: \(firstISBN.trimmingCharacters(in: .whitespaces))")
                         .font(.caption)

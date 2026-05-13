@@ -21,7 +21,11 @@ struct LocalBusinessCard: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    
+
+                    if let ethics = result.metadata["ethics"] as? EthicsEntry {
+                        EthicsBadgeView(entry: ethics)
+                    }
+
                     // Show website URL as clickable link if available
                     if let url = result.url {
                         Link(destination: url) {

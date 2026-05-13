@@ -50,7 +50,11 @@ struct OnlineResultCard: View {
                             .foregroundColor(.secondary)
                             .lineLimit(2)
                     }
-                    
+
+                    if let ethics = result.metadata["ethics"] as? EthicsEntry {
+                        EthicsBadgeView(entry: ethics)
+                    }
+
                     // Show URL as link for online results, otherwise show source label
                     if result.sourceType == .online, let url = result.url {
                         Link(destination: url) {
