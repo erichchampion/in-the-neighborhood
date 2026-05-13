@@ -151,14 +151,7 @@ final class DenyListFilterTests: XCTestCase {
         // Given: A deny list with amazon.com
         let denyList = DenyListFilter(defaultDomains: ["amazon.com"])
         
-        // And: A mock source for web and product
-        let mockSource = MockDenyListSearchSource(
-            identifier: "mock",
-            sourceType: .online,
-            category: .web
-        )
-        
-        // Create a mock SearchToolExecutor that uses our deny list
+        // Create an aggregator that uses our deny list
         let aggregator = ResultAggregator()
         
         // When: Filtering web category with amazon.com URL
