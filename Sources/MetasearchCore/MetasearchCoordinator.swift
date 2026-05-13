@@ -128,17 +128,34 @@ public actor MetasearchCoordinator {
             }
         }
         let intelligenceState = IntelligenceExtractionState()
-        
-        // Execute Phase 1
+
+        // Dedupes local SearchResult IDs across the raw and refined passes so the
+        // refined pass doesn't re-emit places the user already saw from the raw pass.
+        actor LocalSeenIDs {
+            private var ids: Set<String> = []
+            func filterAndTrack(_ results: [SearchResult]) -> [SearchResult] {
+                var fresh: [SearchResult] = []
+                for result in results where !ids.contains(result.id) {
+                    ids.insert(result.id)
+                    fresh.append(result)
+                }
+                return fresh
+            }
+        }
+        let seenLocalIds = LocalSeenIDs()
+
+        // Stage 1: Phase 1 (web/product) AND the raw local pass run in parallel.
+        // The local pass must not wait for intelligence extraction — that was the old
+        // behavior and pushed the mission-critical tier to the end of the search.
         await withTaskGroup(of: Void.self) { group in
             for source in phase1Sources {
                 let sourceIdentifier = source.identifier
                 let sourceCategory = source.category
-                
+
                 // If the product is detected as a book, inject bookshop.org into the online query
                 var effectiveQuery = query
                 let isBook = query.isBook
-                
+
                 if isBook && sourceCategory != .book && sourceCategory != .local {
                     effectiveQuery = EnhancedQuery(
                         original: "\(query.original) bookshop.org",
@@ -148,7 +165,7 @@ public actor MetasearchCoordinator {
                         condition: query.condition
                     )
                 }
-                
+
                 let runQuery = effectiveQuery
                 let timeoutValue = timeout
                 let sourceToRun = source
@@ -161,7 +178,7 @@ public actor MetasearchCoordinator {
                                 // Process and yield results immediately
                                 var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
-                                
+
                                 if !filtered.isEmpty {
                                     // Extract intelligence async if possible
                                     let currentResults = rawResults
@@ -175,7 +192,7 @@ public actor MetasearchCoordinator {
                                             }
                                         }
                                     }
-                                    
+
                                     onResults(sourceIdentifier, filtered)
                                 }
                             }
@@ -185,25 +202,61 @@ public actor MetasearchCoordinator {
                     }
                 }
             }
-            
+
+            // Raw local pass — runs in parallel with Phase 1, uses the user's
+            // unmodified query so results can appear as quickly as the source allows.
+            for source in phase2Sources {
+                let sourceIdentifier = source.identifier
+                let timeoutValue = timeout
+                let sourceToRun = source
+                let sourceBudget = min(sourceToRun.timeoutBudget, timeoutValue)
+
+                group.addTask {
+                    do {
+                        try await self.withTimeout(seconds: sourceBudget) {
+                            try await sourceToRun.searchStreaming(query: query) { rawResults in
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
+                                filtered = self.resultAggregator.aggregate(results: filtered)
+                                if !filtered.isEmpty {
+                                    Task {
+                                        let fresh = await seenLocalIds.filterAndTrack(filtered)
+                                        if !fresh.isEmpty {
+                                            onResults(sourceIdentifier, fresh)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch {
+                        // Ignore individual timeouts/errors
+                    }
+                }
+            }
+
             await group.waitForAll()
         }
-        
-        // Compile MapKit query with extracted intelligence
+
+        // Stage 2: Refined local pass — only worth running if Phase 1 extracted
+        // brand/author intelligence that actually changes the query.
+        guard !phase2Sources.isEmpty else { return }
+
         var originalWithIntelligence = query.original
         let finalBrand = await intelligenceState.extractedBrand
         let finalAuthor = await intelligenceState.extractedAuthor
-        
+
         if let brand = finalBrand, !originalWithIntelligence.lowercased().contains(brand.lowercased()) {
             originalWithIntelligence = "\(brand) \(originalWithIntelligence)"
         } else if let author = finalAuthor, !originalWithIntelligence.lowercased().contains(author.lowercased()) {
             originalWithIntelligence = "\(originalWithIntelligence) \(author)"
         }
-        
-        // Filter out fuzzy categories before MapKit execution
+
+        // Skip the refined pass if intelligence did not change the query — it
+        // would just duplicate the raw pass and waste source budget.
+        guard originalWithIntelligence != query.original else { return }
+
         let exampleCategories = Set(["furniture store", "electronics store"])
         let categoriesToUse = query.categories.filter { !exampleCategories.contains($0.lowercased()) }
-        
+
         let mapKitQuery = EnhancedQuery(
             original: originalWithIntelligence,
             productType: query.productType,
@@ -211,8 +264,7 @@ public actor MetasearchCoordinator {
             priceMax: query.priceMax,
             condition: query.condition
         )
-        
-        // Execute Phase 2 (Local)
+
         await withTaskGroup(of: Void.self) { group in
             for source in phase2Sources {
                 let sourceIdentifier = source.identifier
@@ -226,7 +278,12 @@ public actor MetasearchCoordinator {
                                 var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 if !filtered.isEmpty {
-                                    onResults(sourceIdentifier, filtered)
+                                    Task {
+                                        let fresh = await seenLocalIds.filterAndTrack(filtered)
+                                        if !fresh.isEmpty {
+                                            onResults(sourceIdentifier, fresh)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -235,7 +292,7 @@ public actor MetasearchCoordinator {
                     }
                 }
             }
-            
+
             await group.waitForAll()
         }
     }

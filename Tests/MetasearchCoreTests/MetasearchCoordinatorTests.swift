@@ -1,6 +1,34 @@
 import XCTest
 @testable import MetasearchCore
 
+// MARK: - Test helpers (thread-safe trackers used by A1 tests)
+
+private final class OrderTracker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String] = []
+    func append(_ v: String) {
+        lock.lock(); defer { lock.unlock() }
+        values.append(v)
+    }
+    func snapshot() -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        return values
+    }
+}
+
+private final class EmissionCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var counts: [String: Int] = [:]
+    func bump(_ id: String) {
+        lock.lock(); defer { lock.unlock() }
+        counts[id, default: 0] += 1
+    }
+    func count(for id: String) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return counts[id] ?? 0
+    }
+}
+
 final class MetasearchCoordinatorTests: XCTestCase {
     var coordinator: MetasearchCoordinator!
     var mockSources: [MockSearchSource]!
@@ -108,6 +136,80 @@ final class MetasearchCoordinatorTests: XCTestCase {
         XCTAssertLessThan(elapsed, 1.0, "Search must complete well before slow source's 2s delay")
         XCTAssertTrue(results.contains(where: { $0.source == "fast" }), "Fast source's results must be returned")
         XCTAssertFalse(results.contains(where: { $0.source == "slow" }), "Slow source must be dropped after its 0.1s budget")
+    }
+
+    // MARK: - A1: local search runs in parallel with intelligence extraction
+
+    func test_MetasearchCoordinator_A1_LocalEmitsBeforeSlowWebSource() async {
+        // With A1, the local tier must not wait for slow web/product sources
+        // to finish — it runs in parallel with Phase 1, using the raw query.
+        let local = MockSearchSource(identifier: "local-fast", sourceType: .local, category: .local)
+        let web = MockSearchSource(identifier: "web-slow", sourceType: .online, category: .web)
+        await web.state.setDelay(0.8)
+
+        let coordinator = MetasearchCoordinator(sources: [web, local])
+
+        let query = EnhancedQuery(
+            original: "test",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil
+        )
+
+        let order = OrderTracker()
+        await coordinator.searchStreaming(query: query) { identifier, _ in
+            order.append(identifier)
+        }
+
+        // Let any pending unstructured Tasks (the dedup chain) flush.
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        let snapshot = order.snapshot()
+        guard let localIndex = snapshot.firstIndex(of: "local-fast"),
+              let webIndex = snapshot.firstIndex(of: "web-slow") else {
+            XCTFail("Both sources must emit results. Got: \(snapshot)")
+            return
+        }
+        XCTAssertLessThan(localIndex, webIndex, "Local must emit before slow web. Order: \(snapshot)")
+    }
+
+    func test_MetasearchCoordinator_A1_DedupsLocalAcrossRawAndRefinedPasses() async {
+        // A Phase 1 product source supplies brand="Acme" → after Phase 1 the
+        // refined pass fires with "Acme thing". The local source emits the
+        // same SearchResult.id on both passes; dedup must collapse them.
+        let product = MockSearchSource(
+            identifier: "prod",
+            sourceType: .online,
+            category: .product,
+            brand: "Acme"
+        )
+        let local = MockSearchSource(identifier: "local", sourceType: .local, category: .local)
+
+        let coordinator = MetasearchCoordinator(sources: [product, local])
+
+        let query = EnhancedQuery(
+            original: "thing",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil
+        )
+
+        let counter = EmissionCounter()
+        await coordinator.searchStreaming(query: query) { identifier, results in
+            guard identifier == "local" else { return }
+            for r in results { counter.bump(r.id) }
+        }
+
+        // Give pending unstructured Tasks (the dedup chain) time to settle.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+
+        XCTAssertEqual(
+            counter.count(for: "mock-local"),
+            1,
+            "Local result with the same id must be emitted exactly once across the raw and refined passes"
+        )
     }
 
     func test_MetasearchCoordinator_PerSourceTimeoutBudget_CappedByGlobalCeiling() async throws {

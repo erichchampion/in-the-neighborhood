@@ -60,6 +60,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     let category: ResultCategory
     let state = MockSearchSourceState()
     private let customTimeoutBudget: TimeInterval?
+    private let customBrand: String?
 
     var timeoutBudget: TimeInterval {
         if let customTimeoutBudget { return customTimeoutBudget }
@@ -70,11 +71,18 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         }
     }
 
-    init(identifier: String, sourceType: SourceType, category: ResultCategory = .web, timeoutBudget: TimeInterval? = nil) {
+    init(
+        identifier: String,
+        sourceType: SourceType,
+        category: ResultCategory = .web,
+        timeoutBudget: TimeInterval? = nil,
+        brand: String? = nil
+    ) {
         self.identifier = identifier
         self.sourceType = sourceType
         self.category = category
         self.customTimeoutBudget = timeoutBudget
+        self.customBrand = brand
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -113,6 +121,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         }
         
         await Task.yield() // Yield to allow collectors to attach
+        var metadata: [String: AnyHashable] = [:]
+        if let customBrand { metadata["brand"] = customBrand }
         onResults([
             SearchResult(
                 id: "mock-\(identifier)",
@@ -124,7 +134,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
                 url: URL(string: "https://example.com/\(identifier)"),
                 location: nil,
                 distance: nil,
-                metadata: [:]
+                metadata: metadata
             )
         ])
     }
