@@ -266,15 +266,33 @@ public actor MetasearchCoordinator {
                     if !accumulated.isEmpty {
                         switch sourceCategory {
                         case .book:
+                            // Books stay authoritative: API book sources return
+                            // structured author metadata that we trust as-is.
                             if let author = accumulated.compactMap({ $0.metadata["author"] as? String }).first {
                                 await intelligenceState.setAuthor(author, force: true)
                             }
                         case .product:
-                            if await intelligenceState.extractedBrand == nil,
-                               let brand = accumulated.compactMap({ $0.metadata["brand"] as? String }).first {
+                            // Product sources (especially the Open Facts
+                            // siblings) frequently return off-topic results
+                            // when the query doesn't match their database.
+                            // Only adopt brand/author from a product whose
+                            // title shares a word with the user query OR
+                            // whose brand string overlaps with the query —
+                            // otherwise a "bike" search would inherit
+                            // "Cien" from an Open Beauty Facts result and
+                            // poison the refined local query.
+                            let queryWords = Self.intelligenceQueryWords(from: query.original)
+                            if let relatedForBrand = accumulated.first(where: {
+                                Self.productMetadataIsRelated($0, queryWords: queryWords, brand: $0.metadata["brand"] as? String)
+                            }),
+                               await intelligenceState.extractedBrand == nil,
+                               let brand = relatedForBrand.metadata["brand"] as? String {
                                 await intelligenceState.setBrand(brand)
                             }
-                            if let author = accumulated.compactMap({ $0.metadata["author"] as? String }).first {
+                            if let relatedForAuthor = accumulated.first(where: {
+                                Self.productMetadataIsRelated($0, queryWords: queryWords, brand: nil)
+                            }),
+                               let author = relatedForAuthor.metadata["author"] as? String {
                                 await intelligenceState.setAuthor(author, force: false)
                             }
                         case .web, .local:
@@ -395,6 +413,47 @@ public actor MetasearchCoordinator {
         let total = buffer.snapshot()
         guard !total.isEmpty else { return }
         await cache.set(key: key, results: total)
+    }
+
+    /// Splits a user query into comparison-ready words ≥ 3 chars,
+    /// stripping case and punctuation. Mirrors
+    /// `OpenFactsSearchSource.queryWords(from:)` and is similarly
+    /// `nonisolated` for testability.
+    nonisolated static func intelligenceQueryWords(from query: String) -> [String] {
+        query
+            .lowercased()
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map(String.init)
+            .filter { $0.count >= 3 }
+    }
+
+    /// `true` when the product result has a plausible connection to
+    /// the user's query: either its title shares a word with the
+    /// query, or the brand string itself overlaps with the query.
+    /// Used to gate Phase 1 intelligence extraction — without this,
+    /// off-topic Open Facts results poison the refined Phase 2 query
+    /// (the "Cien Bike" symptom).
+    ///
+    /// An empty `queryWords` array means "no signal to filter on" —
+    /// fall back to letting everything through, same opt-out
+    /// behavior as `OpenFactsSearchSource.isRelevant`.
+    nonisolated static func productMetadataIsRelated(
+        _ result: SearchResult,
+        queryWords: [String],
+        brand: String?
+    ) -> Bool {
+        guard !queryWords.isEmpty else { return true }
+        let titleLower = result.title.lowercased()
+        if queryWords.contains(where: { titleLower.contains($0) }) {
+            return true
+        }
+        if let brand, !brand.isEmpty {
+            let brandLower = brand.lowercased()
+            if queryWords.contains(where: { brandLower.contains($0) }) {
+                return true
+            }
+        }
+        return false
     }
 
     private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escaping @Sendable () async throws -> T) async throws -> T {

@@ -178,11 +178,16 @@ final class MetasearchCoordinatorTests: XCTestCase {
         // A Phase 1 product source supplies brand="Acme" → after Phase 1 the
         // refined pass fires with "Acme thing". The local source emits the
         // same SearchResult.id on both passes; dedup must collapse them.
+        //
+        // The product source's title shares the query word "thing" so it
+        // passes the brand-relevance check added in the bike-troubleshooting
+        // Phase 3 fix.
         let product = MockSearchSource(
             identifier: "prod",
             sourceType: .online,
             category: .product,
-            brand: "Acme"
+            brand: "Acme",
+            title: "Acme thing"
         )
         let local = MockSearchSource(identifier: "local", sourceType: .local, category: .local)
 
@@ -210,6 +215,77 @@ final class MetasearchCoordinatorTests: XCTestCase {
             1,
             "Local result with the same id must be emitted exactly once across the raw and refined passes"
         )
+    }
+
+    // MARK: - Brand sanity check (bike-query troubleshooting)
+
+    private func mkProductResult(
+        title: String,
+        brand: String? = nil
+    ) -> SearchResult {
+        var metadata: [String: AnyHashable] = [:]
+        if let brand { metadata["brand"] = brand }
+        return SearchResult(
+            id: "x", title: title, description: nil,
+            source: "test", sourceType: .online, category: .product,
+            url: nil, location: nil, distance: nil,
+            relevanceScore: nil, price: nil, metadata: metadata
+        )
+    }
+
+    func test_intelligenceQueryWords_dropsConnectorsAndPunctuation() {
+        XCTAssertEqual(
+            MetasearchCoordinator.intelligenceQueryWords(from: "Bike & Tube"),
+            ["bike", "tube"]
+        )
+        XCTAssertEqual(
+            MetasearchCoordinator.intelligenceQueryWords(from: "a bike"),
+            ["bike"]
+        )
+        XCTAssertEqual(
+            MetasearchCoordinator.intelligenceQueryWords(from: ""),
+            []
+        )
+    }
+
+    func test_productMetadataIsRelated_acceptsTitleMatch() {
+        let r = mkProductResult(title: "Bike Tube Patch Kit")
+        XCTAssertTrue(MetasearchCoordinator.productMetadataIsRelated(
+            r, queryWords: ["bike"], brand: nil))
+    }
+
+    func test_productMetadataIsRelated_acceptsBrandOverlapWhenTitleMisses() {
+        // "Patch Kit" doesn't contain "balea", but the brand does.
+        let r = mkProductResult(title: "Patch Kit", brand: "Balea")
+        XCTAssertTrue(MetasearchCoordinator.productMetadataIsRelated(
+            r, queryWords: ["balea"], brand: "Balea"))
+    }
+
+    func test_productMetadataIsRelated_rejectsOffTopicCienResult() {
+        // The exact "Cien" symptom from debug.txt — an Open Beauty Facts
+        // result that polluted a "Bike" query's refined Phase 2 local
+        // query with the unrelated brand "Cien".
+        let cien = mkProductResult(
+            title: "Crème de douche soin douceur Cien",
+            brand: "Cien"
+        )
+        XCTAssertFalse(MetasearchCoordinator.productMetadataIsRelated(
+            cien, queryWords: ["bike"], brand: "Cien"
+        ))
+    }
+
+    func test_productMetadataIsRelated_emptyQueryWords_acceptsEverything() {
+        // No signal → don't filter, same opt-out semantics as the
+        // Open Facts relevance filter.
+        let r = mkProductResult(title: "Cocacola original", brand: "Coca-Cola")
+        XCTAssertTrue(MetasearchCoordinator.productMetadataIsRelated(
+            r, queryWords: [], brand: "Coca-Cola"))
+    }
+
+    func test_productMetadataIsRelated_caseInsensitive() {
+        let r = mkProductResult(title: "BIKE Pump")
+        XCTAssertTrue(MetasearchCoordinator.productMetadataIsRelated(
+            r, queryWords: ["bike"], brand: nil))
     }
 
     // MARK: - Phase B: structured extraction (race fix)

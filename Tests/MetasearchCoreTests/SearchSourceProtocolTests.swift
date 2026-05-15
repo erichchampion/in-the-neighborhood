@@ -75,6 +75,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     private let customTimeoutBudget: TimeInterval?
     private let customBrand: String?
     private let customAuthor: String?
+    private let customTitle: String?
 
     var timeoutBudget: TimeInterval {
         if let customTimeoutBudget { return customTimeoutBudget }
@@ -91,7 +92,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         category: ResultCategory = .web,
         timeoutBudget: TimeInterval? = nil,
         brand: String? = nil,
-        author: String? = nil
+        author: String? = nil,
+        title: String? = nil
     ) {
         self.identifier = identifier
         self.sourceType = sourceType
@@ -99,6 +101,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         self.customTimeoutBudget = timeoutBudget
         self.customBrand = brand
         self.customAuthor = author
+        self.customTitle = title
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -146,7 +149,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         onResults([
             SearchResult(
                 id: "mock-\(identifier)",
-                title: "Mock Result",
+                title: customTitle ?? "Mock Result",
                 description: "Mock description",
                 source: identifier,
                 sourceType: sourceType,
