@@ -266,6 +266,60 @@ final class OverpassSearchSourceTests: XCTestCase {
         XCTAssertEqual(OverpassTagMap.tags(forCategories: []), OverpassTagMap.fallbackTags)
     }
 
+    // MARK: - Plurals / synonyms (bike-query troubleshooting)
+
+    func test_tagMap_resolvesPluralBikes() {
+        // The query enhancer produced `["bikes", "cycling"]` — "bikes" is
+        // a plural and "cycling" is a synonym. Both must resolve to the
+        // canonical bike tag list.
+        let tags = OverpassTagMap.tags(forCategories: ["bikes"])
+        XCTAssertTrue(tags.contains("shop=bicycle"),
+                      "'bikes' (plural) must resolve to shop=bicycle. Got: \(tags)")
+    }
+
+    func test_tagMap_resolvesPluralBicyclesCaseInsensitive() {
+        // The Bicycle search produced `["Bicycles"]` (capital, plural).
+        let tags = OverpassTagMap.tags(forCategories: ["Bicycles"])
+        XCTAssertTrue(tags.contains("shop=bicycle"))
+    }
+
+    func test_tagMap_resolvesCyclingSynonym() {
+        let tags = OverpassTagMap.tags(forCategories: ["cycling"])
+        XCTAssertTrue(tags.contains("shop=bicycle"),
+                      "'cycling' must resolve to shop=bicycle via the synonym table")
+    }
+
+    func test_tagMap_resolvesEbikeSynonym() {
+        XCTAssertTrue(OverpassTagMap.tags(forCategories: ["ebike"]).contains("shop=bicycle"))
+        XCTAssertTrue(OverpassTagMap.tags(forCategories: ["e-bike"]).contains("shop=bicycle"))
+    }
+
+    func test_tagMap_bikeCategoryAlsoIncludesBicycleRepairStation() {
+        // C1-driven: a bike search should also surface repair stations,
+        // which the parser then routes into the Repair intent tab via
+        // categoryTag(for:).
+        let tags = OverpassTagMap.tags(forCategories: ["bike"])
+        XCTAssertTrue(tags.contains("shop=bicycle"))
+        XCTAssertTrue(tags.contains("amenity=bicycle_repair_station"),
+                      "Bike searches must include the repair-station tag so the Repair tab populates")
+    }
+
+    func test_tagMap_pluralAndSynonymTogetherDeduplicates() {
+        // The full set produced by the query enhancer.
+        let tags = OverpassTagMap.tags(forCategories: ["bikes", "cycling"])
+        XCTAssertTrue(tags.contains("shop=bicycle"))
+        XCTAssertTrue(tags.contains("amenity=bicycle_repair_station"))
+        // No duplicates from the two paths converging on the same canonical entry.
+        XCTAssertEqual(tags.filter { $0 == "shop=bicycle" }.count, 1)
+        XCTAssertEqual(tags.filter { $0 == "amenity=bicycle_repair_station" }.count, 1)
+    }
+
+    func test_tagMap_unknownCategoryThatTrailingSStripDoesNotMatch_stillFallsBack() {
+        // "nonsenses" with the `-s` stripped → "nonsense" which still
+        // isn't in the map → fallback.
+        XCTAssertEqual(OverpassTagMap.tags(forCategories: ["nonsenses"]), OverpassTagMap.fallbackTags)
+    }
+
     // MARK: - C1: repair-tag classification
 
     func test_categoryTag_returnsRepairForShopRepair() {
