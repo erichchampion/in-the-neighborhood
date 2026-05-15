@@ -25,21 +25,35 @@ public actor ResultCache {
 
     public func get(key: String) -> [SearchResult]? {
         guard let cached = cache[key] else { return nil }
-        if Date().timeIntervalSince(cached.timestamp) >= ttl {
+        // TTL is measured against `insertedAt`, not `lastAccessedAt`,
+        // so popular entries still expire at the configured TTL rather
+        // than refreshing forever just because they're being read.
+        if Date().timeIntervalSince(cached.insertedAt) >= ttl {
             cache.removeValue(forKey: key)
             return nil
         }
+        // Bump access time so the LRU eviction policy can recognize
+        // this entry as recently used.
+        cache[key] = CachedResult(
+            results: cached.results,
+            insertedAt: cached.insertedAt,
+            lastAccessedAt: Date()
+        )
         return cached.results
     }
 
     public func set(key: String, results: [SearchResult]) {
-        // Evict the oldest entry when full to keep the cache bounded.
+        // Evict the least-recently-ACCESSED entry when full. Insertion
+        // time is the wrong signal — a frequently-read entry inserted
+        // long ago is more valuable than a never-read entry inserted
+        // recently.
         if cache[key] == nil, cache.count >= maxEntries {
-            if let oldestKey = cache.min(by: { $0.value.timestamp < $1.value.timestamp })?.key {
-                cache.removeValue(forKey: oldestKey)
+            if let lruKey = cache.min(by: { $0.value.lastAccessedAt < $1.value.lastAccessedAt })?.key {
+                cache.removeValue(forKey: lruKey)
             }
         }
-        cache[key] = CachedResult(results: results, timestamp: Date())
+        let now = Date()
+        cache[key] = CachedResult(results: results, insertedAt: now, lastAccessedAt: now)
     }
 
     public func clear() {
@@ -49,7 +63,7 @@ public actor ResultCache {
     public func clearExpired() {
         let now = Date()
         cache = cache.filter { _, value in
-            now.timeIntervalSince(value.timestamp) < ttl
+            now.timeIntervalSince(value.insertedAt) < ttl
         }
     }
 
@@ -58,6 +72,10 @@ public actor ResultCache {
 
     private struct CachedResult {
         let results: [SearchResult]
-        let timestamp: Date
+        /// When the entry was first written. Used for TTL expiry.
+        let insertedAt: Date
+        /// When the entry was most recently read (or written). Used for
+        /// LRU eviction when the cache is at capacity.
+        let lastAccessedAt: Date
     }
 }

@@ -103,6 +103,71 @@ final class ResultCacheTests: XCTestCase {
         XCTAssertNotNil(third)
     }
 
+    func test_LRU_recentlyReadEntrySurvivesEviction() async {
+        // Insert A, then B. Read A (bumps its lastAccessedAt). Then insert
+        // C — with capacity=2, the eviction policy must keep A (recently
+        // read) and drop B (never read since insertion).
+        let cache = ResultCache(ttl: 60, maxEntries: 2)
+
+        let mkResult: (String) -> [SearchResult] = { id in
+            [SearchResult(
+                id: id,
+                title: id,
+                description: nil,
+                source: "test",
+                sourceType: .online,
+                category: .web,
+                url: nil,
+                location: nil,
+                distance: nil,
+                metadata: [:]
+            )]
+        }
+
+        await cache.set(key: "A", results: mkResult("A"))
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        await cache.set(key: "B", results: mkResult("B"))
+        try? await Task.sleep(nanoseconds: 20_000_000)
+
+        // Read A — this should bump its lastAccessedAt past B's insertedAt.
+        _ = await cache.get(key: "A")
+        try? await Task.sleep(nanoseconds: 20_000_000)
+
+        await cache.set(key: "C", results: mkResult("C"))
+
+        let a = await cache.get(key: "A")
+        let b = await cache.get(key: "B")
+        let c = await cache.get(key: "C")
+        XCTAssertNotNil(a, "Recently-read entry A must survive eviction")
+        XCTAssertNil(b, "Unread entry B must be evicted as the LRU")
+        XCTAssertNotNil(c)
+    }
+
+    func test_LRU_ttlMeasuredAgainstInsertion_notLastAccess() async {
+        // Reading a near-expired entry must not reset its TTL clock.
+        // Otherwise a popular entry could live forever past its intended
+        // lifetime.
+        let cache = ResultCache(ttl: 0.2, maxEntries: 8)
+
+        let result: [SearchResult] = [SearchResult(
+            id: "x", title: "x", description: nil,
+            source: "s", sourceType: .online, category: .web,
+            url: nil, location: nil, distance: nil, metadata: [:]
+        )]
+        await cache.set(key: "k", results: result)
+
+        // Bump access while still inside TTL.
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+        let still = await cache.get(key: "k")
+        XCTAssertNotNil(still)
+
+        // Now cross the TTL relative to *insertedAt*. If the implementation
+        // were tracking TTL against lastAccessedAt, this would still hit.
+        try? await Task.sleep(nanoseconds: 150_000_000) // total 0.25s
+        let expired = await cache.get(key: "k")
+        XCTAssertNil(expired, "TTL must be measured against insertedAt, not lastAccessedAt")
+    }
+
     func test_setExistingKey_doesNotTriggerEviction() async {
         // Re-setting an existing key should refresh the entry, not push the
         // cache over capacity.
