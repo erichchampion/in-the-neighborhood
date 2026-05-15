@@ -6,6 +6,10 @@ import MetasearchCore
 /// category. The classifier in `SearchViewModel.tab(for:)` decides which
 /// bucket every result lands in; this view just renders the buckets.
 public struct ResultsView: View {
+    /// C4: how the Local tab presents results — list of cards (default)
+    /// or a map of pins.
+    enum LocalViewMode: Hashable { case list, map }
+
     let localResults: [SearchResult]
     let onlineResults: [SearchResult]
     let borrowResults: [SearchResult]
@@ -13,6 +17,7 @@ public struct ResultsView: View {
     let originalQuery: String
     let onRefine: ((SearchResult) -> Void)?
     @Binding var selectedTab: SearchViewModel.TabSelection
+    @State private var localViewMode: LocalViewMode = .list
     let isLoadingLocal: Bool
     let isLoadingOnline: Bool
     let isLoadingBorrow: Bool
@@ -276,9 +281,39 @@ public struct ResultsView: View {
         renderableInBorrowTab(result)
     }
 
-    // MARK: - Local tab (was Local Stores)
+    // MARK: - Local tab (was Local Stores) — C4: list/map toggle
 
     private var localTabContent: some View {
+        VStack(spacing: 0) {
+            // List/Map view-mode toggle. Only render when there are
+            // results to switch between — otherwise the picker would
+            // sit above a permanent empty state.
+            if !localResults.isEmpty {
+                Picker("View", selection: $localViewMode) {
+                    Label("List", systemImage: "list.bullet")
+                        .labelStyle(.iconOnly)
+                        .tag(LocalViewMode.list)
+                    Label("Map", systemImage: "map")
+                        .labelStyle(.iconOnly)
+                        .tag(LocalViewMode.map)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .accessibilityLabel("Local results view")
+            }
+
+            switch localViewMode {
+            case .list:
+                localListContent
+            case .map:
+                LocalMapView(results: localResults)
+            }
+        }
+    }
+
+    private var localListContent: some View {
         ScrollView {
             VStack(spacing: 0) {
                 if !localResults.isEmpty {
