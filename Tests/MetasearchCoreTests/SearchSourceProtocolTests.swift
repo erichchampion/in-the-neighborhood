@@ -42,13 +42,18 @@ final class SearchSourceProtocolTests: XCTestCase {
 actor MockSearchSourceState {
     var shouldThrow = false
     var delay: TimeInterval = 0.0
-    
+    var invocationCount = 0
+
     func setShouldThrow(_ throwError: Bool) {
         shouldThrow = throwError
     }
-    
+
     func setDelay(_ d: TimeInterval) {
         delay = d
+    }
+
+    func recordInvocation() {
+        invocationCount += 1
     }
 }
 
@@ -110,6 +115,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     }
     
     func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        await state.recordInvocation()
+
         let d = await state.delay
         if d > 0 {
             try await Task.sleep(nanoseconds: UInt64(d * 1_000_000_000))

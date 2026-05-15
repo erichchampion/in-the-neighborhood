@@ -212,6 +212,84 @@ final class MetasearchCoordinatorTests: XCTestCase {
         )
     }
 
+    // MARK: - A3: result cache
+
+    func test_A3_repeatedSearch_servesFromCacheAndDoesNotReinvokeSource() async throws {
+        // With a cache-enabled coordinator, a second `search` for the same
+        // query must short-circuit and never invoke the source again.
+        let source = MockSearchSource(identifier: "cached-src", sourceType: .online)
+        let coordinator = MetasearchCoordinator(
+            sources: [source],
+            resultCache: ResultCache(ttl: 60, maxEntries: 8)
+        )
+        let query = EnhancedQuery(
+            original: "Sample Query",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil
+        )
+
+        let first = try await coordinator.search(query: query)
+        XCTAssertFalse(first.isEmpty)
+        let countAfterFirst = await source.state.invocationCount
+        XCTAssertEqual(countAfterFirst, 1)
+
+        let second = try await coordinator.search(query: query)
+        XCTAssertEqual(second.count, first.count, "Cached result must match the original")
+        let countAfterSecond = await source.state.invocationCount
+        XCTAssertEqual(countAfterSecond, 1, "Source must not be invoked again on cache hit")
+    }
+
+    func test_A3_normalizedKey_treatsWhitespaceAndCaseAsEquivalent() async throws {
+        // "  On Tyranny  " and "on tyranny" should hit the same cache slot.
+        let source = MockSearchSource(identifier: "n-src", sourceType: .online)
+        let coordinator = MetasearchCoordinator(
+            sources: [source],
+            resultCache: ResultCache()
+        )
+        let canonical = EnhancedQuery(original: "On Tyranny", productType: nil, categories: [], priceMax: nil, condition: nil)
+        let messy = EnhancedQuery(original: "  on tyranny  ", productType: nil, categories: [], priceMax: nil, condition: nil)
+
+        _ = try await coordinator.search(query: canonical)
+        _ = try await coordinator.search(query: messy)
+
+        let invocations = await source.state.invocationCount
+        XCTAssertEqual(invocations, 1, "Normalized keys must collapse trivial-difference queries to one cache slot")
+    }
+
+    func test_A3_disabledCache_alwaysInvokesSources() async throws {
+        // Passing `resultCache: nil` opts out of caching entirely.
+        let source = MockSearchSource(identifier: "uncached-src", sourceType: .online)
+        let coordinator = MetasearchCoordinator(
+            sources: [source],
+            resultCache: nil
+        )
+        let query = EnhancedQuery(original: "anything", productType: nil, categories: [], priceMax: nil, condition: nil)
+
+        _ = try await coordinator.search(query: query)
+        _ = try await coordinator.search(query: query)
+
+        let invocations = await source.state.invocationCount
+        XCTAssertEqual(invocations, 2, "Disabled cache should not memoize")
+    }
+
+    func test_A3_clearCache_forcesNextSearchToReinvoke() async throws {
+        let source = MockSearchSource(identifier: "clearable-src", sourceType: .online)
+        let coordinator = MetasearchCoordinator(
+            sources: [source],
+            resultCache: ResultCache()
+        )
+        let query = EnhancedQuery(original: "q", productType: nil, categories: [], priceMax: nil, condition: nil)
+
+        _ = try await coordinator.search(query: query)
+        await coordinator.clearCache()
+        _ = try await coordinator.search(query: query)
+
+        let invocations = await source.state.invocationCount
+        XCTAssertEqual(invocations, 2, "clearCache() should evict the entry so the next search re-invokes the source")
+    }
+
     func test_MetasearchCoordinator_PerSourceTimeoutBudget_CappedByGlobalCeiling() async throws {
         // When the global `timeout` ceiling is below a source's own budget,
         // the ceiling wins — the source can't run longer than the ceiling allows.
