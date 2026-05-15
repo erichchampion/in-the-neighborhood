@@ -248,14 +248,29 @@ public struct ResultsView: View {
     }
     
     private var filteredLibraryResults: [SearchResult] {
-        libraryResults.filter { result in
-            let isbn = result.metadata["isbn"] as? String
-            let authors = result.metadata["author_name"] as? [String]
-            let providers = result.metadata["providers"] as? [[String: Any]]
-            let coverId = result.metadata["cover_i"] as? Int
-            let imageUrl = result.metadata["imageUrl"] as? String
-            return isbn != nil || authors != nil || providers != nil || coverId != nil || imageUrl != nil
-        }
+        libraryResults.filter(Self.renderableInLibraryTab)
+    }
+
+    /// Returns `true` if the result has enough metadata for a `LibraryCard`
+    /// to render something useful. Some sources (Open Library via
+    /// `ProductMetadata`) store the joined author string under
+    /// `metadata["author"]`; the raw Open Library shape uses an array under
+    /// `metadata["author_name"]`. DPLA uses `metadata["providers"]`. Accept
+    /// any of them so a perfectly valid Open Library result with just an
+    /// author string doesn't get silently dropped.
+    static func renderableInLibraryTab(_ result: SearchResult) -> Bool {
+        let isbn = result.metadata["isbn"] as? String
+        let authorsArray = result.metadata["author_name"] as? [String]
+        let authorString = result.metadata["author"] as? String
+        let providers = result.metadata["providers"] as? [[String: Any]]
+        let coverId = result.metadata["cover_i"] as? Int
+        let imageUrl = result.metadata["imageUrl"] as? String
+        return isbn != nil
+            || authorsArray != nil
+            || authorString != nil
+            || providers != nil
+            || coverId != nil
+            || imageUrl != nil
     }
     
     private var localStoresTabContent: some View {

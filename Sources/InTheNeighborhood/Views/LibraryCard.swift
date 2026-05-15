@@ -104,10 +104,17 @@ struct LibraryCard: View {
         return nil
     }
     
-    private var extractAuthors: String? {
-        // OpenLibrary: author_name is [String]
+    var extractAuthors: String? {
+        // OpenLibrary (raw): author_name is [String]
         if let authors = result.metadata["author_name"] as? [String], !authors.isEmpty {
             return authors.joined(separator: ", ")
+        }
+        // OpenLibrary (via ProductMetadata.toDictionary): "author" is a
+        // pre-joined String. Falling back to this is what makes Open Library
+        // results actually display author names — without it the card just
+        // shows the title.
+        if let author = result.metadata["author"] as? String, !author.isEmpty {
+            return author
         }
         // DPLA: providers is [[String: Any]]
         if let providers = result.metadata["providers"] as? [[String: Any]] {

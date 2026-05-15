@@ -162,6 +162,73 @@ final class LibraryTabTests: XCTestCase {
         XCTAssertEqual(providers?.count, 2)
     }
     
+    // MARK: - Library-tab rendering predicate (author_name vs author key parity)
+
+    private func mkLibraryResult(metadata: [String: AnyHashable]) -> SearchResult {
+        SearchResult(
+            id: "test",
+            title: "Test",
+            description: nil,
+            source: SourceIdentifier.openlibrary,
+            sourceType: .online,
+            category: .book,
+            url: nil,
+            location: nil,
+            distance: nil,
+            relevanceScore: nil,
+            price: nil,
+            metadata: metadata
+        )
+    }
+
+    func test_renderableInLibraryTab_acceptsAuthorStringKey() {
+        // OpenLibrary writes the joined author string under "author".
+        let result = mkLibraryResult(metadata: ["author": "Timothy Snyder"])
+        XCTAssertTrue(ResultsView.renderableInLibraryTab(result),
+                      "A result whose only signal is metadata[\"author\"] must still render")
+    }
+
+    func test_renderableInLibraryTab_acceptsAuthorNameArrayKey() {
+        // Raw OpenLibrary shape — predicate must accept the legacy key too.
+        let result = mkLibraryResult(metadata: ["author_name": ["Timothy Snyder"]])
+        XCTAssertTrue(ResultsView.renderableInLibraryTab(result))
+    }
+
+    func test_renderableInLibraryTab_acceptsISBNOnly() {
+        let result = mkLibraryResult(metadata: ["isbn": "9780804190114"])
+        XCTAssertTrue(ResultsView.renderableInLibraryTab(result))
+    }
+
+    func test_renderableInLibraryTab_rejectsResultWithNoBookSignal() {
+        let result = mkLibraryResult(metadata: [:])
+        XCTAssertFalse(ResultsView.renderableInLibraryTab(result),
+                       "A result with no isbn/author/cover/imageUrl/providers should not render in the library tab")
+    }
+
+    func test_libraryCard_extractAuthors_prefersAuthorNameArray() {
+        // When both keys are present, the array form (richer) wins.
+        let result = mkLibraryResult(metadata: [
+            "author_name": ["First", "Second"],
+            "author": "ShouldNotBeUsed"
+        ])
+        let card = LibraryCard(result: result)
+        XCTAssertEqual(card.extractAuthors, "First, Second")
+    }
+
+    func test_libraryCard_extractAuthors_fallsBackToAuthorString() {
+        // OpenLibrary-via-ProductMetadata case — only "author" is set.
+        let result = mkLibraryResult(metadata: ["author": "Timothy Snyder"])
+        let card = LibraryCard(result: result)
+        XCTAssertEqual(card.extractAuthors, "Timothy Snyder",
+                       "Card should display the joined author string when author_name is missing")
+    }
+
+    func test_libraryCard_extractAuthors_returnsNilWhenAbsent() {
+        let result = mkLibraryResult(metadata: ["isbn": "9780804190114"])
+        let card = LibraryCard(result: result)
+        XCTAssertNil(card.extractAuthors)
+    }
+
     func testOpenLibraryCoverImageURL() {
         // Given: OpenLibrary result with cover_i
         let result = SearchResult(
