@@ -21,7 +21,7 @@ Each milestone is **one PR / one commit batch**. Run the test suite after each.
 ### Files to modify
 - `Sources/MetasearchCore/SearchSource.swift` — add `timeoutBudget` to protocol.
 - `Sources/MetasearchCore/MetasearchCoordinator.swift` — replace `self.timeout` with `source.timeoutBudget` in both `search()` (line ~47) and `searchStreaming()` (lines ~157 and ~221) at every `withTimeout(seconds:)` call site. Keep the constructor `timeout` parameter as a *hard ceiling* fallback (`min(source.timeoutBudget, self.timeout)`).
-- Per-source overrides where the default doesn't fit (initially: Amazon/BestBuy/Bookshop scrapers — set 6s).
+- Per-source overrides where the default doesn't fit (initially: Amazon and Bookshop HTML scrapers — set 6s. BestBuy uses the Products API and stays at the default 4s).
 
 ### Key changes
 
@@ -43,7 +43,7 @@ public extension SearchSource {
 }
 ```
 
-Then in `AmazonSearchSource.swift`, `BestBuySearchSource.swift`, `BookshopSearchSource.swift` (the HTML scrapers), override to `6.0`.
+Then in `AmazonSearchSource.swift` and `BookshopSearchSource.swift` (the actual HTML scrapers), override to `6.0`. `BestBuySearchSource.swift` uses the official Products API at `api.bestbuy.com/v1`, so it stays at the default 4s.
 
 In `MetasearchCoordinator.swift`, every `try await self.withTimeout(seconds: timeoutValue)` becomes `try await self.withTimeout(seconds: min(source.timeoutBudget, self.timeout))`.
 

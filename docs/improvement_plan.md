@@ -17,7 +17,7 @@ This plan is a **research/strategy plan** — a menu of ideas to evaluate, not a
 
 ### What aligns well
 - **Deny-list filtering** (`DenyListFilter.swift`): hard-coded mega-retailer domains are stripped from results, with mutable runtime API. Aligns directly with mission.
-- **Metadata-only scraping of Amazon/BestBuy**: results are used for brand/ISBN extraction then filtered out before display (`ResultAggregator.swift:44-46`). Clever — extracts intelligence without endorsing the retailer.
+- **Metadata-only use of Amazon (HTML scrape) and BestBuy (Products API)**: results are used for brand/ISBN extraction then filtered out before display (`ResultAggregator.swift:44-46`). Clever — extracts intelligence without endorsing the retailer.
 - **Tier-based prioritization** (`ResultPrioritizer.swift`): local > regional > online. Right shape.
 - **On-device privacy**: `SystemLanguageModel` (iOS 26) used for relevance scoring and `AgentSearchCoordinator` planning, never leaves device.
 - **Open/free sources already integrated**: Nominatim (OSM), Open Library, DPLA, DuckDuckGo, Google Books, MapKit.
@@ -28,7 +28,7 @@ This plan is a **research/strategy plan** — a menu of ideas to evaluate, not a
 - **`Phase 2` (MapKit local) waits on `Phase 1` (web/products) to finish** before running with the enriched query (`MetasearchCoordinator.swift` streaming flow). This makes the **most mission-critical tier (local) the slowest to appear**. The user sees web/product results first, local results last — backwards from the app's stated values.
 - **60-second per-source timeout** (`SearchToolExecutor.swift`): far too lenient for a search UX. Slow scrapers (Amazon, Bookshop HTML) drag the perceived latency up.
 - **No caching layer** anywhere — repeat searches re-hit every source from scratch. There is no `query → results` memo, no `hostname → ethical-metadata` lookup table.
-- **Amazon/BestBuy scrapers are brittle**: HTML-based, no real fallback if DOM shifts. Recent commits (`8de1800`, debug logging in `AmazonProductScraper.swift`) suggest active troubleshooting.
+- **Amazon's HTML scraper is brittle**: DOM-based, no real fallback if Amazon's markup shifts. Recent commits (`8de1800`, debug logging in `AmazonProductScraper.swift`) suggest active troubleshooting. (BestBuy uses the official Products API at `api.bestbuy.com/v1` and isn't affected by this class of problem.)
 - **Categories don't drive routing**: a query for "screwdriver" hits the same sources as "wireless headphones" or "Moby Dick." No category-aware source selection beyond what the LLM agent plan does optionally.
 - **No use of Vision, NaturalLanguage, or Core ML** — three on-device frameworks that match the user's constraints perfectly and are sitting unused.
 - **No map view** despite MapKit being a primary local source. Results are list-only.
@@ -53,6 +53,7 @@ DONE:
 **A2. Tighten per-source budgets** *(S effort, high impact)*
 Drop the 60s per-source timeout in `SearchToolExecutor.swift` to a tiered budget: **2s for local, 4s for fast APIs, 6s for scrapers, 8s hard ceiling**. Whatever didn't return by the deadline is dropped. Search feels snappier; slow sources can't gate the UI.
 
+DONE: 
 **A3. Query-result cache** *(S effort, moderate impact)*
 On-device LRU `[String: [SearchResult]]` with 24h TTL, keyed by normalized query. Speeds up repeat searches (which are common in real use — user tweaks a query, scrolls back). Store in `FileManager` or `CoreData`.
 
@@ -60,8 +61,9 @@ DONE:
 **A4. Hostname → ethics metadata cache** *(S effort, structural impact)*
 Ship a static JSON file (`Resources/EthicsLedger.json`) mapping hostnames to: `{ownership: indie|employee-owned|coop|b-corp|mega, region: local|regional|national, certifications: [...]}`. Refresh from GitHub on background fetch. Reused everywhere — prioritizer, card badges, deny-list expansion. Replaces the binary deny list.
 
+DONE: 
 **A5. Replace HTML scrapers with API-first fallbacks** *(M effort, moderate impact)*
-Amazon and BestBuy scraping is the brittlest part of the codebase. For metadata extraction, prefer **Wikidata SPARQL** + **Open Library** + **Open Food Facts** lookups (all open & free) before falling back to HTML scrape. Even simple ISBN/UPC barcode-to-metadata via Open Library covers most book queries without touching Amazon.
+Amazon's HTML scraping is the brittlest part of the codebase. For metadata extraction, prefer **Wikidata SPARQL** + **Open Library** + **Open Food Facts** lookups (all open & free) before falling back to HTML scrape. Even simple ISBN/UPC barcode-to-metadata via Open Library covers most book queries without touching Amazon. (BestBuy already uses its official Products API; only Amazon and Bookshop scrape HTML today.)
 
 ### Track B — Expand Coverage with New Free/Open Sources
 
@@ -79,6 +81,7 @@ Free, open, no key. Use for:
 - Company → B-Corp / employee-owned / cooperative status
 Powerful but slow; cache aggressively.
 
+DONE: 
 **B4. Internet Archive / Open Library expanded** *(S effort, moderate impact)*
 Already have Open Library and DPLA for books. Internet Archive has a **searchable API for media** (films, music, software) — open, free, no key. Expands the "borrow instead of buy" angle beyond books.
 
