@@ -62,7 +62,25 @@ struct ProductCard: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    
+
+                    // B2: Nutri-Score / Eco-Score / Nova badges for Open Facts results.
+                    // The helper returns an empty array when none of the
+                    // grades are present, so the HStack just doesn't render.
+                    let healthBadges = ProductCard.healthBadges(for: result)
+                    if !healthBadges.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(healthBadges, id: \.self) { badge in
+                                Label(badge.text, systemImage: badge.systemImage)
+                                    .font(.caption2)
+                                    .foregroundColor(badge.tint.foreground)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(badge.tint.background)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+
                     // Author (for books)
                     if let author = result.metadata["author"] as? String {
                         Text("by \(author)")
@@ -181,6 +199,94 @@ struct ProductCard: View {
         }
         
         return components.joined(separator: ", ")
+    }
+}
+
+// MARK: - B2: Nutri-Score / Eco-Score / Nova badges
+//
+// These helpers are `nonisolated` so XCTest methods can call them off
+// the main actor — same pattern used for EthicsBadgeView.displayedItems
+// and LibraryCard.mediaTypeLabel. They're pure projections of
+// `result.metadata` and never touch UI state.
+
+extension ProductCard {
+    struct HealthBadge: Hashable {
+        enum Tint: Hashable {
+            case green   // A — best
+            case lime    // B
+            case yellow  // C
+            case orange  // D
+            case red     // E — worst
+            case warning // Nova ultra-processed
+
+            var foreground: Color {
+                switch self {
+                case .green, .lime, .yellow: return Color(.label)
+                case .orange, .red, .warning: return .white
+                }
+            }
+            var background: Color {
+                switch self {
+                case .green:   return Color.green.opacity(0.8)
+                case .lime:    return Color.green.opacity(0.45)
+                case .yellow:  return Color.yellow.opacity(0.8)
+                case .orange:  return Color.orange.opacity(0.85)
+                case .red:     return Color.red.opacity(0.85)
+                case .warning: return Color.orange.opacity(0.85)
+                }
+            }
+        }
+        let text: String
+        let systemImage: String
+        let tint: Tint
+    }
+
+    /// Builds the ordered list of food/health badges from a result's
+    /// metadata. Empty when none of the Open Facts grades are present.
+    /// Order: Nutri-Score, Eco-Score, Nova warning (only if nova ≥ 3).
+    nonisolated static func healthBadges(for result: SearchResult) -> [HealthBadge] {
+        var badges: [HealthBadge] = []
+        if let nutri = result.metadata["nutriscore_grade"] as? String,
+           let badge = nutriBadge(grade: nutri) {
+            badges.append(badge)
+        }
+        if let eco = result.metadata["ecoscore_grade"] as? String,
+           let badge = ecoBadge(grade: eco) {
+            badges.append(badge)
+        }
+        if let nova = result.metadata["nova_group"] as? Int, nova >= 3 {
+            let label = nova == 4 ? "Ultra-processed" : "Processed"
+            badges.append(HealthBadge(
+                text: label,
+                systemImage: "exclamationmark.triangle",
+                tint: .warning
+            ))
+        }
+        return badges
+    }
+
+    nonisolated static func nutriBadge(grade: String) -> HealthBadge? {
+        guard let tint = gradeToTint(grade) else { return nil }
+        return HealthBadge(text: "Nutri-Score \(grade.uppercased())", systemImage: "leaf", tint: tint)
+    }
+
+    nonisolated static func ecoBadge(grade: String) -> HealthBadge? {
+        guard let tint = gradeToTint(grade) else { return nil }
+        return HealthBadge(text: "Eco-Score \(grade.uppercased())", systemImage: "globe.americas", tint: tint)
+    }
+
+    /// Maps an Open Facts grade (case-insensitive A-E) to a tint.
+    /// Returns nil for unknown grades (e.g. "unknown", "not-applicable")
+    /// so the caller silently skips them.
+    nonisolated static func gradeToTint(_ grade: String) -> HealthBadge.Tint? {
+        switch grade.uppercased() {
+        case "A": return .green
+        case "B": return .lime
+        case "C": return .yellow
+        case "D": return .orange
+        case "E": return .red
+        default:  return nil
+        }
     }
 }
 

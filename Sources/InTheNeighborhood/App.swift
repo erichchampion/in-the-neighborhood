@@ -19,6 +19,10 @@ struct InTheNeighborhoodApp: App {
     let nominatimSource: any SearchSource
     let overpassSource: any SearchSource
     let internetArchiveSource: any SearchSource
+    let openFoodFactsSource: any SearchSource
+    let openBeautyFactsSource: any SearchSource
+    let openProductsFactsSource: any SearchSource
+    let openPetFoodFactsSource: any SearchSource
     let queryEnhancer: QueryEnhancing
     
     init() {
@@ -65,6 +69,14 @@ struct InTheNeighborhoodApp: App {
         // texts, audio, and films in the Library tab (B4).
         internetArchiveSource = InternetArchiveSearchSource()
 
+        // Initialize Open Facts sources (B2) — open, key-less product
+        // databases with Nutri-Score / Eco-Score / Nova metadata. Four
+        // sibling hosts share one source class.
+        openFoodFactsSource     = OpenFactsSearchSource.food()
+        openBeautyFactsSource   = OpenFactsSearchSource.beauty()
+        openProductsFactsSource = OpenFactsSearchSource.products()
+        openPetFoodFactsSource  = OpenFactsSearchSource.petFood()
+
         // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
         let allSources: [any SearchSource] = [
             mapKitSource,
@@ -78,7 +90,11 @@ struct InTheNeighborhoodApp: App {
             googleBooksSource,
             OpenLibrarySearchSource(),
             dplaSource,
-            internetArchiveSource
+            internetArchiveSource,
+            openFoodFactsSource,
+            openBeautyFactsSource,
+            openProductsFactsSource,
+            openPetFoodFactsSource
         ]
         
         coordinator = MetasearchCoordinator(sources: allSources, denyListFilter: SettingsManager.shared.denyList)
