@@ -29,8 +29,8 @@ public struct ResultAggregator: Sendable {
                 finalResults.append(result)
             }
         }
-        
-        return finalResults
+
+        return NearDuplicateMerger.merge(finalResults)
     }
     
     public func filter(

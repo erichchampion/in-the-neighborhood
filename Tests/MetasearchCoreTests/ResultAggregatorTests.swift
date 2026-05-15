@@ -61,6 +61,39 @@ final class ResultAggregatorTests: XCTestCase {
         XCTAssertTrue(aggregated.contains(where: { $0.id == "different-id" }))
     }
     
+    func test_ResultAggregator_CollapsesNearDuplicateLocalsAcrossSources() {
+        let loc = CLLocation(latitude: 47.6062, longitude: -122.3321)
+        let mapkit = SearchResult(
+            id: "mapkit-1",
+            title: "Joe's Bike Shop",
+            description: nil,
+            source: SourceIdentifier.mapkit,
+            sourceType: .local,
+            category: .local,
+            url: nil,
+            location: loc,
+            distance: 0,
+            metadata: [:]
+        )
+        let overpass = SearchResult(
+            id: "overpass-1",
+            title: "Joe's Bikes",
+            description: nil,
+            source: SourceIdentifier.overpass,
+            sourceType: .local,
+            category: .local,
+            url: nil,
+            location: loc,
+            distance: 0,
+            metadata: [:]
+        )
+
+        let aggregated = aggregator.aggregate(results: [mapkit, overpass])
+
+        XCTAssertEqual(aggregated.count, 1)
+        XCTAssertEqual(aggregated.first?.id, "mapkit-1")
+    }
+
     func test_ResultAggregator_FiltersDenyList() {
         let filter = DenyListFilter(defaultDomains: ["amazon.com", "walmart.com"])
         
