@@ -22,6 +22,16 @@ public final class DPLASearchSource: SearchSource, @unchecked Sendable {
     // and can return before the append lands.
 
     public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        // DPLA requires an API key. Without one, the v2 API rejects every
+        // request with a 401 — silently swallowed by the coordinator's
+        // catch but a waste of network and log noise. Short-circuit instead,
+        // matching BestBuySearchSource's pattern.
+        guard !apiKey.isEmpty else {
+            print("[DPLASearchSource] No API key configured, skipping search")
+            onResults([])
+            return
+        }
+
         guard let url = buildURL(query: query) else {
             onResults([])
             return

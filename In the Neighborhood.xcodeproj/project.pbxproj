@@ -12,6 +12,7 @@
 		0E821A284113D03D00C1A469 /* FoundationModelWebExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03FD2236B1304610D58ED5A /* FoundationModelWebExtractorTests.swift */; };
 		13A8DDBD2D66EA5F84D062E8 /* LocationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12CE8A3B38B28C8ACBF785B /* LocationServiceTests.swift */; };
 		15A99BAE25FBE24DF7CBFAE5 /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
+		16FD38FC9EDA8B1A7FA5B3D5 /* OpenLibrarySearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EF72AE9B7524542942BD86 /* OpenLibrarySearchSourceTests.swift */; };
 		1B36E0111983FB67E76B85E6 /* IntentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606828443062274BCEBC0091 /* IntentManager.swift */; };
 		1C5F904A3D2972928D45D6AC /* EthicsLedger.json in Resources */ = {isa = PBXBuildFile; fileRef = 7157FF32EA4EE93A7A12A7F5 /* EthicsLedger.json */; };
 		20E85E1BE4DB5061306703F4 /* AdDomainListDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */; };
@@ -399,6 +400,7 @@
 		9F394A823C15DE1CDAB0AF23 /* SearchIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchIntents.swift; sourceTree = "<group>"; };
 		A03FD2236B1304610D58ED5A /* FoundationModelWebExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelWebExtractorTests.swift; sourceTree = "<group>"; };
 		A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleBooksSearchSource.swift; sourceTree = "<group>"; };
+		A1EF72AE9B7524542942BD86 /* OpenLibrarySearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenLibrarySearchSourceTests.swift; sourceTree = "<group>"; };
 		A2F92308014D8CC04C2EAE60 /* OverpassSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverpassSearchSourceTests.swift; sourceTree = "<group>"; };
 		A3BB8459931E7F657BBAFA83 /* NearbyStoresWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NearbyStoresWidget.entitlements; sourceTree = "<group>"; };
 		A601E719D0B83DF997FEDD8F /* CoreLocation */ = {isa = PBXFileReference; path = CoreLocation; sourceTree = "<group>"; };
@@ -534,6 +536,7 @@
 				9A87F3CF0D76981418B6C31A /* MapKitSearchSourceTests.swift */,
 				7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */,
 				42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */,
+				A1EF72AE9B7524542942BD86 /* OpenLibrarySearchSourceTests.swift */,
 				A2F92308014D8CC04C2EAE60 /* OverpassSearchSourceTests.swift */,
 				F3349062230C15686D213C47 /* WebSearchSourceTests.swift */,
 			);
@@ -1243,6 +1246,7 @@
 				7C7AF589232AF52A789E4A99 /* MapKitSearchSourceTests.swift in Sources */,
 				E18C3C3CA56A5655920C3575 /* MarketplaceSearchSourceTests.swift in Sources */,
 				64E8EFAA3F68DD30F81BFC3F /* NominatimSearchSourceTests.swift in Sources */,
+				16FD38FC9EDA8B1A7FA5B3D5 /* OpenLibrarySearchSourceTests.swift in Sources */,
 				A6A417DE574C1364733627FA /* OverpassSearchSourceTests.swift in Sources */,
 				22D50482BB19B1A5284D0A3A /* WebSearchSourceTests.swift in Sources */,
 			);

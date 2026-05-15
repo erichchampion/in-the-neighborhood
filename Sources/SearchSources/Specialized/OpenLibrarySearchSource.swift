@@ -30,34 +30,48 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
     }
 
 public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
-        // Allow search if:
-        // 1. Query explicitly indicates book intent (isBook)
-        // 2. Query has ISBN-like pattern (10+ digit number)
-        // 3. Query has author-like pattern (capitalized words that could be names)
+        // Open Library is free, has no rate limit for reasonable use, and the
+        // per-source timeout (A2) bounds latency. So we run it for every
+        // non-trivial query except those that obviously aren't book searches
+        // (hardware, "near me", etc.) — better to return a few extra book
+        // results than to silently skip a real book lookup like "on tyranny".
         let allowSearch = query.isBook || looksLikeBookQuery(query.original)
-        
+
         guard allowSearch else {
             print("[OpenLibrarySearchSource] Skipping non-book query: \(query.original)")
             return
         }
-        
+
         print("[OpenLibrarySearchSource] Searching for: \(query.original)")
         try await searchBooks(query: query.original, onResults: onResults)
     }
-    
-    private func looksLikeBookQuery(_ query: String) -> Bool {
-        // Check for ISBN-like patterns (10+ digit numbers)
-        let digitsOnly = query.filter { $0.isNumber }
-        if digitsOnly.count >= 10 {
-            return true
+
+    /// Returns `true` for any query that might plausibly match a book.
+    /// Default-true with a short exclusion list rather than default-false with
+    /// a brittle capitalized-word heuristic — the old rule rejected lowercase
+    /// book titles like "on tyranny" and never searched Open Library at all.
+    /// Exposed as `internal` so tests can verify the trigger decision without
+    /// hitting the network.
+    func looksLikeBookQuery(_ query: String) -> Bool {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return false }
+
+        // Skip queries that are obviously about a physical store or geographic
+        // intent — Open Library has nothing to say about those.
+        let lower = trimmed.lowercased()
+        let nonBookSignals = [
+            "near me", "nearby", "store near", "shop near",
+            "hardware", "hardware store",
+            "grocery", "supermarket",
+            "auto parts", "auto repair",
+            "restaurant", "cafe", "coffee shop",
+            "pharmacy", "gas station"
+        ]
+        for signal in nonBookSignals where lower.contains(signal) {
+            return false
         }
-        // Check for author-like patterns (2+ capitalized words that could be names)
-        let words = query.components(separatedBy: .whitespaces)
-        let capitalizedWords = words.filter { $0.first?.isUppercase == true && $0.count > 1 }
-        if capitalizedWords.count >= 2 {
-            return true
-        }
-        return false
+
+        return true
     }
 
     // MARK: - Private

@@ -164,6 +164,29 @@ final class DPLASearchSourceTests: XCTestCase {
         XCTAssertTrue(results.isEmpty)
     }
     
+    // MARK: - Empty API key short-circuit (Phase 1)
+
+    func testEmptyAPIKey_SkipsNetworkAndReturnsEmpty() async throws {
+        // When DPLA isn't configured we should not waste a network round-trip
+        // on a guaranteed 401. The source must short-circuit before any URL
+        // is built or requested.
+        let session = MockURLSession()
+        let unkeyedSut = DPLASearchSource(apiKey: "", urlSession: session)
+        let query = EnhancedQuery(
+            original: "anything",
+            productType: nil,
+            categories: ["books"],
+            priceMax: nil,
+            condition: nil
+        )
+
+        let results = try await unkeyedSut.search(query: query)
+
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertNil(session.lastURL, "No network call should happen when the API key is empty")
+        XCTAssertNil(session.lastRequest, "No request should be built when the API key is empty")
+    }
+
     func testSearchHandlesHTTPError() async {
         // Given
         let testSession = MockURLSession(

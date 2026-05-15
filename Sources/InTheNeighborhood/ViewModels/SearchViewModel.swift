@@ -230,6 +230,7 @@ public class SearchViewModel: ObservableObject {
         await MainActor.run {
             self.isLoadingWeb = false
             self.isLoadingAmazon = false
+            self.isLoadingLibrary = false
             if !excludeLocal {
                 self.isLoadingLocal = false
             }
