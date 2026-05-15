@@ -176,17 +176,6 @@ public actor MetasearchCoordinator {
             externalOnResults(sourceId, results)
         }
         
-        // Create an actor to hold extraction state safely across tasks
-        actor IntelligenceExtractionState {
-            var extractedBrand: String? = nil
-            var extractedAuthor: String? = nil
-            func setBrand(_ brand: String?) {
-                if extractedBrand == nil { extractedBrand = brand }
-            }
-            func setAuthor(_ author: String?) {
-                if extractedAuthor == nil { extractedAuthor = author }
-            }
-        }
         let intelligenceState = IntelligenceExtractionState()
 
         // Dedupes local SearchResult IDs across the raw and refined passes so the
@@ -240,16 +229,30 @@ public actor MetasearchCoordinator {
                                 filtered = self.resultAggregator.aggregate(results: filtered)
 
                                 if !filtered.isEmpty {
-                                    // Extract intelligence async if possible
+                                    // Extract intelligence async if possible.
+                                    //
+                                    // A5: branch on sourceCategory so book sources
+                                    // (Open Library / Google Books / Bookshop) take
+                                    // precedence on the author field. Product
+                                    // sources only fill in author if no book source
+                                    // has spoken — but they still own the brand
+                                    // field, which books don't carry.
                                     let currentResults = rawResults
                                     Task {
-                                        if (sourceCategory == .product || sourceCategory == .book) {
+                                        switch sourceCategory {
+                                        case .book:
+                                            if let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
+                                                await intelligenceState.setAuthor(author, force: true)
+                                            }
+                                        case .product:
                                             if await intelligenceState.extractedBrand == nil, let brand = currentResults.compactMap({ $0.metadata["brand"] as? String }).first {
                                                 await intelligenceState.setBrand(brand)
                                             }
-                                            if await intelligenceState.extractedAuthor == nil, let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
-                                                await intelligenceState.setAuthor(author)
+                                            if let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
+                                                await intelligenceState.setAuthor(author, force: false)
                                             }
+                                        case .web, .local:
+                                            break
                                         }
                                     }
 
@@ -399,6 +402,49 @@ public actor MetasearchCoordinator {
     public func updateDenyList(filter: DenyListFilter) {
         // Note: This would need proper actor synchronization
         // For now, deny list is set at initialization
+    }
+}
+
+/// Holds brand/author intelligence extracted during Phase 1 of
+/// `MetasearchCoordinator.searchStreaming`. A5: book-category sources
+/// (Open Library / Google Books / Bookshop) are authoritative for the
+/// `extractedAuthor` field — their author metadata is structured, not
+/// scraped, and should override any author that an Amazon scraper may
+/// have written earlier. Once a book source has claimed the author, the
+/// `authorSetByBookSource` latch blocks any later product-source write
+/// from overwriting it. Brand stays first-writer-wins because books
+/// don't carry brand metadata, and the product scrapers remain the best
+/// signal there.
+///
+/// Internal (not nested in `searchStreaming`) so the priority semantics
+/// can be unit-tested directly without standing up the whole streaming
+/// pipeline.
+actor IntelligenceExtractionState {
+    var extractedBrand: String?
+    var extractedAuthor: String?
+    private var authorSetByBookSource = false
+
+    init() {}
+
+    func setBrand(_ brand: String?) {
+        if extractedBrand == nil { extractedBrand = brand }
+    }
+
+    func setAuthor(_ author: String?) {
+        if extractedAuthor == nil { extractedAuthor = author }
+    }
+
+    /// Overrides any previously-set author when `force == true`. A book
+    /// source claiming the author also latches the flag so later
+    /// product-source writes can't overwrite.
+    func setAuthor(_ author: String?, force: Bool) {
+        guard let author else { return }
+        if force {
+            extractedAuthor = author
+            authorSetByBookSource = true
+        } else if extractedAuthor == nil && !authorSetByBookSource {
+            extractedAuthor = author
+        }
     }
 }
 

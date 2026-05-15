@@ -212,6 +212,71 @@ final class MetasearchCoordinatorTests: XCTestCase {
         )
     }
 
+    // MARK: - A5: IntelligenceExtractionState book-priority semantics
+
+    func test_A5_bookSourceForceOverridesEarlierProductAuthor() async {
+        // Product source got there first; book source must override.
+        let state = IntelligenceExtractionState()
+        await state.setAuthor("Scraped Author", force: false)
+        await state.setAuthor("API Author", force: true)
+        let final = await state.extractedAuthor
+        XCTAssertEqual(final, "API Author")
+    }
+
+    func test_A5_productSource_doesNotOverrideEarlierBookAuthor() async {
+        // Book source latches the flag; a later product source can't overwrite.
+        let state = IntelligenceExtractionState()
+        await state.setAuthor("API Author", force: true)
+        await state.setAuthor("Scraped Author", force: false)
+        let final = await state.extractedAuthor
+        XCTAssertEqual(final, "API Author", "Book-source-set author must be sticky against later product writes")
+    }
+
+    func test_A5_productSource_fillsAuthorWhenNoBookSourceHasSpoken() async {
+        // No book source has spoken — product source still gets to set author.
+        let state = IntelligenceExtractionState()
+        await state.setAuthor("Scraped Author", force: false)
+        let final = await state.extractedAuthor
+        XCTAssertEqual(final, "Scraped Author")
+    }
+
+    func test_A5_productSource_doesNotOverwriteItself() async {
+        // First-writer-wins for product sources is preserved.
+        let state = IntelligenceExtractionState()
+        await state.setAuthor("First", force: false)
+        await state.setAuthor("Second", force: false)
+        let final = await state.extractedAuthor
+        XCTAssertEqual(final, "First")
+    }
+
+    func test_A5_bookSource_overridesAnotherBookSource() async {
+        // If two book sources speak, the latter wins. This is fine because
+        // both are authoritative — we don't want stale info.
+        let state = IntelligenceExtractionState()
+        await state.setAuthor("First Book API", force: true)
+        await state.setAuthor("Second Book API", force: true)
+        let final = await state.extractedAuthor
+        XCTAssertEqual(final, "Second Book API")
+    }
+
+    func test_A5_nilAuthorIsIgnored() async {
+        let state = IntelligenceExtractionState()
+        await state.setAuthor("Existing", force: false)
+        await state.setAuthor(nil, force: true)
+        let final = await state.extractedAuthor
+        XCTAssertEqual(final, "Existing", "nil author must not overwrite")
+    }
+
+    func test_A5_brandStaysFirstWriterWins() async {
+        // Brand semantics are unchanged — first writer wins regardless of
+        // source category, because books don't carry brands.
+        let state = IntelligenceExtractionState()
+        await state.setBrand("Acme")
+        await state.setBrand("Other")
+        let final = await state.extractedBrand
+        XCTAssertEqual(final, "Acme")
+    }
+
     // MARK: - A3: result cache
 
     func test_A3_repeatedSearch_servesFromCacheAndDoesNotReinvokeSource() async throws {
