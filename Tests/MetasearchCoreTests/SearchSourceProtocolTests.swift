@@ -43,6 +43,10 @@ actor MockSearchSourceState {
     var shouldThrow = false
     var delay: TimeInterval = 0.0
     var invocationCount = 0
+    /// The query most recently passed to `searchStreaming`. Used by e2e
+    /// tests to verify that the refined Phase 2 query carries
+    /// intelligence extracted from Phase 1.
+    var lastQuery: EnhancedQuery?
 
     func setShouldThrow(_ throwError: Bool) {
         shouldThrow = throwError
@@ -55,6 +59,10 @@ actor MockSearchSourceState {
     func recordInvocation() {
         invocationCount += 1
     }
+
+    func recordQuery(_ query: EnhancedQuery) {
+        lastQuery = query
+    }
 }
 
 // MARK: - Mock Search Source
@@ -66,6 +74,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     let state = MockSearchSourceState()
     private let customTimeoutBudget: TimeInterval?
     private let customBrand: String?
+    private let customAuthor: String?
 
     var timeoutBudget: TimeInterval {
         if let customTimeoutBudget { return customTimeoutBudget }
@@ -81,13 +90,15 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         sourceType: SourceType,
         category: ResultCategory = .web,
         timeoutBudget: TimeInterval? = nil,
-        brand: String? = nil
+        brand: String? = nil,
+        author: String? = nil
     ) {
         self.identifier = identifier
         self.sourceType = sourceType
         self.category = category
         self.customTimeoutBudget = timeoutBudget
         self.customBrand = brand
+        self.customAuthor = author
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -116,20 +127,22 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     
     func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
         await state.recordInvocation()
+        await state.recordQuery(query)
 
         let d = await state.delay
         if d > 0 {
             try await Task.sleep(nanoseconds: UInt64(d * 1_000_000_000))
         }
-        
+
         let throwsErr = await state.shouldThrow
         if throwsErr {
             throw NSError(domain: "MockError", code: 1)
         }
-        
+
         await Task.yield() // Yield to allow collectors to attach
         var metadata: [String: AnyHashable] = [:]
         if let customBrand { metadata["brand"] = customBrand }
+        if let customAuthor { metadata["author"] = customAuthor }
         onResults([
             SearchResult(
                 id: "mock-\(identifier)",

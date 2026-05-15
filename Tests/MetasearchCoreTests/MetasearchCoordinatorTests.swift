@@ -212,6 +212,85 @@ final class MetasearchCoordinatorTests: XCTestCase {
         )
     }
 
+    // MARK: - Phase B: structured extraction (race fix)
+
+    func test_PhaseB_intelligenceCommitsBeforeStage2_bookSource() async {
+        // A book source emits `author: "API Author"`. After Stage 1
+        // returns, the refined Phase 2 query must already carry that
+        // author — the old fire-and-forget Task pattern would sometimes
+        // schedule the actor write after Stage 2 had already built its
+        // query from stale intelligence.
+        let bookSource = MockSearchSource(
+            identifier: "book-src",
+            sourceType: .online,
+            category: .book,
+            author: "API Author"
+        )
+        let localSource = MockSearchSource(
+            identifier: "local-src",
+            sourceType: .local,
+            category: .local
+        )
+        let coordinator = MetasearchCoordinator(
+            sources: [bookSource, localSource],
+            resultCache: nil
+        )
+        let query = EnhancedQuery(
+            original: "some book",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil
+        )
+
+        await coordinator.searchStreaming(query: query) { _, _ in }
+
+        // The local source's most recent query (refined pass) must
+        // include the author the book source supplied.
+        let received = await localSource.state.lastQuery
+        XCTAssertNotNil(received, "Local source must have been invoked at least once")
+        XCTAssertTrue(
+            (received?.original ?? "").contains("API Author"),
+            "Refined local query must include the book-source author. Got: \(received?.original ?? "nil")"
+        )
+    }
+
+    func test_PhaseB_intelligenceCommitsBeforeStage2_productSource() async {
+        // A product source emits `brand: "Acme"`. The refined Phase 2
+        // query should pick that brand up before the local source runs.
+        let productSource = MockSearchSource(
+            identifier: "product-src",
+            sourceType: .online,
+            category: .product,
+            brand: "Acme"
+        )
+        let localSource = MockSearchSource(
+            identifier: "local-src",
+            sourceType: .local,
+            category: .local
+        )
+        let coordinator = MetasearchCoordinator(
+            sources: [productSource, localSource],
+            resultCache: nil
+        )
+        let query = EnhancedQuery(
+            original: "wireless headphones",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil
+        )
+
+        await coordinator.searchStreaming(query: query) { _, _ in }
+
+        let received = await localSource.state.lastQuery
+        XCTAssertNotNil(received)
+        XCTAssertTrue(
+            (received?.original ?? "").contains("Acme"),
+            "Refined local query must include the product-source brand. Got: \(received?.original ?? "nil")"
+        )
+    }
+
     // MARK: - A5: IntelligenceExtractionState book-priority semantics
 
     func test_A5_bookSourceForceOverridesEarlierProductAuthor() async {

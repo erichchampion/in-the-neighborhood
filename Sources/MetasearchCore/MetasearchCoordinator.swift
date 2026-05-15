@@ -221,47 +221,65 @@ public actor MetasearchCoordinator {
                 let sourceBudget = min(sourceToRun.timeoutBudget, timeoutValue)
 
                 group.addTask {
+                    // Per-source accumulator: every raw batch the source
+                    // emits gets buffered here synchronously, then iterated
+                    // once after the source returns. This replaces the older
+                    // pattern of scheduling an unstructured
+                    // `Task { await intelligenceState.setAuthor(...) }` from
+                    // inside the rawResults callback — that fired-and-forgot
+                    // the extraction work, so Stage 1's `waitForAll` could
+                    // return before the Task had actually committed the
+                    // brand/author. The refined Phase 2 query would then be
+                    // built from stale intelligence (race).
+                    let rawAccumulator = StreamingEmissionBuffer()
                     do {
                         try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: runQuery) { rawResults in
+                                rawAccumulator.append(rawResults)
+
                                 // Process and yield results immediately
                                 var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
                                 filtered = self.resultAggregator.aggregate(results: filtered)
 
                                 if !filtered.isEmpty {
-                                    // Extract intelligence async if possible.
-                                    //
-                                    // A5: branch on sourceCategory so book sources
-                                    // (Open Library / Google Books / Bookshop) take
-                                    // precedence on the author field. Product
-                                    // sources only fill in author if no book source
-                                    // has spoken — but they still own the brand
-                                    // field, which books don't carry.
-                                    let currentResults = rawResults
-                                    Task {
-                                        switch sourceCategory {
-                                        case .book:
-                                            if let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
-                                                await intelligenceState.setAuthor(author, force: true)
-                                            }
-                                        case .product:
-                                            if await intelligenceState.extractedBrand == nil, let brand = currentResults.compactMap({ $0.metadata["brand"] as? String }).first {
-                                                await intelligenceState.setBrand(brand)
-                                            }
-                                            if let author = currentResults.compactMap({ $0.metadata["author"] as? String }).first {
-                                                await intelligenceState.setAuthor(author, force: false)
-                                            }
-                                        case .web, .local:
-                                            break
-                                        }
-                                    }
-
                                     onResults(sourceIdentifier, filtered)
                                 }
                             }
                         }
                     } catch {
-                        // Ignore individual timeout or source failures
+                        // Ignore individual timeout or source failures.
+                        // We still run the extraction below over whatever
+                        // results the source managed to emit before failing.
+                    }
+
+                    // Structured intelligence extraction — runs *inside* the
+                    // task before it returns, so the enclosing `waitForAll`
+                    // on Stage 1 cannot release until the extracted
+                    // brand/author have been awaited into `intelligenceState`.
+                    //
+                    // A5: book-category sources are authoritative for the
+                    // author field (their data is structured, not scraped).
+                    // Product sources fill in author only if no book source
+                    // has spoken; they still own the brand field, which
+                    // books don't carry.
+                    let accumulated = rawAccumulator.snapshot()
+                    if !accumulated.isEmpty {
+                        switch sourceCategory {
+                        case .book:
+                            if let author = accumulated.compactMap({ $0.metadata["author"] as? String }).first {
+                                await intelligenceState.setAuthor(author, force: true)
+                            }
+                        case .product:
+                            if await intelligenceState.extractedBrand == nil,
+                               let brand = accumulated.compactMap({ $0.metadata["brand"] as? String }).first {
+                                await intelligenceState.setBrand(brand)
+                            }
+                            if let author = accumulated.compactMap({ $0.metadata["author"] as? String }).first {
+                                await intelligenceState.setAuthor(author, force: false)
+                            }
+                        case .web, .local:
+                            break
+                        }
                     }
                 }
             }
