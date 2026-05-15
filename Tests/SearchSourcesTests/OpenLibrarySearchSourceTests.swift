@@ -61,4 +61,25 @@ final class OpenLibrarySearchSourceTests: XCTestCase {
     func test_singleCharacterQuery_isRejected() {
         XCTAssertFalse(sut.looksLikeBookQuery("a"))
     }
+
+    // MARK: - B4: expanded fields in the search URL
+
+    func test_buildURL_requestsExpandedFields_hasFulltextIaSubject() {
+        // The "Read free at Internet Archive" link in LibraryCard depends on
+        // Open Library returning `has_fulltext` and `ia`. The subject field
+        // gates optional category display. All three must be in the
+        // `fields=` parameter or the metadata pipeline silently loses them.
+        let url = OpenLibrarySearchSource.buildURL(query: "on tyranny", maxResults: 10)
+        XCTAssertNotNil(url)
+        let decoded = url!.absoluteString.removingPercentEncoding ?? ""
+        XCTAssertTrue(decoded.contains("has_fulltext"),
+                      "URL must request has_fulltext. Got: \(decoded)")
+        XCTAssertTrue(decoded.contains("ia"),
+                      "URL must request ia. Got: \(decoded)")
+        XCTAssertTrue(decoded.contains("subject"),
+                      "URL must request subject. Got: \(decoded)")
+        // Make sure we didn't lose the originally-requested fields either.
+        XCTAssertTrue(decoded.contains("author_name"))
+        XCTAssertTrue(decoded.contains("cover_i"))
+    }
 }

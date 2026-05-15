@@ -101,6 +101,7 @@
 		A8ADEA0E944B2D77CFC32119 /* ResultAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */; };
 		AAB908CCF0A231C2527ED202 /* BarcodeRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093C21E5E3573679F34F1357 /* BarcodeRouter.swift */; };
 		AB32A016860800B45C8A154F /* LocalBusinessCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */; };
+		ABA44D13AF0521FE0BFCFCA0 /* InternetArchiveSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB03562C5D69F82D4C10E7DD /* InternetArchiveSearchSource.swift */; };
 		AC3CE8120A7FE599D023AE9E /* APIKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DFC2E07B3AFA2166B72DC3 /* APIKeys.swift */; };
 		AC5B0016DC134F7F90EADF9B /* ResultCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A4CFFFF4362273ADD11C4F /* ResultCategory.swift */; };
 		AD0EE9ABCC5EFF53D10AF337 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C35A427A7452541A3C326E89 /* Localizable.strings */; };
@@ -125,6 +126,7 @@
 		D6F6CC1656059D859E30B60D /* MetasearchCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */; };
 		DBA1D490E4A5835B9E867016 /* SavedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF25DFFFD6E505CFD71D33B5 /* SavedStore.swift */; };
 		DBC571C8B7D8BB7C5F4A7B3D /* DuckDuckGoSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA682B75D24A2B42F6878A9 /* DuckDuckGoSearchSource.swift */; };
+		DDC489EED02DB017BDEBEA3E /* InternetArchiveSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7711832DF948E9828E66B0B9 /* InternetArchiveSearchSourceTests.swift */; };
 		DE6C2A740D2F28861F6BFCB2 /* FoundationModelWebExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B267F210530754102E40986D /* FoundationModelWebExtractor.swift */; };
 		E03ECCB59B8FEBE8E70B068E /* SearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9957955B01A13F9142CA99FC /* SearchResult.swift */; };
 		E18C3C3CA56A5655920C3575 /* MarketplaceSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */; };
@@ -372,6 +374,7 @@
 		702ADFF3EBDF4CF483F476F9 /* FoundationModelsStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsStub.swift; sourceTree = "<group>"; };
 		7157FF32EA4EE93A7A12A7F5 /* EthicsLedger.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EthicsLedger.json; sourceTree = "<group>"; };
 		71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDomainListDownloadManager.swift; sourceTree = "<group>"; };
+		7711832DF948E9828E66B0B9 /* InternetArchiveSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternetArchiveSearchSourceTests.swift; sourceTree = "<group>"; };
 		78121379A73D042FCB7D0587 /* BingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProvider.swift; sourceTree = "<group>"; };
 		787988D8D38A4EAA364960D3 /* ResultPrioritizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultPrioritizer.swift; sourceTree = "<group>"; };
 		798C5DD0EA4B954339D86B78 /* InTheNeighborhood.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = InTheNeighborhood.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -424,6 +427,7 @@
 		CF9D676FC5640A0BCF652813 /* LocationServices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LocationServices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CFB54416BE5C5A3A678F27A6 /* SearchResultSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultSummaryTests.swift; sourceTree = "<group>"; };
 		D2242193C3670C2F90A59C5B /* DPLASearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DPLASearchSource.swift; sourceTree = "<group>"; };
+		DB03562C5D69F82D4C10E7DD /* InternetArchiveSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternetArchiveSearchSource.swift; sourceTree = "<group>"; };
 		DE5A9D76260791772F421287 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		DF25DFFFD6E505CFD71D33B5 /* SavedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedStore.swift; sourceTree = "<group>"; };
 		E12CE8A3B38B28C8ACBF785B /* LocationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationServiceTests.swift; sourceTree = "<group>"; };
@@ -533,6 +537,7 @@
 				564C6E174E9CAF508DABAE97 /* DPLASearchSourceTests.swift */,
 				260455D2BDD7C60B137E40A4 /* DuckDuckGoProviderTests.swift */,
 				A03FD2236B1304610D58ED5A /* FoundationModelWebExtractorTests.swift */,
+				7711832DF948E9828E66B0B9 /* InternetArchiveSearchSourceTests.swift */,
 				9A87F3CF0D76981418B6C31A /* MapKitSearchSourceTests.swift */,
 				7D2DBC0E18C2B2A1E44149F5 /* MarketplaceSearchSourceTests.swift */,
 				42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */,
@@ -638,6 +643,7 @@
 				7E60B8EED951FE9AF0068A3E /* ExtractedProductInfo.swift */,
 				B267F210530754102E40986D /* FoundationModelWebExtractor.swift */,
 				A0A9F8B66F03C629C731A7E0 /* GoogleBooksSearchSource.swift */,
+				DB03562C5D69F82D4C10E7DD /* InternetArchiveSearchSource.swift */,
 				068A3AD1BEB1FB0F2D430DDE /* MarketplaceSearchSource.swift */,
 				02F5BE359CB183DFE5354ED7 /* OpenLibrarySearchSource.swift */,
 			);
@@ -1243,6 +1249,7 @@
 				9A8A400F4A0F8C99003159DD /* DPLASearchSourceTests.swift in Sources */,
 				E594C538949D360F2FD40FFA /* DuckDuckGoProviderTests.swift in Sources */,
 				0E821A284113D03D00C1A469 /* FoundationModelWebExtractorTests.swift in Sources */,
+				DDC489EED02DB017BDEBEA3E /* InternetArchiveSearchSourceTests.swift in Sources */,
 				7C7AF589232AF52A789E4A99 /* MapKitSearchSourceTests.swift in Sources */,
 				E18C3C3CA56A5655920C3575 /* MarketplaceSearchSourceTests.swift in Sources */,
 				64E8EFAA3F68DD30F81BFC3F /* NominatimSearchSourceTests.swift in Sources */,
@@ -1346,6 +1353,7 @@
 				35691E31F2331E0DB772BBF1 /* FoundationModelQueryEnhancer.swift in Sources */,
 				DE6C2A740D2F28861F6BFCB2 /* FoundationModelWebExtractor.swift in Sources */,
 				B15CE9B451A664A62D8D0221 /* GoogleBooksSearchSource.swift in Sources */,
+				ABA44D13AF0521FE0BFCFCA0 /* InternetArchiveSearchSource.swift in Sources */,
 				0D3FFB081F09E900D141F387 /* MapKitSearchSource.swift in Sources */,
 				7B4C9A9905A08010EAAB0260 /* MarketplaceSearchSource.swift in Sources */,
 				5D02AD124A3CEB1FAB9BAD81 /* NominatimSearchSource.swift in Sources */,

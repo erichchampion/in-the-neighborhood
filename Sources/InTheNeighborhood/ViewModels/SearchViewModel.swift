@@ -98,7 +98,9 @@ public class SearchViewModel: ObservableObject {
                         // Categorize and append new results
                         for result in newResults {
                             // Always route library sources to library tab, regardless of category
-                            if result.source == SourceIdentifier.openlibrary || result.source == SourceIdentifier.dpla {
+                            if result.source == SourceIdentifier.openlibrary
+                                || result.source == SourceIdentifier.dpla
+                                || result.source == SourceIdentifier.internetarchive {
                                 self.libraryResults.append(result)
                                 self.isLoadingLibrary = false
                             } else {
@@ -200,7 +202,9 @@ public class SearchViewModel: ObservableObject {
                 // Route new results to visual buckets based on category
                 if let first = newResults.first {
                     // Always route library sources to library tab, regardless of category
-                    if first.source == SourceIdentifier.openlibrary || first.source == SourceIdentifier.dpla {
+                    if first.source == SourceIdentifier.openlibrary
+                        || first.source == SourceIdentifier.dpla
+                        || first.source == SourceIdentifier.internetarchive {
                         self.libraryResults.append(contentsOf: newResults)
                         self.isLoadingLibrary = false
                     } else {

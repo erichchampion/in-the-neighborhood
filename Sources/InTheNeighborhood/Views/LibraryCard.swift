@@ -33,7 +33,17 @@ struct LibraryCard: View {
                 Text(result.title)
                     .font(.headline)
                     .lineLimit(2)
-                
+
+                if let mediaLabel = mediaTypeLabel {
+                    Label(mediaLabel.text, systemImage: mediaLabel.systemImage)
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
                 if let authors = extractAuthors {
                     Text("By \(authors)")
                         .font(.subheadline)
@@ -63,6 +73,17 @@ struct LibraryCard: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
+                }
+
+                // B4: when the result has a free Internet Archive scan
+                // (either an Internet Archive item itself, or an Open
+                // Library book whose `has_fulltext`+`ia` say so), surface a
+                // "Read free" link.
+                if let url = readFreeURL {
+                    Link(destination: url) {
+                        Label("Read free at Internet Archive", systemImage: "book.pages")
+                            .font(.caption)
+                    }
                 }
             }
             
@@ -104,7 +125,47 @@ struct LibraryCard: View {
         return nil
     }
     
-    var extractAuthors: String? {
+    // MARK: - B4 helpers (internal so tests can pin behavior).
+    // All three are `nonisolated` because they're pure functions of
+    // `result.metadata` — they never touch main-actor UI state. Marking
+    // them explicitly lets XCTest methods (which run off the main actor)
+    // call them without crossing the `View`-imposed isolation boundary.
+
+    /// Returns a media-type label for non-text Internet Archive results.
+    /// `nil` means "no badge" (the default book layout is what the user
+    /// expects for plain texts).
+    struct MediaTypeLabel: Equatable {
+        let text: String
+        let systemImage: String
+    }
+    nonisolated var mediaTypeLabel: MediaTypeLabel? {
+        guard let mediatype = result.metadata["mediatype"] as? String else { return nil }
+        switch mediatype.lowercased() {
+        case "audio":  return MediaTypeLabel(text: "Audio", systemImage: "headphones")
+        case "movies": return MediaTypeLabel(text: "Film",  systemImage: "film")
+        default:       return nil   // "texts" or anything else → no badge
+        }
+    }
+
+    /// Returns the Internet Archive details URL when the result carries
+    /// a free scan reference. Two paths:
+    ///   - Open Library expanded: `metadata["ia"]` holds the IA identifier
+    ///     when the book has a full-text scan.
+    ///   - Internet Archive items themselves: `metadata["ia_identifier"]`
+    ///     plus `mediatype == "texts"`.
+    nonisolated var readFreeURL: URL? {
+        if let iaId = result.metadata["ia"] as? String, !iaId.isEmpty {
+            return URL(string: "https://archive.org/details/\(iaId)")
+        }
+        if let mediatype = result.metadata["mediatype"] as? String,
+           mediatype.lowercased() == "texts",
+           let iaId = result.metadata["ia_identifier"] as? String, !iaId.isEmpty {
+            return URL(string: "https://archive.org/details/\(iaId)")
+        }
+        return nil
+    }
+
+    nonisolated var extractAuthors: String? {
         // OpenLibrary (raw): author_name is [String]
         if let authors = result.metadata["author_name"] as? [String], !authors.isEmpty {
             return authors.joined(separator: ", ")

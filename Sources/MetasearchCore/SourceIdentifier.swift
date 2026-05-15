@@ -13,4 +13,5 @@ public enum SourceIdentifier {
     public static let openlibrary = "openlibrary"
     public static let dpla = "dpla"
     public static let overpass = "overpass"
+    public static let internetarchive = "internetarchive"
 }

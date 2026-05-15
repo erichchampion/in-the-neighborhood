@@ -258,7 +258,11 @@ public struct ResultsView: View {
     /// `metadata["author_name"]`. DPLA uses `metadata["providers"]`. Accept
     /// any of them so a perfectly valid Open Library result with just an
     /// author string doesn't get silently dropped.
-    static func renderableInLibraryTab(_ result: SearchResult) -> Bool {
+    ///
+    /// `nonisolated` because the predicate is a pure function of
+    /// `result.metadata` and never touches main-actor UI state — lets tests
+    /// call it from XCTest methods (which run off the main actor).
+    nonisolated static func renderableInLibraryTab(_ result: SearchResult) -> Bool {
         let isbn = result.metadata["isbn"] as? String
         let authorsArray = result.metadata["author_name"] as? [String]
         let authorString = result.metadata["author"] as? String

@@ -99,14 +99,7 @@ public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable
     }
 
     private func searchBooks(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
-        var components = URLComponents(string: "https://openlibrary.org/search.json")
-        components?.queryItems = [
-            URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "limit", value: "\(maxResults)"),
-            URLQueryItem(name: "fields", value: "key,title,author_name,first_publish_year,isbn,cover_i,publisher,number_of_pages_median")
-        ]
-
-        guard let url = components?.url else {
+        guard let url = Self.buildURL(query: query, maxResults: maxResults) else {
             print("[OpenLibrarySearchSource] Failed to build URL")
             return
         }
@@ -131,6 +124,23 @@ public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable
         }
     }
 
+    /// Builds the Open Library search URL with the full field set, including
+    /// the B4 additions (`has_fulltext`, `ia`, `subject`) that let the
+    /// LibraryCard surface "Read free at Internet Archive" when a scan
+    /// exists. Exposed as `internal static` so tests can pin the URL shape.
+    static func buildURL(query: String, maxResults: Int) -> URL? {
+        var components = URLComponents(string: "https://openlibrary.org/search.json")
+        components?.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "limit", value: "\(maxResults)"),
+            URLQueryItem(
+                name: "fields",
+                value: "key,title,author_name,first_publish_year,isbn,cover_i,publisher,number_of_pages_median,subject,has_fulltext,ia"
+            )
+        ]
+        return components?.url
+    }
+
     private func mapDocToSearchResult(_ doc: OpenLibraryDoc) -> SearchResult? {
         guard let title = doc.title, !title.isEmpty else { return nil }
 
@@ -152,6 +162,23 @@ public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable
             imageUrl: coverURL
         )
 
+        // Start from ProductMetadata's dictionary (isbn/author/imageUrl) and
+        // layer in the B4 expansions. When `has_fulltext == true` and the
+        // `ia` array is non-empty, the book has a free scan on
+        // archive.org — LibraryCard turns this into a "Read free" link.
+        var metadata = productMetadata.toDictionary()
+        if let hasFulltext = doc.hasFulltext {
+            metadata["has_fulltext"] = hasFulltext
+        }
+        if let iaIds = doc.ia, !iaIds.isEmpty, doc.hasFulltext == true {
+            metadata["ia"] = iaIds.first
+        }
+        if let subjects = doc.subject, !subjects.isEmpty {
+            // Cap at 3 to avoid blowing up the metadata payload — the card
+            // only shows a handful at most.
+            metadata["subject"] = Array(subjects.prefix(3))
+        }
+
         return SearchResult(
             id: doc.key ?? UUID().uuidString,
             title: title,
@@ -162,7 +189,7 @@ public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable
             url: workURL,
             location: nil,
             distance: nil,
-            metadata: productMetadata.toDictionary()
+            metadata: metadata
         )
     }
 }
@@ -182,12 +209,18 @@ private struct OpenLibraryDoc: Decodable {
     let coverI: Int?
     let publisher: [String]?
     let numberOfPagesMedian: Int?
+    // B4: expanded fields. `hasFulltext` + `ia` together unlock the
+    // "Read free at Internet Archive" link in LibraryCard.
+    let subject: [String]?
+    let hasFulltext: Bool?
+    let ia: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case key, title, isbn, publisher
+        case key, title, isbn, publisher, subject, ia
         case authorName = "author_name"
         case firstPublishYear = "first_publish_year"
         case coverI = "cover_i"
         case numberOfPagesMedian = "number_of_pages_median"
+        case hasFulltext = "has_fulltext"
     }
 }

@@ -18,6 +18,7 @@ struct InTheNeighborhoodApp: App {
     let dplaSource: any SearchSource
     let nominatimSource: any SearchSource
     let overpassSource: any SearchSource
+    let internetArchiveSource: any SearchSource
     let queryEnhancer: QueryEnhancing
     
     init() {
@@ -60,6 +61,10 @@ struct InTheNeighborhoodApp: App {
         // — finds specialty shops by their OSM `shop=…` / `amenity=…` tags.
         overpassSource = OverpassSearchSource(locationService: locationService)
 
+        // Initialize Internet Archive source — surfaces free digitized
+        // texts, audio, and films in the Library tab (B4).
+        internetArchiveSource = InternetArchiveSearchSource()
+
         // Initialize coordinator (DuckDuckGo and Bing as separate sources enable incremental display)
         let allSources: [any SearchSource] = [
             mapKitSource,
@@ -72,7 +77,8 @@ struct InTheNeighborhoodApp: App {
             amazonSource,
             googleBooksSource,
             OpenLibrarySearchSource(),
-            dplaSource
+            dplaSource,
+            internetArchiveSource
         ]
         
         coordinator = MetasearchCoordinator(sources: allSources, denyListFilter: SettingsManager.shared.denyList)

@@ -86,6 +86,35 @@ final class LibraryTabTests: XCTestCase {
         XCTAssertFalse(isLibrarySource)
     }
     
+    func testInternetArchiveResultsDetectedAsLibrarySource() {
+        // B4: Internet Archive results must route into the Library tab,
+        // alongside Open Library and DPLA.
+        let iaResult = SearchResult(
+            id: "ia-mobydick00melv",
+            title: "Moby Dick",
+            description: "A whaling novel",
+            source: SourceIdentifier.internetarchive,
+            sourceType: .online,
+            category: .book,
+            url: URL(string: "https://archive.org/details/mobydick00melv"),
+            location: nil,
+            distance: nil,
+            relevanceScore: nil,
+            price: nil,
+            metadata: [
+                "ia_identifier": "mobydick00melv",
+                "mediatype": "texts"
+            ]
+        )
+
+        let isLibrarySource =
+            iaResult.source == SourceIdentifier.openlibrary
+            || iaResult.source == SourceIdentifier.dpla
+            || iaResult.source == SourceIdentifier.internetarchive
+
+        XCTAssertTrue(isLibrarySource)
+    }
+
     func testGoogleBooksResultsNotDetectedAsLibrarySource() {
         // Given: A result from Google Books (not a library source)
         let googleBooksResult = SearchResult(
@@ -227,6 +256,85 @@ final class LibraryTabTests: XCTestCase {
         let result = mkLibraryResult(metadata: ["isbn": "9780804190114"])
         let card = LibraryCard(result: result)
         XCTAssertNil(card.extractAuthors)
+    }
+
+    // MARK: - B4: media-type badge
+
+    func test_libraryCard_mediaTypeLabel_audioBecomesAudioBadge() {
+        let result = mkLibraryResult(metadata: ["mediatype": "audio"])
+        let card = LibraryCard(result: result)
+        XCTAssertEqual(card.mediaTypeLabel?.text, "Audio")
+        XCTAssertEqual(card.mediaTypeLabel?.systemImage, "headphones")
+    }
+
+    func test_libraryCard_mediaTypeLabel_moviesBecomesFilmBadge() {
+        let result = mkLibraryResult(metadata: ["mediatype": "movies"])
+        let card = LibraryCard(result: result)
+        XCTAssertEqual(card.mediaTypeLabel?.text, "Film")
+        XCTAssertEqual(card.mediaTypeLabel?.systemImage, "film")
+    }
+
+    func test_libraryCard_mediaTypeLabel_textsHasNoBadge() {
+        let result = mkLibraryResult(metadata: ["mediatype": "texts"])
+        let card = LibraryCard(result: result)
+        XCTAssertNil(card.mediaTypeLabel,
+                     "Default-book layout should not be cluttered with a redundant badge")
+    }
+
+    func test_libraryCard_mediaTypeLabel_absentMediatypeHasNoBadge() {
+        let result = mkLibraryResult(metadata: ["author": "Some One"])
+        let card = LibraryCard(result: result)
+        XCTAssertNil(card.mediaTypeLabel)
+    }
+
+    // MARK: - B4: "Read free at Internet Archive" link
+
+    func test_libraryCard_readFreeURL_fromOpenLibraryIA() {
+        // Open Library expanded: book has `ia` array → card surfaces link.
+        let result = mkLibraryResult(metadata: [
+            "ia": "ontyranny0000snyd",
+            "has_fulltext": true
+        ])
+        let card = LibraryCard(result: result)
+        XCTAssertEqual(card.readFreeURL?.absoluteString,
+                       "https://archive.org/details/ontyranny0000snyd")
+    }
+
+    func test_libraryCard_readFreeURL_fromInternetArchiveTexts() {
+        // IA item with mediatype=texts → link to its details page.
+        let result = mkLibraryResult(metadata: [
+            "ia_identifier": "mobydick00melv",
+            "mediatype": "texts"
+        ])
+        let card = LibraryCard(result: result)
+        XCTAssertEqual(card.readFreeURL?.absoluteString,
+                       "https://archive.org/details/mobydick00melv")
+    }
+
+    func test_libraryCard_readFreeURL_nilForBookWithoutIA() {
+        // Plain Open Library result without an IA scan → no link.
+        let result = mkLibraryResult(metadata: [
+            "author": "Timothy Snyder",
+            "isbn": "9780804190114"
+        ])
+        let card = LibraryCard(result: result)
+        XCTAssertNil(card.readFreeURL)
+    }
+
+    func test_libraryCard_readFreeURL_nilForIAMoviesAndAudio() {
+        // Films/audio items use the regular `result.url` link in the card,
+        // not the "Read free" affordance — readFreeURL only fires for texts.
+        let audio = mkLibraryResult(metadata: [
+            "ia_identifier": "JazzNight1925",
+            "mediatype": "audio"
+        ])
+        XCTAssertNil(LibraryCard(result: audio).readFreeURL)
+
+        let movies = mkLibraryResult(metadata: [
+            "ia_identifier": "BusterKeaton_TheGeneral",
+            "mediatype": "movies"
+        ])
+        XCTAssertNil(LibraryCard(result: movies).readFreeURL)
     }
 
     func testOpenLibraryCoverImageURL() {
