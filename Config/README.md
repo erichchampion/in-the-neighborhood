@@ -14,9 +14,15 @@ This directory contains xcconfig files for managing API keys at build time.
    ```
    BING_API_KEY = your_actual_bing_api_key_here
    BESTBUY_API_KEY = your_actual_bestbuy_api_key_here
+   GOOGLE_BOOKS_API_KEY = your_actual_google_books_api_key_here
+   DPLA_API_KEY = your_actual_dpla_api_key_here
    ```
-   
-   Note: Google Books API does not require an API key for public searches.
+
+   Notes:
+   - **Google Books** works without an API key for public searches; leave blank to use unauthenticated.
+   - **DPLA** requires a key. Without one, `DPLASearchSource` short-circuits and the Library tab will only show Open Library and Internet Archive results.
+   - **Bing** is optional; without a key the Bing source short-circuits and DuckDuckGo carries the web tab.
+   - **BestBuy** is optional; without a key the BestBuy source short-circuits.
 
 3. The `.xcconfig` files are gitignored, so your keys won't be committed to the repository.
 
@@ -43,3 +49,4 @@ This is useful for CI/CD pipelines where you can set secrets as environment vari
 - **Bing API Key**: Get from [Azure Portal](https://portal.azure.com/) → Cognitive Services → Bing Search API
 - **Best Buy API Key**: Get from [developer.bestbuy.com](https://developer.bestbuy.com/login) (free registration)
 - **Google Books API**: No API key required - the API works without authentication for public searches
+- **DPLA API Key**: Get from [pro.dp.la/developers](https://pro.dp.la/developers/policies#get-a-key) (free; required for any DPLA Library results)

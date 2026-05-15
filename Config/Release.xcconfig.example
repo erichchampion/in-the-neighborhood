@@ -1,6 +1,7 @@
 // Release configuration - Copy this file to Release.xcconfig and add your API keys
-// Or set BING_API_KEY and BESTBUY_API_KEY as environment variables in CI/CD
+// Or set the keys below as environment variables in CI/CD
 
 BING_API_KEY = your_bing_api_key_here
 BESTBUY_API_KEY = your_bestbuy_api_key_here
-GOOGLE_BOOKS_API_KEY = your_api_key_here
+GOOGLE_BOOKS_API_KEY = your_google_books_api_key_here
+DPLA_API_KEY = your_dpla_api_key_here
