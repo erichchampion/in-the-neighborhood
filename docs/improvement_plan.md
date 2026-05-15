@@ -45,15 +45,18 @@ Three independent tracks. Pick any combination. Each item lists rough effort and
 
 ### Track A — Speed & Reliability (fix what's slow/sporadic)
 
+DONE:
 **A1. Decouple local search from intelligence extraction** *(M effort, high impact)*
 Start `MapKitSearchSource` and `NominatimSearchSource` **immediately with the raw query** in parallel with Phase 1. When Phase 1 finishes and yields enriched metadata, fire a *second* local search and merge. User sees nearby results within 1-2s instead of 5-10s. Modify `MetasearchCoordinator.swift` streaming flow.
 
+DONE:
 **A2. Tighten per-source budgets** *(S effort, high impact)*
 Drop the 60s per-source timeout in `SearchToolExecutor.swift` to a tiered budget: **2s for local, 4s for fast APIs, 6s for scrapers, 8s hard ceiling**. Whatever didn't return by the deadline is dropped. Search feels snappier; slow sources can't gate the UI.
 
 **A3. Query-result cache** *(S effort, moderate impact)*
 On-device LRU `[String: [SearchResult]]` with 24h TTL, keyed by normalized query. Speeds up repeat searches (which are common in real use — user tweaks a query, scrolls back). Store in `FileManager` or `CoreData`.
 
+DONE:
 **A4. Hostname → ethics metadata cache** *(S effort, structural impact)*
 Ship a static JSON file (`Resources/EthicsLedger.json`) mapping hostnames to: `{ownership: indie|employee-owned|coop|b-corp|mega, region: local|regional|national, certifications: [...]}`. Refresh from GitHub on background fetch. Reused everywhere — prioritizer, card badges, deny-list expansion. Replaces the binary deny list.
 
@@ -62,6 +65,7 @@ Amazon and BestBuy scraping is the brittlest part of the codebase. For metadata 
 
 ### Track B — Expand Coverage with New Free/Open Sources
 
+DONE:
 **B1. OpenStreetMap Overpass API** *(M effort, high impact)*
 Nominatim does geocoding; **Overpass** queries OSM by tag — `shop=hardware`, `shop=books`, `shop=bicycle`, `shop=greengrocer`, `amenity=library`, `amenity=tool_library`. This is the **single biggest unlock for local coverage** because OSM tags categorize specialty shops far better than MapKit's free-text. Free, open, no key.
 
@@ -89,6 +93,7 @@ WorldCat has a free tier with limits. Alternatively, many public library systems
 **C1. From "search" to "need fulfillment"** *(L effort, high impact)*
 A query like "wireless headphones" today returns products to buy new. Reframe: when the user submits, surface tabs/sections for **Buy local**, **Buy ethical online**, **Buy used**, **Repair**, **Borrow** (library of things), **Alternatives** (Wikidata "is similar to"). Each backed by different sources. Turns the app into a values-aligned consumption advisor, not just a search engine.
 
+DONE:
 **C2. Barcode scan via Vision framework** *(M effort, high delight)*
 On-device, no API, fully free. User scans a UPC/EAN/ISBN on a product in a store; app does **"find this locally"** + **"find ethical alternative"** + **"is this on Open Food Facts?"** flows. Vision is already on every modern iOS device. This is the highest-leverage on-device-only feature still untapped.
 
@@ -98,6 +103,7 @@ Use `NLTagger` / `NLLanguageRecognizer` (no LLM needed) to classify the query in
 **C4. Map view tab** *(S effort, high delight)*
 MapKit is already a dependency. Show local results on a map with pins, distance circles, optional category filter. Currently `LocalBusinessCard` shows distance numerically — a map view is the natural next step.
 
+DONE:
 **C5. Ethics badges in cards** *(S effort, mission visibility)*
 Once `EthicsLedger.json` (A4) exists, show small badges on every result card: 🏠 Local, 🤝 Co-op, 🏢 Indie, 🌱 B-Corp, ⚠ Mega-owned. Makes the app's values tangible to the user rather than implicit in the filtering.
 
