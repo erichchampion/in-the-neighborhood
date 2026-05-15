@@ -6,10 +6,96 @@ final class LibraryTabTests: XCTestCase {
     
     // MARK: - Tab Selection Tests
     
-    func testTabSelectionHasLibraryCase() {
-        // Verify TabSelection enum includes .library
-        let tab = SearchViewModel.TabSelection.library
+    func testTabSelectionHasBorrowCase() {
+        // C1: TabSelection now reflects intents — .library was renamed
+        // to .borrow.
+        let tab = SearchViewModel.TabSelection.borrow
         XCTAssertNotNil(tab)
+    }
+
+    func testTabSelectionHasRepairCase() {
+        // C1: new intent tab.
+        let tab = SearchViewModel.TabSelection.repair
+        XCTAssertNotNil(tab)
+    }
+
+    // MARK: - C1: tab(for:) classifier
+
+    private func mkResult(
+        source: String,
+        sourceType: SourceType,
+        category: ResultCategory = .web,
+        metadata: [String: AnyHashable] = [:]
+    ) -> SearchResult {
+        SearchResult(
+            id: "x",
+            title: "x",
+            description: nil,
+            source: source,
+            sourceType: sourceType,
+            category: category,
+            url: nil,
+            location: nil,
+            distance: nil,
+            relevanceScore: nil,
+            price: nil,
+            metadata: metadata
+        )
+    }
+
+    func test_classifier_openLibrary_routesToBorrow() {
+        let r = mkResult(source: SourceIdentifier.openlibrary, sourceType: .online, category: .book)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .borrow)
+    }
+
+    func test_classifier_dpla_routesToBorrow() {
+        let r = mkResult(source: SourceIdentifier.dpla, sourceType: .online, category: .book)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .borrow)
+    }
+
+    func test_classifier_internetArchive_routesToBorrow() {
+        let r = mkResult(source: SourceIdentifier.internetarchive, sourceType: .online, category: .book)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .borrow)
+    }
+
+    func test_classifier_repairSignal_routesToRepair_evenForLocalSource() {
+        // An Overpass result with `category_tag == "repair"` lands in the
+        // Repair tab regardless of its sourceType being `.local`.
+        let r = mkResult(
+            source: SourceIdentifier.overpass,
+            sourceType: .local,
+            category: .local,
+            metadata: ["category_tag": "repair"]
+        )
+        XCTAssertEqual(SearchViewModel.tab(for: r), .repair)
+    }
+
+    func test_classifier_geoLocalWithoutRepairSignal_routesToLocal() {
+        let r = mkResult(source: SourceIdentifier.mapkit, sourceType: .local, category: .local)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .local)
+    }
+
+    func test_classifier_overpassWithoutRepairSignal_routesToLocal() {
+        // A regular non-repair Overpass shop lands in Local.
+        let r = mkResult(source: SourceIdentifier.overpass, sourceType: .local, category: .local)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .local)
+    }
+
+    func test_classifier_duckDuckGo_routesToOnline() {
+        let r = mkResult(source: SourceIdentifier.duckduckgo, sourceType: .online, category: .web)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .online)
+    }
+
+    func test_classifier_amazon_routesToOnline() {
+        // Mega-retailer results are filtered upstream, but if one reached
+        // here it would land in Online (not Borrow).
+        let r = mkResult(source: SourceIdentifier.amazon, sourceType: .online, category: .product)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .online)
+    }
+
+    func test_classifier_openFoodFacts_routesToOnline() {
+        let r = mkResult(source: SourceIdentifier.openfoodfacts, sourceType: .online, category: .product)
+        XCTAssertEqual(SearchViewModel.tab(for: r), .online)
     }
     
     // MARK: - Library Source Detection Tests

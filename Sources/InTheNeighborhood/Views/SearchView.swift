@@ -43,16 +43,16 @@ public struct SearchView: View {
                     case .loading:
                         // Show results area with per-section progress indicators (same layout as loaded state)
                         ResultsView(
-                            webResults: viewModel.webResults,
-                            amazonResults: viewModel.amazonResults,
-                            libraryResults: viewModel.libraryResults,
                             localResults: viewModel.localResults,
+                            onlineResults: viewModel.onlineResults,
+                            borrowResults: viewModel.borrowResults,
+                            repairResults: viewModel.repairResults,
                             originalQuery: viewModel.originalQuery,
                             selectedTab: $viewModel.selectedTab,
-                            isLoadingWeb: viewModel.isLoadingWeb,
-                            isLoadingAmazon: viewModel.isLoadingAmazon,
-                            isLoadingLibrary: viewModel.isLoadingLibrary,
                             isLoadingLocal: viewModel.isLoadingLocal,
+                            isLoadingOnline: viewModel.isLoadingOnline,
+                            isLoadingBorrow: viewModel.isLoadingBorrow,
+                            isLoadingRepair: viewModel.isLoadingRepair,
                             localStoreCategories: viewModel.localStoreCategories,
                             onRefine: { result in
                                 Task {
@@ -66,23 +66,23 @@ public struct SearchView: View {
                             }
                         )
                         .accessibilityLabel("Search results")
-                        .accessibilityValue(viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.libraryResults.isEmpty && viewModel.localResults.isEmpty ? "Searching…" : "\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.libraryResults.count + viewModel.localResults.count) results found")
-                        
+                        .accessibilityValue(viewModel.localResults.isEmpty && viewModel.onlineResults.isEmpty && viewModel.borrowResults.isEmpty && viewModel.repairResults.isEmpty ? "Searching…" : "\(viewModel.localResults.count + viewModel.onlineResults.count + viewModel.borrowResults.count + viewModel.repairResults.count) results found")
+
                     case .loaded:
-                        if viewModel.webResults.isEmpty && viewModel.amazonResults.isEmpty && viewModel.libraryResults.isEmpty && viewModel.localResults.isEmpty {
+                        if viewModel.localResults.isEmpty && viewModel.onlineResults.isEmpty && viewModel.borrowResults.isEmpty && viewModel.repairResults.isEmpty {
                             EmptyStateView(message: NSLocalizedString("No results found. Try a different search term.", comment: ""))
                         } else {
                             ResultsView(
-                                webResults: viewModel.webResults,
-                                amazonResults: viewModel.amazonResults,
-                                libraryResults: viewModel.libraryResults,
                                 localResults: viewModel.localResults,
+                                onlineResults: viewModel.onlineResults,
+                                borrowResults: viewModel.borrowResults,
+                                repairResults: viewModel.repairResults,
                                 originalQuery: viewModel.originalQuery,
                                 selectedTab: $viewModel.selectedTab,
-                                isLoadingWeb: viewModel.isLoadingWeb,
-                                isLoadingAmazon: viewModel.isLoadingAmazon,
-                                isLoadingLibrary: viewModel.isLoadingLibrary,
                                 isLoadingLocal: viewModel.isLoadingLocal,
+                                isLoadingOnline: viewModel.isLoadingOnline,
+                                isLoadingBorrow: viewModel.isLoadingBorrow,
+                                isLoadingRepair: viewModel.isLoadingRepair,
                                 localStoreCategories: viewModel.localStoreCategories,
                                 onRefine: { result in
                                     Task {
@@ -96,7 +96,7 @@ public struct SearchView: View {
                                 }
                             )
                             .accessibilityLabel("Search results")
-                            .accessibilityValue("\(viewModel.webResults.count + viewModel.amazonResults.count + viewModel.libraryResults.count + viewModel.localResults.count) results found")
+                            .accessibilityValue("\(viewModel.localResults.count + viewModel.onlineResults.count + viewModel.borrowResults.count + viewModel.repairResults.count) results found")
                         }
                         
                     case .error:
@@ -141,11 +141,11 @@ public struct SearchView: View {
                 viewModel.searchText = pending.query
                 switch pending.type {
                 case .localStores:
-                    viewModel.selectedTab = .localStores
+                    viewModel.selectedTab = .local
                 case .products:
-                    viewModel.selectedTab = .products
+                    viewModel.selectedTab = .online
                 case .general:
-                    viewModel.selectedTab = .web
+                    viewModel.selectedTab = .online
                 }
                 Task {
                     await viewModel.search(query: pending.query)

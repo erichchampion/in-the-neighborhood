@@ -18,9 +18,21 @@ public enum OverpassTagMap {
         "bicycle":      ["shop=bicycle"],
         "music":        ["shop=music", "shop=musical_instrument"],
         "clothing":     ["shop=clothes", "shop=second_hand"],
-        "repair":       ["shop=repair"],
+        "repair":       repairTags,
         "library":      ["amenity=library"],
         "tool_library": ["amenity=library"]
+    ]
+
+    /// Tag specs that identify a "repair" intent — used both to drive
+    /// Overpass queries when the user explicitly asks about repair, and to
+    /// classify incoming results into the Repair intent tab (C1) regardless
+    /// of how the query was constructed.
+    public static let repairTags: [String] = [
+        "shop=repair",
+        "shop=mobile_phone_repair",
+        "shop=computer_repair",
+        "amenity=bicycle_repair_station",
+        "amenity=repair_cafe"
     ]
 
     /// Used when no category matches — any shop at all in range.
@@ -40,5 +52,26 @@ public enum OverpassTagMap {
         }
         var seen = Set<String>()
         return collected.filter { seen.insert($0).inserted }
+    }
+
+    /// Inspects an Overpass element's `tags` dictionary and returns a
+    /// category tag (currently only `"repair"`) when the tags match a known
+    /// intent. Used by `OverpassSearchSource.parseResponse` to set
+    /// `metadata["category_tag"]` so `SearchViewModel` can route results
+    /// to the right intent tab (C1).
+    public static func categoryTag(for tags: [String: String]) -> String? {
+        for spec in repairTags {
+            let parts = spec.split(separator: "=", maxSplits: 1).map(String.init)
+            guard let key = parts.first else { continue }
+            let value: String? = parts.count == 2 && parts[1] != "*" ? parts[1] : nil
+            if let actual = tags[key] {
+                if let value {
+                    if actual == value { return "repair" }
+                } else {
+                    return "repair"  // wildcard match — any value for this key
+                }
+            }
+        }
+        return nil
     }
 }

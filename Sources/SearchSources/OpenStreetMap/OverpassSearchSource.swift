@@ -172,11 +172,28 @@ public final class OverpassSearchSource: SearchSource, @unchecked Sendable {
             let tagsJSON = (try? JSONSerialization.data(withJSONObject: tags))
                 .flatMap { String(data: $0, encoding: .utf8) } ?? ""
 
-            let metadata: [String: AnyHashable] = [
+            // Flatten tags into a [String: String] so OverpassTagMap can
+            // classify them. Non-string values (rare on OSM, but possible
+            // for `extratags` etc.) are skipped — `categoryTag(for:)` only
+            // needs string equality.
+            var stringTags: [String: String] = [:]
+            for (k, v) in tags {
+                if let stringValue = v as? String {
+                    stringTags[k] = stringValue
+                }
+            }
+
+            var metadata: [String: AnyHashable] = [
                 "osm_type": osmType,
                 "osm_id": osmId,
                 "tags_json": tagsJSON
             ]
+            // C1: surface a "category_tag" so the ViewModel can route this
+            // result into the Repair intent tab without inspecting OSM
+            // tags downstream.
+            if let categoryTag = OverpassTagMap.categoryTag(for: stringTags) {
+                metadata["category_tag"] = categoryTag
+            }
 
             return SearchResult(
                 id: "overpass-\(osmType)-\(osmId)",

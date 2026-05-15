@@ -1,51 +1,55 @@
 import SwiftUI
 import MetasearchCore
 
+/// C1: intent-driven results UI. Four tabs — Local / Online / Borrow /
+/// Repair — each reflecting a user intent rather than a search-source
+/// category. The classifier in `SearchViewModel.tab(for:)` decides which
+/// bucket every result lands in; this view just renders the buckets.
 public struct ResultsView: View {
-    let webResults: [SearchResult]
-    let amazonResults: [SearchResult]
-    let libraryResults: [SearchResult]
     let localResults: [SearchResult]
+    let onlineResults: [SearchResult]
+    let borrowResults: [SearchResult]
+    let repairResults: [SearchResult]
     let originalQuery: String
     let onRefine: ((SearchResult) -> Void)?
     @Binding var selectedTab: SearchViewModel.TabSelection
-    let isLoadingWeb: Bool
-    let isLoadingAmazon: Bool
-    let isLoadingLibrary: Bool
     let isLoadingLocal: Bool
+    let isLoadingOnline: Bool
+    let isLoadingBorrow: Bool
+    let isLoadingRepair: Bool
     let localStoreCategories: [String]
     let agentSummary: String?
-    
+
     public init(
-        webResults: [SearchResult],
-        amazonResults: [SearchResult],
-        libraryResults: [SearchResult],
         localResults: [SearchResult],
+        onlineResults: [SearchResult],
+        borrowResults: [SearchResult],
+        repairResults: [SearchResult],
         originalQuery: String = "",
         selectedTab: Binding<SearchViewModel.TabSelection>,
-        isLoadingWeb: Bool = false,
-        isLoadingAmazon: Bool = false,
-        isLoadingLibrary: Bool = false,
         isLoadingLocal: Bool = false,
+        isLoadingOnline: Bool = false,
+        isLoadingBorrow: Bool = false,
+        isLoadingRepair: Bool = false,
         localStoreCategories: [String] = [],
         agentSummary: String? = nil,
         onRefine: ((SearchResult) -> Void)? = nil
     ) {
-        self.webResults = webResults
-        self.amazonResults = amazonResults
-        self.libraryResults = libraryResults
         self.localResults = localResults
+        self.onlineResults = onlineResults
+        self.borrowResults = borrowResults
+        self.repairResults = repairResults
         self.originalQuery = originalQuery
         self._selectedTab = selectedTab
-        self.isLoadingWeb = isLoadingWeb
-        self.isLoadingAmazon = isLoadingAmazon
-        self.isLoadingLibrary = isLoadingLibrary
         self.isLoadingLocal = isLoadingLocal
+        self.isLoadingOnline = isLoadingOnline
+        self.isLoadingBorrow = isLoadingBorrow
+        self.isLoadingRepair = isLoadingRepair
         self.localStoreCategories = localStoreCategories
         self.agentSummary = agentSummary
         self.onRefine = onRefine
     }
-    
+
     public var body: some View {
         VStack(spacing: 0) {
             // Agent AI Summary Banner
@@ -64,40 +68,49 @@ public struct ResultsView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
-            // Tab selector - always visible so user can switch away from Local Stores while model downloads
+            // Intent tab selector. Always visible so the user can move
+            // between intents while a slow source is still streaming.
             Picker("Results Tab", selection: $selectedTab) {
-                Text("Web").tag(SearchViewModel.TabSelection.web)
-                Text("Products").tag(SearchViewModel.TabSelection.products)
-                Text("Library").tag(SearchViewModel.TabSelection.library)
-                Text("Local Stores").tag(SearchViewModel.TabSelection.localStores)
+                Text("Local").tag(SearchViewModel.TabSelection.local)
+                Text("Online").tag(SearchViewModel.TabSelection.online)
+                Text("Borrow").tag(SearchViewModel.TabSelection.borrow)
+                Text("Repair").tag(SearchViewModel.TabSelection.repair)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            
-            // Tab content with download overlay only over this area when on Local Stores
+
             ZStack {
                 switch selectedTab {
-                case .web:
-                    webTabContent
-                case .products:
-                    productsTabContent
-                case .library:
-                    libraryTabContent
-                case .localStores:
-                    localStoresTabContent
+                case .local:
+                    localTabContent
+                case .online:
+                    onlineTabContent
+                case .borrow:
+                    borrowTabContent
+                case .repair:
+                    repairTabContent
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
-    
-    // Filter Amazon results to only include those with at least one metadata key useful for refinement
-    private var filteredAmazonResults: [SearchResult] {
-        amazonResults.filter { hasRefinementMetadata($0) }
+
+    // MARK: - Online tab (web + products combined)
+
+    /// Within Online, split into "Products" (cards with refinement
+    /// metadata) and "Web" (everything else) — same visual grouping
+    /// the user got when these were separate tabs.
+    private var onlineProductResults: [SearchResult] {
+        onlineResults.filter { $0.category == .product || $0.category == .book }
+            .filter(Self.hasRefinementMetadata)
     }
-    
-    private func hasRefinementMetadata(_ result: SearchResult) -> Bool {
+
+    private var onlineWebResults: [SearchResult] {
+        onlineResults.filter { $0.category == .web }
+    }
+
+    nonisolated static func hasRefinementMetadata(_ result: SearchResult) -> Bool {
         let brand = result.metadata["brand"] as? String
         let isbn = result.metadata["isbn"] as? String
         let sku = result.metadata["sku"] as? String
@@ -105,7 +118,7 @@ public struct ResultsView: View {
         let artist = result.metadata["artist"] as? String
         return brand != nil || isbn != nil || sku != nil || author != nil || artist != nil
     }
-    
+
     /// Returns the URL to open for Best Buy cards when bestbuy.com is not in the deny list.
     private func urlToOpen(for result: SearchResult) -> URL? {
         guard result.source.lowercased() == SourceIdentifier.bestbuy,
@@ -115,107 +128,90 @@ public struct ResultsView: View {
         }
         return url
     }
-    
-    private var webTabContent: some View {
+
+    private var onlineTabContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Web Results Section
-                if !webResults.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Web Results")
-                            .font(.headline)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .padding(.bottom, 8)
-                        
-                        ForEach(webResults) { result in
-                            ResultRowView(result: result)
+                if onlineProductResults.isEmpty && onlineWebResults.isEmpty {
+                    if isLoadingOnline {
+                        VStack {
+                            ProgressView()
+                                .padding()
+                            Text("Searching ethical online sources...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
+                    } else {
+                        VStack {
+                            Text("No online results found")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                                .padding(.top, 40)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                } else {
+                    // Products section
+                    if !onlineProductResults.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Products")
+                                .font(.headline)
                                 .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
+                                .padding(.top, 16)
+                                .padding(.bottom, 8)
+
+                            ForEach(onlineProductResults) { result in
+                                ProductCard(
+                                    result: result,
+                                    onRefine: { onRefine?(result) },
+                                    urlToOpen: urlToOpen(for: result)
+                                )
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6))
+                        .padding(.bottom, 16)
+                    }
+
+                    // Web section
+                    if !onlineWebResults.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Web")
+                                .font(.headline)
+                                .padding(.horizontal, 16)
+                                .padding(.top, 16)
+                                .padding(.bottom, 8)
+
+                            ForEach(onlineWebResults) { result in
+                                ResultRowView(result: result)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                            }
                         }
                     }
-                } else if isLoadingWeb {
-                    VStack {
-                        ProgressView()
-                            .padding()
-                        Text("Searching web...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
-                } else {
-                    VStack {
-                        Text("No web results found")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                            .padding(.top, 40)
-                    }
-                    .frame(maxWidth: .infinity)
                 }
             }
         }
     }
-    
-    private var productsTabContent: some View {
+
+    // MARK: - Borrow tab (was Library)
+
+    private var borrowTabContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                if !filteredAmazonResults.isEmpty {
+                if !filteredBorrowResults.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Products")
+                        Text("Borrow")
                             .font(.headline)
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
                             .padding(.bottom, 8)
-                        
-                        ForEach(filteredAmazonResults) { result in
-                            ProductCard(
-                                result: result,
-                                onRefine: { onRefine?(result) },
-                                urlToOpen: urlToOpen(for: result)
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
-                    .padding(.bottom, 16)
-                } else if isLoadingAmazon {
-                    VStack {
-                        ProgressView()
-                            .padding()
-                        Text("Searching for Products...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
-                } else {
-                    VStack {
-                        Text("No products found")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                            .padding(.top, 40)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-    
-    private var libraryTabContent: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                if !filteredLibraryResults.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Library")
-                            .font(.headline)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .padding(.bottom, 8)
-                        
-                        ForEach(filteredLibraryResults) { result in
+
+                        ForEach(filteredBorrowResults) { result in
                             LibraryCard(result: result)
                                 .padding(.horizontal, 16)
                                 .padding(.bottom, 8)
@@ -224,7 +220,7 @@ public struct ResultsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.systemGray6))
                     .padding(.bottom, 16)
-                } else if isLoadingLibrary {
+                } else if isLoadingBorrow {
                     VStack {
                         ProgressView()
                             .padding()
@@ -236,7 +232,7 @@ public struct ResultsView: View {
                     .padding(.top, 40)
                 } else {
                     VStack {
-                        Text("No library results found")
+                        Text("No borrow options found")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .padding(.top, 40)
@@ -246,9 +242,9 @@ public struct ResultsView: View {
             }
         }
     }
-    
-    private var filteredLibraryResults: [SearchResult] {
-        libraryResults.filter(Self.renderableInLibraryTab)
+
+    private var filteredBorrowResults: [SearchResult] {
+        borrowResults.filter(Self.renderableInBorrowTab)
     }
 
     /// Returns `true` if the result has enough metadata for a `LibraryCard`
@@ -258,11 +254,7 @@ public struct ResultsView: View {
     /// `metadata["author_name"]`. DPLA uses `metadata["providers"]`. Accept
     /// any of them so a perfectly valid Open Library result with just an
     /// author string doesn't get silently dropped.
-    ///
-    /// `nonisolated` because the predicate is a pure function of
-    /// `result.metadata` and never touches main-actor UI state — lets tests
-    /// call it from XCTest methods (which run off the main actor).
-    nonisolated static func renderableInLibraryTab(_ result: SearchResult) -> Bool {
+    nonisolated static func renderableInBorrowTab(_ result: SearchResult) -> Bool {
         let isbn = result.metadata["isbn"] as? String
         let authorsArray = result.metadata["author_name"] as? [String]
         let authorString = result.metadata["author"] as? String
@@ -276,28 +268,37 @@ public struct ResultsView: View {
             || coverId != nil
             || imageUrl != nil
     }
-    
-    private var localStoresTabContent: some View {
+
+    /// Back-compat shim so older test files referring to the previous
+    /// predicate name continue to compile. New callers should use
+    /// `renderableInBorrowTab(_:)`.
+    nonisolated static func renderableInLibraryTab(_ result: SearchResult) -> Bool {
+        renderableInBorrowTab(result)
+    }
+
+    // MARK: - Local tab (was Local Stores)
+
+    private var localTabContent: some View {
         ScrollView {
             VStack(spacing: 0) {
                 if !localResults.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text("Local Stores")
+                            Text("Local")
                                 .font(.headline)
-                            
+
                             if !localStoreCategories.isEmpty {
                                 Text("• " + localStoreCategories.joined(separator: ", "))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
-                            
+
                             Spacer()
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
                         .padding(.bottom, 8)
-                        
+
                         ForEach(localResults) { result in
                             ResultRowView(result: result)
                                 .padding(.horizontal, 16)
@@ -308,7 +309,7 @@ public struct ResultsView: View {
                     VStack {
                         ProgressView()
                             .padding()
-                        Text("Finding local stores...")
+                        Text("Finding local options...")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -316,14 +317,14 @@ public struct ResultsView: View {
                     .padding(.top, 40)
                 } else {
                     VStack {
-                        Text("No local stores found")
+                        Text("No local options found")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .padding(.top, 40)
                     }
                     .frame(maxWidth: .infinity)
                 }
-                
+
                 // Link to Apple Business Connect
                 if let url = URL(string: "https://businessconnect.apple.com/") {
                     Link(destination: url) {
@@ -337,11 +338,58 @@ public struct ResultsView: View {
             }
         }
     }
+
+    // MARK: - Repair tab (new)
+
+    private var repairTabContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if !repairResults.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Repair")
+                            .font(.headline)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                            .padding(.bottom, 8)
+
+                        ForEach(repairResults) { result in
+                            ResultRowView(result: result)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                } else if isLoadingRepair {
+                    VStack {
+                        ProgressView()
+                            .padding()
+                        Text("Looking for repair options...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    VStack(spacing: 8) {
+                        Text("No repair options found nearby")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text("Try a related term like \"bicycle repair\" or \"phone repair\".")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 40)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
 }
 
 struct ResultRowView: View {
     let result: SearchResult
-    
+
     var body: some View {
         Group {
             // Check if this is a product or book result - use ProductCard if so

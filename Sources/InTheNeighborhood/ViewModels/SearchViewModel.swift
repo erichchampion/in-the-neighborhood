@@ -7,40 +7,72 @@ public class SearchViewModel: ObservableObject {
     @Published public var searchText = ""
     @Published public var state: SearchState = .idle
     @Published public var results: [SearchResult] = [] // Legacy - kept for backward compatibility
-    @Published public var webResults: [SearchResult] = []
-    @Published public var amazonResults: [SearchResult] = []
-    @Published public var libraryResults: [SearchResult] = []
+    /// C1: intent-shaped result buckets.
+    /// - `local`  — geo-tagged results (MapKit / Nominatim / Overpass non-repair)
+    /// - `online` — web + product results (DuckDuckGo / Bing / Bookshop / Amazon-metadata / Open Facts)
+    /// - `borrow` — library sources (Open Library / DPLA / Internet Archive)
+    /// - `repair` — Overpass results with a repair-tag signal
     @Published public var localResults: [SearchResult] = []
-    @Published public var selectedTab: TabSelection = .web
-    @Published public var isLoadingWeb: Bool = false
-    @Published public var isLoadingAmazon: Bool = false
-    @Published public var isLoadingLibrary: Bool = false
+    @Published public var onlineResults: [SearchResult] = []
+    @Published public var borrowResults: [SearchResult] = []
+    @Published public var repairResults: [SearchResult] = []
+    @Published public var selectedTab: TabSelection = .local
     @Published public var isLoadingLocal: Bool = false
+    @Published public var isLoadingOnline: Bool = false
+    @Published public var isLoadingBorrow: Bool = false
+    @Published public var isLoadingRepair: Bool = false
     @Published public var isRefining: Bool = false
     @Published public var errorMessage: String?
     @Published public var originalQuery: String = ""
     @Published public var localStoreCategories: [String] = []
-    
+
     @Published public var agentSummary: String? = nil
-    
+
     private let coordinator: MetasearchCoordinator
     private let agentCoordinator: AgentSearchCoordinator
     private let queryEnhancer: QueryEnhancing
     private var searchTask: Task<Void, Never>?
     private let debounceDelay: TimeInterval = 0.5 // seconds
-    
+
     public enum SearchState {
         case idle
         case loading
         case loaded
         case error
     }
-    
+
+    /// C1: intent-driven tabs. Each case names a *user intent* — "I want
+    /// to buy locally / borrow this / get this repaired / find an
+    /// ethical online source" — rather than a search-source category.
     public enum TabSelection {
-        case web
-        case products
-        case library
-        case localStores
+        case local       // was .localStores
+        case online      // replaces .web + .products
+        case borrow      // was .library
+        case repair      // new
+    }
+
+    /// Classifies a result into its intent tab. Used by both the
+    /// agent-driven and standard search paths so the routing rule
+    /// lives in exactly one place. `nonisolated` and `static` so it's
+    /// trivially unit-testable.
+    nonisolated public static func tab(for result: SearchResult) -> TabSelection {
+        // Library sources always feed the Borrow tab regardless of category.
+        if result.source == SourceIdentifier.openlibrary
+            || result.source == SourceIdentifier.dpla
+            || result.source == SourceIdentifier.internetarchive {
+            return .borrow
+        }
+        // Any source that flagged this result as repair-shaped (today
+        // only Overpass via OverpassTagMap.categoryTag) feeds Repair.
+        if result.metadata["category_tag"] as? String == "repair" {
+            return .repair
+        }
+        // Anything else geo-tagged is Local.
+        if result.sourceType == .local {
+            return .local
+        }
+        // Web + product results fall to Online.
+        return .online
     }
     
     public init(
@@ -95,38 +127,37 @@ public class SearchViewModel: ObservableObject {
                         
                         guard !newResults.isEmpty else { return }
                         
-                        // Categorize and append new results
+                        // C1: route each new result to its intent tab via the
+                        // shared `tab(for:)` classifier.
                         for result in newResults {
-                            // Always route library sources to library tab, regardless of category
-                            if result.source == SourceIdentifier.openlibrary
-                                || result.source == SourceIdentifier.dpla
-                                || result.source == SourceIdentifier.internetarchive {
-                                self.libraryResults.append(result)
-                                self.isLoadingLibrary = false
-                            } else {
-                                switch result.category {
-                                case .product, .book:
-                                    self.amazonResults.append(result)
-                                case .local:
-                                    self.localResults.append(result)
-                                case .web:
-                                    self.webResults.append(result)
-                                }
+                            switch Self.tab(for: result) {
+                            case .borrow:
+                                self.borrowResults.append(result)
+                                self.isLoadingBorrow = false
+                            case .repair:
+                                self.repairResults.append(result)
+                                self.isLoadingRepair = false
+                            case .local:
+                                self.localResults.append(result)
+                                self.isLoadingLocal = false
+                            case .online:
+                                self.onlineResults.append(result)
+                                self.isLoadingOnline = false
                             }
                             self.results.append(result)
                         }
                     }
                 })
-                
+
                 await MainActor.run {
                     self.agentSummary = agentResult.summary
                     if let plan = agentResult.plan, let localType = plan.localStoreType, !localType.isEmpty {
                         self.localStoreCategories = [localType]
                     }
-                    self.isLoadingWeb = false
-                    self.isLoadingAmazon = false
-                    self.isLoadingLibrary = false
                     self.isLoadingLocal = false
+                    self.isLoadingOnline = false
+                    self.isLoadingBorrow = false
+                    self.isLoadingRepair = false
                     self.updateStateAfterThreadCompletion()
                 }
             } else {
@@ -146,35 +177,37 @@ public class SearchViewModel: ObservableObject {
         state = .loading
         errorMessage = nil
         self.originalQuery = originalQuery
-        
-        webResults = []
-        amazonResults = []
-        libraryResults = []
+
         localResults = []
+        onlineResults = []
+        borrowResults = []
+        repairResults = []
         results = []
         localStoreCategories = []
-        
-        isLoadingWeb = true
-        isLoadingAmazon = true
-        isLoadingLibrary = true
+
         isLoadingLocal = true
+        isLoadingOnline = true
+        isLoadingBorrow = true
+        isLoadingRepair = true
     }
 
     private func startRefinedSearch(originalQuery: String) {
         state = .loading
         errorMessage = nil
         self.originalQuery = originalQuery
-        
-        webResults = []
-        amazonResults = []
+
+        onlineResults = []
+        borrowResults = []
+        repairResults = []
         // PRESERVE localResults
         // PRESERVE localStoreCategories
-        
-        // Remove old web and amazon results from `results`
+
+        // Remove non-local results from `results`; keep local in place.
         results = localResults
-        
-        isLoadingWeb = true
-        isLoadingAmazon = true
+
+        isLoadingOnline = true
+        isLoadingBorrow = true
+        isLoadingRepair = true
         isLoadingLocal = false // Do not show loading for local since we are skipping it
     }
 
@@ -199,42 +232,40 @@ public class SearchViewModel: ObservableObject {
                 
                 guard !newResults.isEmpty else { return }
                 
-                // Route new results to visual buckets based on category
-                if let first = newResults.first {
-                    // Always route library sources to library tab, regardless of category
-                    if first.source == SourceIdentifier.openlibrary
-                        || first.source == SourceIdentifier.dpla
-                        || first.source == SourceIdentifier.internetarchive {
-                        self.libraryResults.append(contentsOf: newResults)
-                        self.isLoadingLibrary = false
-                    } else {
-                        switch first.category {
-                        case .product, .book:
-                            self.amazonResults.append(contentsOf: newResults)
-                            self.isLoadingAmazon = false
-                        case .local:
-                            // Only update local if we are explicitly not excluding them (e.g not refining)
-                            if !excludeLocal {
-                                self.localResults.append(contentsOf: newResults)
-                                self.localStoreCategories = localStores
-                                self.isLoadingLocal = false
-                            }
-                        case .web:
-                            self.webResults.append(contentsOf: newResults)
-                            self.isLoadingWeb = false
+                // C1: route each result individually to its intent tab.
+                // The old code routed by inspecting `first.category`,
+                // which forced all results in a batch into the same
+                // bucket — wrong when a batch mixes (e.g.) repair
+                // shops and non-repair shops from one Overpass call.
+                for result in newResults {
+                    switch Self.tab(for: result) {
+                    case .borrow:
+                        self.borrowResults.append(result)
+                        self.isLoadingBorrow = false
+                    case .repair:
+                        self.repairResults.append(result)
+                        self.isLoadingRepair = false
+                    case .local:
+                        if !excludeLocal {
+                            self.localResults.append(result)
+                            self.localStoreCategories = localStores
+                            self.isLoadingLocal = false
                         }
+                    case .online:
+                        self.onlineResults.append(result)
+                        self.isLoadingOnline = false
                     }
                 }
-                
-                self.results = self.webResults + self.amazonResults + self.libraryResults + self.localResults
+
+                self.results = self.localResults + self.onlineResults + self.borrowResults + self.repairResults
                 self.updateStateAfterThreadCompletion()
             }
         }
-        
+
         await MainActor.run {
-            self.isLoadingWeb = false
-            self.isLoadingAmazon = false
-            self.isLoadingLibrary = false
+            self.isLoadingOnline = false
+            self.isLoadingBorrow = false
+            self.isLoadingRepair = false
             if !excludeLocal {
                 self.isLoadingLocal = false
             }
@@ -245,9 +276,15 @@ public class SearchViewModel: ObservableObject {
     /// Updates the overall state after a search thread completes
     /// Transitions to .loaded when all threads are done OR when we have results and at least one thread is done
     private func updateStateAfterThreadCompletion() {
-        let allThreadsComplete = !isLoadingWeb && !isLoadingAmazon && !isLoadingLocal
-        let hasResults = !webResults.isEmpty || !amazonResults.isEmpty || !localResults.isEmpty
-        
+        let allThreadsComplete = !isLoadingLocal
+            && !isLoadingOnline
+            && !isLoadingBorrow
+            && !isLoadingRepair
+        let hasResults = !localResults.isEmpty
+            || !onlineResults.isEmpty
+            || !borrowResults.isEmpty
+            || !repairResults.isEmpty
+
         if allThreadsComplete {
             // All threads are done - transition to loaded
             state = .loaded
@@ -284,9 +321,10 @@ public class SearchViewModel: ObservableObject {
         searchText = ""
         state = .idle
         results = []
-        webResults = []
-        amazonResults = []
         localResults = []
+        onlineResults = []
+        borrowResults = []
+        repairResults = []
         localStoreCategories = []
         errorMessage = nil
     }
@@ -348,8 +386,9 @@ public class SearchViewModel: ObservableObject {
         
         startRefinedSearch(originalQuery: refinedQuery)
         
-        // Automatically switch back to the web tab to show new comprehensive results
-        selectedTab = .web
+        // Automatically switch to the Online tab to show new comprehensive results
+        // (refinement is product/web-shaped, not local-shaped).
+        selectedTab = .online
         
         searchTask = Task {
             let enhancedQuery = (try? await queryEnhancer.enhanceQuery(refinedQuery)) ?? EnhancedQuery(original: refinedQuery, productType: nil, categories: [], priceMax: nil, condition: nil)

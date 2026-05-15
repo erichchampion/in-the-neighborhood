@@ -265,4 +265,83 @@ final class OverpassSearchSourceTests: XCTestCase {
         XCTAssertEqual(OverpassTagMap.tags(forCategories: ["nonsense"]), OverpassTagMap.fallbackTags)
         XCTAssertEqual(OverpassTagMap.tags(forCategories: []), OverpassTagMap.fallbackTags)
     }
+
+    // MARK: - C1: repair-tag classification
+
+    func test_categoryTag_returnsRepairForShopRepair() {
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["shop": "repair"]), "repair")
+    }
+
+    func test_categoryTag_returnsRepairForMobilePhoneRepair() {
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["shop": "mobile_phone_repair"]), "repair")
+    }
+
+    func test_categoryTag_returnsRepairForComputerRepair() {
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["shop": "computer_repair"]), "repair")
+    }
+
+    func test_categoryTag_returnsRepairForBicycleRepairStation() {
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["amenity": "bicycle_repair_station"]),
+                       "repair")
+    }
+
+    func test_categoryTag_returnsRepairForRepairCafe() {
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["amenity": "repair_cafe"]), "repair")
+    }
+
+    func test_categoryTag_returnsNilForNonRepairTags() {
+        XCTAssertNil(OverpassTagMap.categoryTag(for: ["shop": "books"]))
+        XCTAssertNil(OverpassTagMap.categoryTag(for: ["amenity": "library"]))
+        XCTAssertNil(OverpassTagMap.categoryTag(for: [:]))
+    }
+
+    // MARK: - C1: parser surfaces metadata["category_tag"] for repair
+
+    func test_parseResponse_attachesCategoryTagWhenRepairShop() async throws {
+        // Two nodes: one is a repair shop (should get category_tag),
+        // one is a bookstore (should not).
+        let fixture = """
+        {
+          "elements": [
+            {
+              "type": "node",
+              "id": 999,
+              "lat": 37.78,
+              "lon": -122.41,
+              "tags": { "name": "Bike Repair Co", "shop": "repair" }
+            },
+            {
+              "type": "node",
+              "id": 888,
+              "lat": 37.79,
+              "lon": -122.42,
+              "tags": { "name": "Indie Books", "shop": "books" }
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+        let ok = HTTPURLResponse(
+            url: URL(string: "https://overpass-api.de/api/interpreter")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+        )
+        let session = OverpassMockURLSession(data: fixture, response: ok)
+        let source = OverpassSearchSource(locationService: testLocationService, urlSession: session)
+        let query = EnhancedQuery(
+            original: "anything",
+            productType: nil,
+            categories: ["book"],
+            priceMax: nil,
+            condition: nil
+        )
+        let results = try await source.search(query: query)
+        XCTAssertEqual(results.count, 2)
+        let repairResult = results.first(where: { $0.title == "Bike Repair Co" })
+        let booksResult = results.first(where: { $0.title == "Indie Books" })
+        XCTAssertEqual(repairResult?.metadata["category_tag"] as? String, "repair",
+                       "Repair shop must carry the category_tag for ViewModel routing")
+        XCTAssertNil(booksResult?.metadata["category_tag"],
+                     "Non-repair shop must not carry the repair signal")
+    }
 }
