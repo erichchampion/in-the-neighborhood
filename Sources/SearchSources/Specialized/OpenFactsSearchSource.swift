@@ -56,7 +56,15 @@ public final class OpenFactsSearchSource: SearchSource, @unchecked Sendable {
                 return
             }
 
-            let results = Self.parseResponse(data: data, host: host, sourceId: identifier)
+            let parsed = Self.parseResponse(data: data, host: host, sourceId: identifier)
+            // Open Facts' v2 search falls back to a default catalog page
+            // when `search_terms` doesn't match anything in the
+            // database. Filter on the client so unrelated products
+            // (Coca-Cola, shampoo, dog food for a "bike" query) never
+            // reach the UI.
+            let results = parsed.filter {
+                Self.isRelevant(result: $0, query: query.original)
+            }
             onResults(results)
         } catch {
             onResults([])
@@ -84,6 +92,31 @@ public final class OpenFactsSearchSource: SearchSource, @unchecked Sendable {
             URLQueryItem(name: "json", value: "true")
         ]
         return components.url
+    }
+
+    /// Extracts comparison-ready words from a user query. Lowercased,
+    /// strips punctuation, drops short connector words (< 3 chars) like
+    /// "a" / "of" / "to" that would match anything.
+    static func queryWords(from query: String) -> [String] {
+        query
+            .lowercased()
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map(String.init)
+            .filter { $0.count >= 3 }
+    }
+
+    /// `true` when the result's title or brand contains at least one
+    /// query word. An empty `queryWords` list (very short query) is
+    /// treated as "no filtering signal" — let everything pass rather
+    /// than silently empty the results.
+    static func isRelevant(result: SearchResult, query: String) -> Bool {
+        let words = queryWords(from: query)
+        guard !words.isEmpty else { return true }
+        let titleLower = result.title.lowercased()
+        let brandLower = (result.metadata["brand"] as? String)?.lowercased() ?? ""
+        return words.contains { word in
+            titleLower.contains(word) || brandLower.contains(word)
+        }
     }
 
     static func parseResponse(data: Data, host: String, sourceId: String) -> [SearchResult] {

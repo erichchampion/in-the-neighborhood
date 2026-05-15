@@ -260,6 +260,86 @@ final class OpenFactsSearchSourceTests: XCTestCase {
         XCTAssertTrue(results.isEmpty)
     }
 
+    // MARK: - Client-side relevance filter (bike-query troubleshooting)
+
+    private func mkResult(title: String, brand: String? = nil) -> SearchResult {
+        var metadata: [String: AnyHashable] = [:]
+        if let brand { metadata["brand"] = brand }
+        return SearchResult(
+            id: "x",
+            title: title,
+            description: nil,
+            source: SourceIdentifier.openfoodfacts,
+            sourceType: .online,
+            category: .product,
+            url: nil,
+            location: nil,
+            distance: nil,
+            relevanceScore: nil,
+            price: nil,
+            metadata: metadata
+        )
+    }
+
+    func test_queryWords_dropsShortConnectorsAndPunctuation() {
+        XCTAssertEqual(
+            OpenFactsSearchSource.queryWords(from: "Bike & Tube"),
+            ["bike", "tube"]
+        )
+        XCTAssertEqual(
+            OpenFactsSearchSource.queryWords(from: "a bike"),
+            ["bike"],
+            "Short connector words (<3 chars) must be dropped"
+        )
+        XCTAssertEqual(
+            OpenFactsSearchSource.queryWords(from: ""),
+            []
+        )
+    }
+
+    func test_isRelevant_acceptsTitleMatch() {
+        let r = mkResult(title: "Bike Tube Patch Kit")
+        XCTAssertTrue(OpenFactsSearchSource.isRelevant(result: r, query: "bike"))
+    }
+
+    func test_isRelevant_acceptsBrandMatch() {
+        let r = mkResult(title: "Patch Kit", brand: "Balea")
+        XCTAssertTrue(
+            OpenFactsSearchSource.isRelevant(result: r, query: "balea"),
+            "Brand-only matches must still pass"
+        )
+    }
+
+    func test_isRelevant_rejectsUnrelatedProducts() {
+        // The actual products from debug.txt that polluted the Online
+        // tab for a "bike" query.
+        let cocaCola = mkResult(title: "Cocacola original 500", brand: "Coca-Cola")
+        let chocolate = mkResult(title: "Extra fine dark chocolate", brand: "Lindt & Sprüngli")
+        let shampoo = mkResult(title: "Coffein Shampoo Power Effect", brand: "Balea")
+        let lotion = mkResult(title: "Nivea Men Body Lotion", brand: "Nivea Men")
+        let cien = mkResult(title: "Crème de douche soin douceur Cien", brand: "Cien")
+
+        for r in [cocaCola, chocolate, shampoo, lotion, cien] {
+            XCTAssertFalse(
+                OpenFactsSearchSource.isRelevant(result: r, query: "bike"),
+                "\(r.title) must be filtered out of a 'bike' query"
+            )
+        }
+    }
+
+    func test_isRelevant_emptyQuery_passesAllResults() {
+        // Defensive: a too-short query has no filtering signal. Better
+        // to show everything than silently empty the tab.
+        let r = mkResult(title: "Cocacola original")
+        XCTAssertTrue(OpenFactsSearchSource.isRelevant(result: r, query: ""))
+        XCTAssertTrue(OpenFactsSearchSource.isRelevant(result: r, query: "a"))
+    }
+
+    func test_isRelevant_caseInsensitive() {
+        let r = mkResult(title: "BIKE Pump", brand: nil)
+        XCTAssertTrue(OpenFactsSearchSource.isRelevant(result: r, query: "bike"))
+    }
+
     func test_networkError_returnsEmpty() async {
         let session = MockURLSession(error: NSError(domain: "test", code: -1))
         let sut = OpenFactsSearchSource.food(urlSession: session)
