@@ -334,11 +334,17 @@ final class MetasearchCoordinatorTests: XCTestCase {
     func test_PhaseB_intelligenceCommitsBeforeStage2_productSource() async {
         // A product source emits `brand: "Acme"`. The refined Phase 2
         // query should pick that brand up before the local source runs.
+        //
+        // The title contains a word from the query so it passes the
+        // bike-Phase-3 relevance check that gates product-source brand
+        // extraction. Without this, "Mock Result" (default) doesn't
+        // overlap with "wireless headphones" and the brand is rejected.
         let productSource = MockSearchSource(
             identifier: "product-src",
             sourceType: .online,
             category: .product,
-            brand: "Acme"
+            brand: "Acme",
+            title: "Acme wireless"
         )
         let localSource = MockSearchSource(
             identifier: "local-src",

@@ -7,7 +7,9 @@ final class NearDuplicateMergerTests: XCTestCase {
     // MARK: - normalizedTitle
 
     func test_normalizedTitle_stripsPunctuationAndLowercases() {
-        XCTAssertEqual(NearDuplicateMerger.normalizedTitle("Joe's Bike Shop!"), "joes bike shop")
+        // Apostrophe is dropped (not substituted with space); "joes"
+        // stems to "joe" because it ends in s and is longer than 3 chars.
+        XCTAssertEqual(NearDuplicateMerger.normalizedTitle("Joe's Bike Shop!"), "joe bike shop")
     }
 
     func test_normalizedTitle_dropsSuffixWords() {

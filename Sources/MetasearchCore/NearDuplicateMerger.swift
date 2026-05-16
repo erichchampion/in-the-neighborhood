@@ -70,21 +70,46 @@ public enum NearDuplicateMerger {
         return titlesMatch(a.title, b.title)
     }
 
+    /// Returns true when every token of the shorter normalized title set
+    /// appears in the longer one. Both contiguous-substring matching
+    /// ("Joe's Bike Shop" vs "Joe's Bikes" — different final token) and
+    /// raw set equality fall apart on storefront naming variations; this
+    /// rule lets a strict subset name match a longer variant while still
+    /// rejecting same-length names that differ on a distinguishing token
+    /// (e.g. "Trek Bicycle Bellevue" vs "Trek Bicycle Seattle").
     static func titlesMatch(_ a: String, _ b: String) -> Bool {
-        let na = normalizedTitle(a)
-        let nb = normalizedTitle(b)
-        guard !na.isEmpty, !nb.isEmpty else { return false }
-        return na.contains(nb) || nb.contains(na)
+        let ta = normalizedTokens(a)
+        let tb = normalizedTokens(b)
+        guard !ta.isEmpty, !tb.isEmpty else { return false }
+        let (shorter, longer) = ta.count <= tb.count ? (ta, tb) : (tb, ta)
+        let longerSet = Set(longer)
+        return shorter.allSatisfy { longerSet.contains($0) }
     }
 
     static func normalizedTitle(_ title: String) -> String {
+        return normalizedTokens(title).joined(separator: " ")
+    }
+
+    /// Lowercased token list with punctuation dropped (not substituted —
+    /// "Joe's" becomes "joes", not "joe s"), short suffix words removed,
+    /// and a tiny stem applied (trailing "s" stripped on tokens longer
+    /// than 3 chars so "bikes" matches "bike" but "us" stays "us").
+    static func normalizedTokens(_ title: String) -> [String] {
         let lowered = title.lowercased()
         let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789 ")
-        let stripped = String(lowered.map { allowed.contains($0) ? $0 : " " })
-        let tokens = stripped.split(whereSeparator: { $0 == " " }).map(String.init)
+        let stripped = String(lowered.filter { allowed.contains($0) })
+        let raw = stripped.split(whereSeparator: { $0 == " " }).map(String.init)
         let suffixes: Set<String> = ["the", "inc", "llc", "ltd", "co", "company", "corp"]
-        let kept = tokens.filter { !suffixes.contains($0) }
-        return kept.joined(separator: " ")
+        return raw
+            .filter { !$0.isEmpty && !suffixes.contains($0) }
+            .map(stem(_:))
+    }
+
+    private static func stem(_ token: String) -> String {
+        if token.count > 3, token.hasSuffix("s") {
+            return String(token.dropLast())
+        }
+        return token
     }
 
     static func sourcePriority(_ source: String) -> Int {
