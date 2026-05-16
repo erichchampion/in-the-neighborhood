@@ -16,6 +16,7 @@
 		15A99BAE25FBE24DF7CBFAE5 /* LocationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9D676FC5640A0BCF652813 /* LocationServices.framework */; };
 		16FD38FC9EDA8B1A7FA5B3D5 /* OpenLibrarySearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EF72AE9B7524542942BD86 /* OpenLibrarySearchSourceTests.swift */; };
 		1B36E0111983FB67E76B85E6 /* IntentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 606828443062274BCEBC0091 /* IntentManager.swift */; };
+		1B79A55023532D51D4870E80 /* QueryClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 527FE38149171E4E5E4412AB /* QueryClassifierTests.swift */; };
 		1C5F904A3D2972928D45D6AC /* EthicsLedger.json in Resources */ = {isa = PBXBuildFile; fileRef = 7157FF32EA4EE93A7A12A7F5 /* EthicsLedger.json */; };
 		20E85E1BE4DB5061306703F4 /* AdDomainListDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71AC025574A1DF4AF8923906 /* AdDomainListDownloadManager.swift */; };
 		218A7D9CE336EA969ACE9403 /* NearbyStoresWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 201F9199A4D0D20328A77321 /* NearbyStoresWidget.swift */; };
@@ -29,6 +30,7 @@
 		350EF95D50EB3D13AA387D68 /* CoreLocation in Frameworks */ = {isa = PBXBuildFile; fileRef = A601E719D0B83DF997FEDD8F /* CoreLocation */; };
 		35691E31F2331E0DB772BBF1 /* FoundationModelQueryEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83DDC49623690F3C958DBF05 /* FoundationModelQueryEnhancer.swift */; };
 		38475B2AAF6C173188C623E9 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C27659E73A83FBC565A7E24 /* SettingsManager.swift */; };
+		38BD0E3CF5A0F6D74BCDC544 /* QueryClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4464DEBDD1C7F712B19B9E7F /* QueryClassifier.swift */; };
 		38D356899058DBA65ACBCE29 /* OnlineResultCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6C9B58D210B802419526EE /* OnlineResultCard.swift */; };
 		3A52D50609BAD0BF4E4CB7E5 /* BookshopSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5D72F072A44053BEB5B62F /* BookshopSearchSource.swift */; };
 		3C39FACEAE4F8A4D9F92A56E /* MetasearchCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 93A2459508E032CFDA7292CA /* MetasearchCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -100,6 +102,7 @@
 		9B3091DA11F55AE69A1D2E52 /* AmazonProductCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4441FC91644334E53BCD786C /* AmazonProductCard.swift */; };
 		9CEFB587E29FFD98953948B6 /* MetasearchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60014238D4EDCF5F55EF05B8 /* MetasearchCoordinator.swift */; };
 		9F20564DDFE27A37277F6191 /* URLSessionProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550A4D181511271BAAF61E90 /* URLSessionProtocol.swift */; };
+		A09BC4B56171D5A99A1D090A /* QueryCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE55E2DED2FC1FF2AE2B302 /* QueryCategory.swift */; };
 		A0F87845596EC8038E3097B4 /* OpenFactsSearchSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEFA954C1882412A53855ED /* OpenFactsSearchSource.swift */; };
 		A32A7BD9B1F8854D3877C31F /* LibraryTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D73D27B5C0EC52167F18C87 /* LibraryTabTests.swift */; };
 		A397F1BDE3E5DE5126205A83 /* EthicsLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8FCF861B4C9BB4E82BD95 /* EthicsLedger.swift */; };
@@ -359,12 +362,14 @@
 		42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NominatimSearchSourceTests.swift; sourceTree = "<group>"; };
 		4399D6E7DF02280B28EBCB4C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4441FC91644334E53BCD786C /* AmazonProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmazonProductCard.swift; sourceTree = "<group>"; };
+		4464DEBDD1C7F712B19B9E7F /* QueryClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryClassifier.swift; sourceTree = "<group>"; };
 		46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBusinessCard.swift; sourceTree = "<group>"; };
 		4B6C9B58D210B802419526EE /* OnlineResultCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineResultCard.swift; sourceTree = "<group>"; };
 		4D36D9DDA36AB96F419299EF /* EthicsBadgeViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthicsBadgeViewTests.swift; sourceTree = "<group>"; };
 		50851D395CF28F509C40A93F /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelevanceScorerTests.swift; sourceTree = "<group>"; };
+		527FE38149171E4E5E4412AB /* QueryClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryClassifierTests.swift; sourceTree = "<group>"; };
 		550A4D181511271BAAF61E90 /* URLSessionProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionProtocol.swift; sourceTree = "<group>"; };
 		564C6E174E9CAF508DABAE97 /* DPLASearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DPLASearchSourceTests.swift; sourceTree = "<group>"; };
 		570B31361FF9E1C713544C46 /* EnhancedQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedQueryTests.swift; sourceTree = "<group>"; };
@@ -382,6 +387,7 @@
 		69F4F5E0BF89A2813CD92FAF /* NearDuplicateMergerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearDuplicateMergerTests.swift; sourceTree = "<group>"; };
 		6A0497F64900BDD2D6814695 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		6A4496B05A829B434E7A8E98 /* CircuitBreaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreaker.swift; sourceTree = "<group>"; };
+		6DE55E2DED2FC1FF2AE2B302 /* QueryCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCategory.swift; sourceTree = "<group>"; };
 		6EF2A1B962815C6186C69EC8 /* BookshopSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookshopSearchSourceTests.swift; sourceTree = "<group>"; };
 		6FA682B75D24A2B42F6878A9 /* DuckDuckGoSearchSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuckDuckGoSearchSource.swift; sourceTree = "<group>"; };
 		702ADFF3EBDF4CF483F476F9 /* FoundationModelsStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsStub.swift; sourceTree = "<group>"; };
@@ -793,6 +799,8 @@
 				CDE9DC5CF4EBBC96B19EC818 /* NearDuplicateMerger.swift */,
 				87170702F20831507289E85A /* ProductCondition.swift */,
 				37617675AED4A26E9171B61D /* ProductMetadata.swift */,
+				6DE55E2DED2FC1FF2AE2B302 /* QueryCategory.swift */,
+				4464DEBDD1C7F712B19B9E7F /* QueryClassifier.swift */,
 				820FB56B7ECB45F114E52915 /* QueryEnhancing.swift */,
 				F764F46EACA9F318D26DE171 /* RelevanceScorer.swift */,
 				BE126180FE7CB9F4693EECD1 /* ResultAggregator.swift */,
@@ -863,6 +871,7 @@
 				AEA766F0A998BE7B963E2518 /* EthicsScorerTests.swift */,
 				62723231923D9821345D0DD9 /* MetasearchCoordinatorTests.swift */,
 				69F4F5E0BF89A2813CD92FAF /* NearDuplicateMergerTests.swift */,
+				527FE38149171E4E5E4412AB /* QueryClassifierTests.swift */,
 				510B2EF3D773170674B89268 /* RelevanceScorerTests.swift */,
 				E64D58E303AC93B6D71E64D7 /* ResultAggregatorTests.swift */,
 				5B47415AF857736FA4868DA3 /* ResultCacheTests.swift */,
@@ -1349,6 +1358,7 @@
 				442A69DA9DBE565099BE3020 /* EthicsScorerTests.swift in Sources */,
 				D6F6CC1656059D859E30B60D /* MetasearchCoordinatorTests.swift in Sources */,
 				7AEAC4C5CE2F13349F359F96 /* NearDuplicateMergerTests.swift in Sources */,
+				1B79A55023532D51D4870E80 /* QueryClassifierTests.swift in Sources */,
 				8CE8D0954648788460175F01 /* RelevanceScorerTests.swift in Sources */,
 				A8ADEA0E944B2D77CFC32119 /* ResultAggregatorTests.swift in Sources */,
 				9AD524FFA3CD2C7307440087 /* ResultCacheTests.swift in Sources */,
@@ -1415,6 +1425,8 @@
 				84FA7446A3E4CD05CDFC2887 /* NearDuplicateMerger.swift in Sources */,
 				BC622F7A19D1799E99771A54 /* ProductCondition.swift in Sources */,
 				BC7BD235B049FDED0C8877A3 /* ProductMetadata.swift in Sources */,
+				A09BC4B56171D5A99A1D090A /* QueryCategory.swift in Sources */,
+				38BD0E3CF5A0F6D74BCDC544 /* QueryClassifier.swift in Sources */,
 				BFA36BC9A26A245DB2AF90BA /* QueryEnhancing.swift in Sources */,
 				83240E0E20B643AB6C96FB81 /* RelevanceScorer.swift in Sources */,
 				BC9F7451A8003B00C5129DF3 /* ResultAggregator.swift in Sources */,
