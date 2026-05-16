@@ -32,19 +32,41 @@ public struct EnhancedQuery: Equatable, Hashable, Sendable {
     @Guide(description: "The desired condition of the product.")
     #endif
     public let condition: ProductCondition?
-    
+
+    /// High-level product category produced by `QueryClassifier`.
+    /// Intentionally NOT a `@Guide`-annotated field — the FoundationModel
+    /// `@Generable` LLM schema should not try to populate it; that's the
+    /// classifier's job and only the classifier's. nil = "no confident
+    /// classification, sources should not be category-gated."
+    public let queryCategory: QueryCategory?
+
     public init(
         original: String,
         productType: String?,
         categories: [String],
         priceMax: Double?,
-        condition: ProductCondition?
+        condition: ProductCondition?,
+        queryCategory: QueryCategory? = nil
     ) {
         self.original = original
         self.productType = productType
         self.categories = categories
         self.priceMax = priceMax
         self.condition = condition
+        self.queryCategory = queryCategory
+    }
+
+    /// Returns a copy with `queryCategory` replaced. Mirrors
+    /// `SearchResult.withMetadata(_:)`.
+    public func withQueryCategory(_ category: QueryCategory?) -> EnhancedQuery {
+        EnhancedQuery(
+            original: original,
+            productType: productType,
+            categories: categories,
+            priceMax: priceMax,
+            condition: condition,
+            queryCategory: category
+        )
     }
 
     /// Centralized logic to determine if this query likely refers to a book.

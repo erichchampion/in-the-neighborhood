@@ -42,6 +42,64 @@ final class MetasearchCoordinatorTests: XCTestCase {
         coordinator = MetasearchCoordinator(sources: mockSources)
     }
     
+    // MARK: - Phase C3: queryCategory threading
+
+    func test_EnhancedQuery_withQueryCategory_preservesOtherFields() {
+        let q = EnhancedQuery(
+            original: "drill bit",
+            productType: "drill",
+            categories: ["hardware"],
+            priceMax: 25.0,
+            condition: .new
+        )
+        let q2 = q.withQueryCategory(.hardware)
+
+        XCTAssertEqual(q2.original, q.original)
+        XCTAssertEqual(q2.productType, q.productType)
+        XCTAssertEqual(q2.categories, q.categories)
+        XCTAssertEqual(q2.priceMax, q.priceMax)
+        XCTAssertEqual(q2.condition, q.condition)
+        XCTAssertEqual(q2.queryCategory, .hardware)
+        XCTAssertNil(q.queryCategory)
+    }
+
+    func test_MetasearchCoordinator_attachesQueryCategoryFromClassifier() async {
+        let recorder = MockSearchSource(identifier: "rec", sourceType: .online)
+        let coord = MetasearchCoordinator(sources: [recorder])
+        let query = EnhancedQuery(
+            original: "wireless headphones",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil
+        )
+
+        await coord.searchStreaming(query: query) { _, _ in }
+
+        let received = await recorder.state.lastQuery
+        XCTAssertEqual(received?.queryCategory, .electronics)
+    }
+
+    func test_MetasearchCoordinator_preservesPreSetQueryCategory() async {
+        // If the caller already classified, the coordinator should not
+        // overwrite. Lets tests inject deterministic categories.
+        let recorder = MockSearchSource(identifier: "rec", sourceType: .online)
+        let coord = MetasearchCoordinator(sources: [recorder])
+        let query = EnhancedQuery(
+            original: "wireless headphones",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil,
+            queryCategory: .book
+        )
+
+        await coord.searchStreaming(query: query) { _, _ in }
+
+        let received = await recorder.state.lastQuery
+        XCTAssertEqual(received?.queryCategory, .book)
+    }
+
     func test_MetasearchCoordinator_QueriesAllSources() async throws {
         let query = EnhancedQuery(
             original: "test query",

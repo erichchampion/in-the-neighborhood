@@ -8,13 +8,15 @@ public actor MetasearchCoordinator {
     private nonisolated(unsafe) var denyListFilter: DenyListFilter
     private let ethicsScorer: EthicsScorer
     private let resultCache: ResultCache?
+    private let queryClassifier: QueryClassifier
 
     public init(
         sources: [any SearchSource],
         timeout: TimeInterval = 60.0,
         denyListFilter: DenyListFilter = DenyListFilter(),
         ethicsScorer: EthicsScorer = EthicsScorer(),
-        resultCache: ResultCache? = ResultCache()
+        resultCache: ResultCache? = ResultCache(),
+        queryClassifier: QueryClassifier = QueryClassifier()
     ) {
         self.sources = sources
         self.timeout = timeout
@@ -23,6 +25,15 @@ public actor MetasearchCoordinator {
         self.denyListFilter = denyListFilter
         self.ethicsScorer = ethicsScorer
         self.resultCache = resultCache
+        self.queryClassifier = queryClassifier
+    }
+
+    /// Attaches a classifier-derived `queryCategory` if one isn't already
+    /// set on the query. Tests can pre-set the category on the input to
+    /// keep classification deterministic.
+    private func classifyIfNeeded(_ query: EnhancedQuery) -> EnhancedQuery {
+        guard query.queryCategory == nil else { return query }
+        return query.withQueryCategory(queryClassifier.classify(query.original))
     }
 
     /// Clear the in-memory cache (e.g. when the user explicitly wants fresh
@@ -47,7 +58,8 @@ public actor MetasearchCoordinator {
         return try await search(query: query, excludingSources: [])
     }
     
-    public func search(query: EnhancedQuery, excludingSources: Set<String>) async throws -> [SearchResult] {
+    public func search(query rawQuery: EnhancedQuery, excludingSources: Set<String>) async throws -> [SearchResult] {
+        let query = classifyIfNeeded(rawQuery)
         // Cache hit: skip the network entirely. We key on the normalized
         // raw query string; `excludingSources` would change the result set,
         // so only cache the no-exclusions case.
@@ -136,11 +148,12 @@ public actor MetasearchCoordinator {
     /// Applies filter and aggregate per batch; caller is responsible for merging/deduplicating across batches.
     /// Integrates the intelligence pipeline: Amazon & BestBuy are used to extract accurate brand/author metadata before yielding to MapKit.
     public func searchStreaming(
-        query: EnhancedQuery,
+        query rawQuery: EnhancedQuery,
         excludingSources: Set<String> = [],
         excludeLocal: Bool = false,
         onResults externalOnResults: @escaping @Sendable (String, [SearchResult]) -> Void
     ) async {
+        let query = classifyIfNeeded(rawQuery)
         let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
 
         // Split sources into distinct phases
