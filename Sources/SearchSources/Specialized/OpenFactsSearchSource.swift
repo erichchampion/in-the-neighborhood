@@ -16,6 +16,7 @@ public final class OpenFactsSearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .product
+    public let categoryAffinity: Set<QueryCategory>
 
     private let host: String
     private let urlSession: URLSessionProtocol
@@ -25,11 +26,13 @@ public final class OpenFactsSearchSource: SearchSource, @unchecked Sendable {
     public init(
         host: String,
         identifier: String,
+        categoryAffinity: Set<QueryCategory>,
         urlSession: URLSessionProtocol = URLSessionAdapter(),
         maxResults: Int = 20
     ) {
         self.host = host
         self.identifier = identifier
+        self.categoryAffinity = categoryAffinity
         self.urlSession = urlSession
         self.maxResults = maxResults
     }
@@ -207,6 +210,7 @@ public extension OpenFactsSearchSource {
         OpenFactsSearchSource(
             host: "world.openfoodfacts.org",
             identifier: SourceIdentifier.openfoodfacts,
+            categoryAffinity: [.grocery],
             urlSession: urlSession
         )
     }
@@ -217,15 +221,18 @@ public extension OpenFactsSearchSource {
         OpenFactsSearchSource(
             host: "world.openbeautyfacts.org",
             identifier: SourceIdentifier.openbeautyfacts,
+            categoryAffinity: [.personalCare],
             urlSession: urlSession
         )
     }
 
-    /// General non-food products (Open Products Facts).
+    /// General non-food products (Open Products Facts). No affinity —
+    /// runs for every classified query as a generic product catalog.
     static func products(urlSession: URLSessionProtocol = URLSessionAdapter()) -> OpenFactsSearchSource {
         OpenFactsSearchSource(
             host: "world.openproductsfacts.org",
             identifier: SourceIdentifier.openproductsfacts,
+            categoryAffinity: [],
             urlSession: urlSession
         )
     }
@@ -235,6 +242,7 @@ public extension OpenFactsSearchSource {
         OpenFactsSearchSource(
             host: "world.openpetfoodfacts.org",
             identifier: SourceIdentifier.openpetfoodfacts,
+            categoryAffinity: [.petFood],
             urlSession: urlSession
         )
     }

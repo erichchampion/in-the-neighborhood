@@ -80,6 +80,88 @@ final class MetasearchCoordinatorTests: XCTestCase {
         XCTAssertEqual(received?.queryCategory, .electronics)
     }
 
+    func test_MetasearchCoordinator_skipsSourcesWithMismatchedAffinity() async {
+        let bookSource = MockSearchSource(
+            identifier: "book-src",
+            sourceType: .online,
+            categoryAffinity: [.book]
+        )
+        let generalSource = MockSearchSource(
+            identifier: "general-src",
+            sourceType: .online,
+            categoryAffinity: []
+        )
+        let coord = MetasearchCoordinator(sources: [bookSource, generalSource])
+        let query = EnhancedQuery(
+            original: "wireless headphones",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil,
+            queryCategory: .electronics
+        )
+
+        await coord.searchStreaming(query: query) { _, _ in }
+
+        let bookHits = await bookSource.state.invocationCount
+        let generalHits = await generalSource.state.invocationCount
+        XCTAssertEqual(bookHits, 0, "Book-affinity source must be skipped for an electronics query")
+        XCTAssertGreaterThan(generalHits, 0, "Empty-affinity source must always run")
+    }
+
+    func test_MetasearchCoordinator_runsAllSourcesWhenCategoryIsNil() async {
+        let bookSource = MockSearchSource(
+            identifier: "book-src",
+            sourceType: .online,
+            categoryAffinity: [.book]
+        )
+        let electronicsSource = MockSearchSource(
+            identifier: "elec-src",
+            sourceType: .online,
+            categoryAffinity: [.electronics]
+        )
+        let coord = MetasearchCoordinator(sources: [bookSource, electronicsSource])
+        // queryCategory = nil — classifier returned no confident match.
+        // Pre-C3 behavior (all sources run) must be preserved.
+        let query = EnhancedQuery(
+            original: "asdfqwerty",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil,
+            queryCategory: nil
+        )
+
+        await coord.searchStreaming(query: query) { _, _ in }
+
+        let bookHits = await bookSource.state.invocationCount
+        let elecHits = await electronicsSource.state.invocationCount
+        XCTAssertGreaterThan(bookHits, 0)
+        XCTAssertGreaterThan(elecHits, 0)
+    }
+
+    func test_MetasearchCoordinator_runsSourceWhenAffinityMatches() async {
+        let bookSource = MockSearchSource(
+            identifier: "book-src",
+            sourceType: .online,
+            categoryAffinity: [.book]
+        )
+        let coord = MetasearchCoordinator(sources: [bookSource])
+        let query = EnhancedQuery(
+            original: "on tyranny",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil,
+            queryCategory: .book
+        )
+
+        await coord.searchStreaming(query: query) { _, _ in }
+
+        let bookHits = await bookSource.state.invocationCount
+        XCTAssertGreaterThan(bookHits, 0)
+    }
+
     func test_MetasearchCoordinator_preservesPreSetQueryCategory() async {
         // If the caller already classified, the coordinator should not
         // overwrite. Lets tests inject deterministic categories.

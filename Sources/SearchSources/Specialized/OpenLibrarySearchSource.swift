@@ -10,6 +10,7 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String = SourceIdentifier.openlibrary
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .book
+    public let categoryAffinity: Set<QueryCategory> = [.book]
 
     private let session: URLSession
     private let maxResults: Int
@@ -29,73 +30,13 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
         return await collector.allResults
     }
 
-public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
-        // Open Library is free, has no rate limit for reasonable use, and the
-        // per-source timeout (A2) bounds latency. So we run it for every
-        // non-trivial query except those that obviously aren't book searches
-        // (hardware, "near me", etc.) — better to return a few extra book
-        // results than to silently skip a real book lookup like "on tyranny".
-        let allowSearch = query.isBook || looksLikeBookQuery(query.original)
-
-        guard allowSearch else {
-            print("[OpenLibrarySearchSource] Skipping non-book query: \(query.original)")
-            return
-        }
-
+    public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        // Source-side filtering is gone — the coordinator's
+        // categoryAffinity gate (Phase C3) now decides whether
+        // OpenLibrary runs based on the classifier output. If we got
+        // here, this query is book-related.
         print("[OpenLibrarySearchSource] Searching for: \(query.original)")
         try await searchBooks(query: query.original, onResults: onResults)
-    }
-
-    /// Returns `true` for any query that might plausibly match a book.
-    /// Default-true with a short exclusion list rather than default-false with
-    /// a brittle capitalized-word heuristic — the old rule rejected lowercase
-    /// book titles like "on tyranny" and never searched Open Library at all.
-    /// Exposed as `internal` so tests can verify the trigger decision without
-    /// hitting the network.
-    func looksLikeBookQuery(_ query: String) -> Bool {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 2 else { return false }
-
-        // Skip queries that are obviously about a physical store or geographic
-        // intent — Open Library has nothing to say about those.
-        let lower = trimmed.lowercased()
-        let nonBookSignals = [
-            "near me", "nearby", "store near", "shop near",
-            "hardware", "hardware store",
-            "grocery", "supermarket",
-            "auto parts", "auto repair",
-            "restaurant", "cafe", "coffee shop",
-            "pharmacy", "gas station"
-        ]
-        for signal in nonBookSignals where lower.contains(signal) {
-            return false
-        }
-
-        return true
-    }
-
-    // MARK: - Private
-
-    /// Only run for book / reading queries to avoid cluttering non-book results.
-    private func isBookQuery(_ query: EnhancedQuery) -> Bool {
-        let bookCategories: Set<String> = [
-            "bookstore", "books", "book shop", "library", "reading", "novel",
-            "author", "fiction", "nonfiction", "non-fiction", "biography",
-            "textbook", "comic", "graphic novel"
-        ]
-        let lowerOriginal = query.original.lowercased()
-        if query.categories.contains(where: { bookCategories.contains($0.lowercased()) }) {
-            return true
-        }
-        if bookCategories.contains(where: { lowerOriginal.contains($0) }) {
-            return true
-        }
-        // Check productType if available
-        if let type = query.productType?.lowercased(),
-           type.contains("book") || type.contains("novel") || type.contains("reading") {
-            return true
-        }
-        return false
     }
 
     private func searchBooks(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {

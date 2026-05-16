@@ -5,6 +5,7 @@ public final class BookshopSearchSource: SearchSource {
     public let identifier: String = SourceIdentifier.bookshop
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .book
+    public let categoryAffinity: Set<QueryCategory> = [.book]
     public let timeoutBudget: TimeInterval = 6.0  // HTML scrape with retries
 
     private let baseURL = "https://bookshop.org"
@@ -29,11 +30,8 @@ public final class BookshopSearchSource: SearchSource {
     }
 
     public func searchStreaming(query: EnhancedQuery, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
-        // Filter to only book-related queries
-        guard query.isBook else {
-            return
-        }
-        
+        // Source-side filtering moved to the coordinator's categoryAffinity
+        // gate (Phase C3). If we got here, the classifier confirmed book.
         try await searchWithRetry(query: query.original, attempt: 0, onResults: onResults)
     }
     

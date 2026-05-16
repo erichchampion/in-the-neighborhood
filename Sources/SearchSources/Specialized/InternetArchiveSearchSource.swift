@@ -12,6 +12,7 @@ public final class InternetArchiveSearchSource: SearchSource, @unchecked Sendabl
     public let identifier: String = SourceIdentifier.internetarchive
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .book
+    public let categoryAffinity: Set<QueryCategory> = [.book, .media]
 
     private let urlSession: URLSessionProtocol
     private let userAgent = "InTheNeighborhood/1.0 (com.in-the-neighborhood)"

@@ -5,7 +5,8 @@ public final class GoogleBooksSearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String = SourceIdentifier.googlebooks
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .book
-    
+    public let categoryAffinity: Set<QueryCategory> = [.book]
+
     private let session: URLSession
     private let apiKey: String?
     private let maxRetries: Int

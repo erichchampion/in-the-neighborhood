@@ -7,7 +7,8 @@ public final class BestBuySearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String = SourceIdentifier.bestbuy
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .product
-    
+    public let categoryAffinity: Set<QueryCategory> = [.electronics]
+
     private let session: URLSession
     private let apiKey: String?
     private let baseURL = "https://api.bestbuy.com/v1"

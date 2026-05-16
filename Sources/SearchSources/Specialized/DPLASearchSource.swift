@@ -5,7 +5,8 @@ public final class DPLASearchSource: SearchSource, @unchecked Sendable {
     public let identifier: String = "dpla"
     public let sourceType: SourceType = .online
     public let category: ResultCategory = .book
-    
+    public let categoryAffinity: Set<QueryCategory> = [.book, .media]
+
     private let apiKey: String
     private let urlSession: URLSessionProtocol
     

@@ -71,6 +71,7 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     let identifier: String
     let sourceType: SourceType
     let category: ResultCategory
+    let categoryAffinity: Set<QueryCategory>
     let state = MockSearchSourceState()
     private let customTimeoutBudget: TimeInterval?
     private let customBrand: String?
@@ -93,11 +94,13 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         timeoutBudget: TimeInterval? = nil,
         brand: String? = nil,
         author: String? = nil,
-        title: String? = nil
+        title: String? = nil,
+        categoryAffinity: Set<QueryCategory> = []
     ) {
         self.identifier = identifier
         self.sourceType = sourceType
         self.category = category
+        self.categoryAffinity = categoryAffinity
         self.customTimeoutBudget = timeoutBudget
         self.customBrand = brand
         self.customAuthor = author

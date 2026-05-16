@@ -154,7 +154,21 @@ public actor MetasearchCoordinator {
         onResults externalOnResults: @escaping @Sendable (String, [SearchResult]) -> Void
     ) async {
         let query = classifyIfNeeded(rawQuery)
-        let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
+        let excludedFiltered = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
+
+        // Phase C3: drop specialty sources whose categoryAffinity doesn't
+        // include the classifier's chosen category. Sources with an empty
+        // affinity set always run (general-purpose / local). When the
+        // classifier returned nil, run everything — preserves pre-C3
+        // coverage under uncertainty.
+        let sourcesToSearch: [any SearchSource]
+        if let category = query.queryCategory {
+            sourcesToSearch = excludedFiltered.filter { source in
+                source.categoryAffinity.isEmpty || source.categoryAffinity.contains(category)
+            }
+        } else {
+            sourcesToSearch = excludedFiltered
+        }
 
         // Split sources into distinct phases
         // Phase 1: Web sources and Product Intelligence sources (Amazon, BestBuy)
@@ -214,21 +228,7 @@ public actor MetasearchCoordinator {
                 let sourceIdentifier = source.identifier
                 let sourceCategory = source.category
 
-                // If the product is detected as a book, inject bookshop.org into the online query
-                var effectiveQuery = query
-                let isBook = query.isBook
-
-                if isBook && sourceCategory != .book && sourceCategory != .local {
-                    effectiveQuery = EnhancedQuery(
-                        original: "\(query.original) bookshop.org",
-                        productType: query.productType,
-                        categories: query.categories,
-                        priceMax: query.priceMax,
-                        condition: query.condition
-                    )
-                }
-
-                let runQuery = effectiveQuery
+                let runQuery = query
                 let timeoutValue = timeout
                 let sourceToRun = source
                 let sourceBudget = min(sourceToRun.timeoutBudget, timeoutValue)
