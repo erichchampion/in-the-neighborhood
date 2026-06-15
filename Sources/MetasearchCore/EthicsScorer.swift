@@ -38,12 +38,15 @@ public struct EthicsScorer: Sendable {
 
     /// Within-tier ranking score. Higher is better. Used by ResultPrioritizer
     /// to break ties between two results in the same source-type tier with
-    /// the same relevance score.
+    /// the same relevance score. `discouraged` scores below `unknown` so
+    /// tolerated-but-not-endorsed chains are demoted beneath neutral results
+    /// (but, unlike `mega`, are not blocked entirely).
     public func score(forHost host: String) -> Int {
         switch entry(forHost: host)?.ownership {
         case .coop, .bCorp, .employeeOwned: return 3
         case .indie:                         return 2
         case .unknown, .none:                return 1
+        case .discouraged:                   return -1
         case .mega:                          return 0
         }
     }

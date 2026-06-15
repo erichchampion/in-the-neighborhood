@@ -40,13 +40,27 @@ public struct EnhancedQuery: Equatable, Hashable, Sendable {
     /// classification, sources should not be category-gated."
     public let queryCategory: QueryCategory?
 
+    /// Structured product identifiers extracted from Phase 1 intelligence
+    /// (deny-listed scrapers + Open Facts). These let identifier-aware
+    /// sources do an exact lookup instead of a free-text search:
+    /// `isbn` → Open Library `isbn:` query, `upcEan` → Open Facts exact
+    /// GTIN endpoint. Like `queryCategory`, these are NOT `@Guide` fields —
+    /// they're populated by the coordinator's metadata loop, never by the
+    /// LLM. nil = "no identifier extracted; use free-text `original`."
+    public let isbn: String?
+    public let upcEan: String?
+    public let model: String?
+
     public init(
         original: String,
         productType: String?,
         categories: [String],
         priceMax: Double?,
         condition: ProductCondition?,
-        queryCategory: QueryCategory? = nil
+        queryCategory: QueryCategory? = nil,
+        isbn: String? = nil,
+        upcEan: String? = nil,
+        model: String? = nil
     ) {
         self.original = original
         self.productType = productType
@@ -54,6 +68,9 @@ public struct EnhancedQuery: Equatable, Hashable, Sendable {
         self.priceMax = priceMax
         self.condition = condition
         self.queryCategory = queryCategory
+        self.isbn = isbn
+        self.upcEan = upcEan
+        self.model = model
     }
 
     /// Returns a copy with `queryCategory` replaced. Mirrors
@@ -65,7 +82,31 @@ public struct EnhancedQuery: Equatable, Hashable, Sendable {
             categories: categories,
             priceMax: priceMax,
             condition: condition,
-            queryCategory: category
+            queryCategory: category,
+            isbn: isbn,
+            upcEan: upcEan,
+            model: model
+        )
+    }
+
+    /// Returns a copy with structured identifiers attached. Only non-nil
+    /// arguments replace the existing values, so callers can layer in one
+    /// identifier without clearing the others.
+    public func withIdentifiers(
+        isbn: String? = nil,
+        upcEan: String? = nil,
+        model: String? = nil
+    ) -> EnhancedQuery {
+        EnhancedQuery(
+            original: original,
+            productType: productType,
+            categories: categories,
+            priceMax: priceMax,
+            condition: condition,
+            queryCategory: queryCategory,
+            isbn: isbn ?? self.isbn,
+            upcEan: upcEan ?? self.upcEan,
+            model: model ?? self.model
         )
     }
 }

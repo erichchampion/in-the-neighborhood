@@ -59,6 +59,7 @@
 		5E2850DB254686761B8CF5EA /* LocalMapViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FE705A3CA1C3EE3B8AEBFA /* LocalMapViewTests.swift */; };
 		5E56DF0F4BDDDB2A8E36B5CB /* SearchResultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33EC7EF1CAEA5214B3E6EC3C /* SearchResultTests.swift */; };
 		64610111D6ECE0BF81C1FD14 /* LibraryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */; };
+		A1B2C3D4E5F6000000000001 /* WhyThisResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6000000000002 /* WhyThisResultView.swift */; };
 		64E8EFAA3F68DD30F81BFC3F /* NominatimSearchSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42010E90F23F2BA6A44BA2BA /* NominatimSearchSourceTests.swift */; };
 		660E51663BCD166A7F98ECD2 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE25AA993A0210D35FDB7ED7 /* SearchViewModel.swift */; };
 		66BEB74D06FB1A2975EF790E /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF2464ED8DB513B9CCFC9BB2 /* ResultsView.swift */; };
@@ -461,6 +462,7 @@
 		E6B29927CCA2E7B386705AD6 /* ErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorView.swift; sourceTree = "<group>"; };
 		E8F4E04E9E5260293A812A2F /* BingProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BingProviderTests.swift; sourceTree = "<group>"; };
 		EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCard.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6000000000002 /* WhyThisResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhyThisResultView.swift; sourceTree = "<group>"; };
 		EEC39C5A4F672BC878A0FE66 /* SearchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryEntry.swift; sourceTree = "<group>"; };
 		F3349062230C15686D213C47 /* WebSearchSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSourceTests.swift; sourceTree = "<group>"; };
 		F4888A0B4A52D2C70CCA1B04 /* CircuitBreakerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreakerTests.swift; sourceTree = "<group>"; };
@@ -735,6 +737,7 @@
 				B7ADC741BC33AC29E2E6E8A8 /* EthicsBadgeView.swift */,
 				2FBEA5568DD9B1CB8FE1EB45 /* FavoritesView.swift */,
 				EA2CDEF5540574D4A2404D9C /* LibraryCard.swift */,
+				A1B2C3D4E5F6000000000002 /* WhyThisResultView.swift */,
 				46FD19BB8AF9F14CD14C72E9 /* LoadingView.swift */,
 				4A80969CD07F32617E5A6B64 /* LocalBusinessCard.swift */,
 				7C24C46C99A15D1A1964AA47 /* LocalMapView.swift */,
@@ -1261,6 +1264,7 @@
 				E9E0EAF06F52537643B4EAF3 /* FavoritesView.swift in Sources */,
 				1B36E0111983FB67E76B85E6 /* IntentManager.swift in Sources */,
 				64610111D6ECE0BF81C1FD14 /* LibraryCard.swift in Sources */,
+				A1B2C3D4E5F6000000000001 /* WhyThisResultView.swift in Sources */,
 				8A7A2FDB0366C3361790F42D /* LoadingView.swift in Sources */,
 				AB32A016860800B45C8A154F /* LocalBusinessCard.swift in Sources */,
 				06D8AF8D2E234A6C6A4F6986 /* LocalMapView.swift in Sources */,

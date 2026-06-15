@@ -8,7 +8,8 @@ final class EthicsScorerTests: XCTestCase {
             "bookshop.org":         EthicsEntry(ownership: .bCorp, region: "national", certifications: ["b-corp"]),
             "powells.com":          EthicsEntry(ownership: .indie, region: "regional"),
             "rei.com":              EthicsEntry(ownership: .coop, region: "national", certifications: ["coop"]),
-            "kingarthurbaking.com": EthicsEntry(ownership: .employeeOwned, region: "national", certifications: ["esop", "b-corp"])
+            "kingarthurbaking.com": EthicsEntry(ownership: .employeeOwned, region: "national", certifications: ["esop", "b-corp"]),
+            "barnesandnoble.com":   EthicsEntry(ownership: .discouraged, region: "national")
         ])
         return EthicsScorer(ledger: ledger)
     }
@@ -60,6 +61,28 @@ final class EthicsScorerTests: XCTestCase {
     func test_isBlocked_falseForUnknown() {
         let scorer = makeScorer()
         XCTAssertFalse(scorer.isBlocked(host: "example.com"))
+    }
+
+    func test_isBlocked_falseForDiscouraged() {
+        // `discouraged` is demoted but NOT blocked — only `mega` is blocked.
+        let scorer = makeScorer()
+        XCTAssertFalse(scorer.isBlocked(host: "barnesandnoble.com"))
+    }
+
+    // MARK: - discouraged demotion
+
+    func test_score_discouragedIsDemotedBelowUnknown() {
+        // `discouraged` must rank below neutral/unknown so tolerated-but-not-
+        // endorsed chains sink beneath uncategorized peers. (`mega` is moot
+        // for ranking — it's blocked before it ever reaches the prioritizer.)
+        let scorer = makeScorer()
+        let discouraged = scorer.score(forHost: "barnesandnoble.com")
+        let unknown = scorer.score(forHost: "example.com")
+        let indie = scorer.score(forHost: "powells.com")
+
+        XCTAssertEqual(discouraged, -1, "discouraged should score -1")
+        XCTAssertLessThan(discouraged, unknown, "discouraged must rank below neutral/unknown")
+        XCTAssertLessThan(discouraged, indie, "discouraged must rank below indie")
     }
 
     // MARK: - score(forHost:) monotonicity

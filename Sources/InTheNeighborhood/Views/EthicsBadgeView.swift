@@ -95,6 +95,8 @@ struct EthicsBadgeView: View {
             return BadgeItem(label: "Co-op", systemImage: "hands.sparkles", tint: .positive)
         case .bCorp:
             return BadgeItem(label: "B-Corp", systemImage: "leaf", tint: .positive)
+        case .discouraged:
+            return BadgeItem(label: "Large chain", systemImage: "building.2", tint: .warning)
         case .mega:
             return BadgeItem(label: "Mega-owned", systemImage: "exclamationmark.triangle", tint: .warning)
         case .unknown:

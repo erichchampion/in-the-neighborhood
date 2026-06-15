@@ -343,10 +343,40 @@ final class OverpassSearchSourceTests: XCTestCase {
         XCTAssertEqual(OverpassTagMap.categoryTag(for: ["amenity": "repair_cafe"]), "repair")
     }
 
-    func test_categoryTag_returnsNilForNonRepairTags() {
+    func test_categoryTag_returnsNilForUnclassifiedTags() {
+        // Bookstores are a purchase intent (not borrow/repair); so are clothes shops.
         XCTAssertNil(OverpassTagMap.categoryTag(for: ["shop": "books"]))
-        XCTAssertNil(OverpassTagMap.categoryTag(for: ["amenity": "library"]))
+        XCTAssertNil(OverpassTagMap.categoryTag(for: ["shop": "clothes"]))
         XCTAssertNil(OverpassTagMap.categoryTag(for: [:]))
+    }
+
+    // MARK: - W4 Area 1: borrow-tag classification
+
+    func test_categoryTag_returnsBorrowForLibraryAndToolLibraryAndBookcase() {
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["amenity": "library"]), "borrow")
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["amenity": "tool_library"]), "borrow")
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: ["amenity": "public_bookcase"]), "borrow")
+    }
+
+    func test_categoryTag_returnsBorrowForLibraryTypeToolLibrary() {
+        XCTAssertEqual(
+            OverpassTagMap.categoryTag(for: ["amenity": "community_centre", "library:type": "tool_library"]),
+            "borrow"
+        )
+    }
+
+    func test_categoryTag_repairWinsOverBorrowWhenBothPresent() {
+        // Repair is the more specific intent, so it takes precedence.
+        let tags = ["amenity": "repair_cafe", "library:type": "tool_library"]
+        XCTAssertEqual(OverpassTagMap.categoryTag(for: tags), "repair")
+    }
+
+    func test_tagMap_toolLibrarySynonymFetchesLibraryTags() {
+        // The "tool library" query synonym must resolve to the library tag set
+        // so these nodes are actually fetched (then classified as borrow).
+        let tags = OverpassTagMap.tags(forCategories: ["tool library"])
+        XCTAssertTrue(tags.contains("amenity=tool_library"))
+        XCTAssertTrue(tags.contains("amenity=library"))
     }
 
     // MARK: - C1: parser surfaces metadata["category_tag"] for repair

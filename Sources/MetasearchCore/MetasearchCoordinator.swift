@@ -5,7 +5,7 @@ public actor MetasearchCoordinator {
     private let timeout: TimeInterval
     private let resultAggregator: ResultAggregator
     private let resultPrioritizer: ResultPrioritizer
-    private nonisolated(unsafe) var denyListFilter: DenyListFilter
+    private var denyListFilter: DenyListFilter
     private let ethicsScorer: EthicsScorer
     private let resultCache: ResultCache?
     private let queryClassifier: QueryClassifier
@@ -46,14 +46,27 @@ public actor MetasearchCoordinator {
         self.denyListFilter = denyList
     }
 
-    private nonisolated func getEffectiveDenyList() -> DenyListFilter {
-        return denyListFilter
+    /// Shared source-selection logic used by both `search()` and
+    /// `searchStreaming()`. Drops excluded sources, then applies the Phase C3
+    /// category-affinity gate: when a classified `category` is present, a
+    /// source runs only if its `categoryAffinity` is empty (general-purpose)
+    /// or contains the category. A `nil` category runs everything, preserving
+    /// pre-C3 coverage under uncertainty. Kept `nonisolated static` so both
+    /// entry points (and tests) share one definition.
+    nonisolated static func selectSources(
+        _ sources: [any SearchSource],
+        excluding excludingSources: Set<String>,
+        category: QueryCategory?
+    ) -> [any SearchSource] {
+        let excludedFiltered = excludingSources.isEmpty
+            ? sources
+            : sources.filter { !excludingSources.contains($0.identifier) }
+        guard let category else { return excludedFiltered }
+        return excludedFiltered.filter {
+            $0.categoryAffinity.isEmpty || $0.categoryAffinity.contains(category)
+        }
     }
 
-    private nonisolated func getEthicsScorer() -> EthicsScorer {
-        return ethicsScorer
-    }
-    
     public func search(query: EnhancedQuery) async throws -> [SearchResult] {
         return try await search(query: query, excludingSources: [])
     }
@@ -73,7 +86,7 @@ public actor MetasearchCoordinator {
         // Execute searches in parallel with timeout
         // Each source is independent - failures are handled gracefully
         var allResults: [SearchResult] = []
-        let sourcesToSearch = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
+        let sourcesToSearch = Self.selectSources(sources, excluding: excludingSources, category: query.queryCategory)
         let queryToSearch = query
         let timeoutValue = timeout
         
@@ -97,43 +110,15 @@ public actor MetasearchCoordinator {
             
             // Collect results from all sources, even if some failed
             for try await results in group {
-                // #region agent log
-                let sourceName = results.first?.source ?? "unknown"
-                print("[DEBUG] MetasearchCoordinator.swift:59 - Collected results from source: \(sourceName), count: \(results.count)")
-                if results.isEmpty && sourceName == "unknown" {
-                    print("[DEBUG] MetasearchCoordinator.swift:59 - WARNING: Empty results with unknown source - this may indicate a timeout or error")
-                }
-                for result in results {
-                    print("[DEBUG] MetasearchCoordinator.swift:59 - Result: source=\(result.source), title=\(result.title)")
-                }
-                // #endregion
                 allResults.append(contentsOf: results)
             }
         }
-        
-        // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:66 - Before filter: total results: \(allResults.count), Amazon results: \(allResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
-        // #endregion
-        
+
         // Aggregate, filter, and prioritize results
         // Even if some sources failed, we return what we have
-        var filteredResults = resultAggregator.filter(results: allResults, denyList: getEffectiveDenyList(), scorer: ethicsScorer)
-        
-        // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:70 - After filter: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
-        // #endregion
-        
+        var filteredResults = resultAggregator.filter(results: allResults, denyList: denyListFilter, scorer: ethicsScorer)
         filteredResults = resultAggregator.aggregate(results: filteredResults)
-        
-        // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:75 - After aggregate: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
-        // #endregion
-        
         filteredResults = resultPrioritizer.prioritize(results: filteredResults, scorer: ethicsScorer)
-
-        // #region agent log
-        print("[DEBUG] MetasearchCoordinator.swift:80 - After prioritize: total results: \(filteredResults.count), Amazon results: \(filteredResults.filter { $0.source.lowercased() == SourceIdentifier.amazon }.count)")
-        // #endregion
 
         // Populate the cache so the next identical query short-circuits.
         // Skip empty results so a transient outage doesn't poison the cache.
@@ -154,21 +139,17 @@ public actor MetasearchCoordinator {
         onResults externalOnResults: @escaping @Sendable (String, [SearchResult]) -> Void
     ) async {
         let query = classifyIfNeeded(rawQuery)
-        let excludedFiltered = excludingSources.isEmpty ? sources : sources.filter { !excludingSources.contains($0.identifier) }
 
-        // Phase C3: drop specialty sources whose categoryAffinity doesn't
-        // include the classifier's chosen category. Sources with an empty
-        // affinity set always run (general-purpose / local). When the
-        // classifier returned nil, run everything — preserves pre-C3
-        // coverage under uncertainty.
-        let sourcesToSearch: [any SearchSource]
-        if let category = query.queryCategory {
-            sourcesToSearch = excludedFiltered.filter { source in
-                source.categoryAffinity.isEmpty || source.categoryAffinity.contains(category)
-            }
-        } else {
-            sourcesToSearch = excludedFiltered
-        }
+        // Phase C3: shared with the non-streaming path — drops excluded
+        // sources, then gates specialty sources by category affinity.
+        let sourcesToSearch = Self.selectSources(sources, excluding: excludingSources, category: query.queryCategory)
+
+        // Capture the deny list and scorer into actor-isolated locals so the
+        // @Sendable streaming callbacks below read immutable copies instead of
+        // touching the actor's mutable `denyListFilter` from a nonisolated
+        // context (removes the former `nonisolated(unsafe)` hazard).
+        let effectiveDenyList = denyListFilter
+        let effectiveScorer = ethicsScorer
 
         // Split sources into distinct phases
         // Phase 1: Web sources and Product Intelligence sources (Amazon, BestBuy)
@@ -205,9 +186,11 @@ public actor MetasearchCoordinator {
         
         let intelligenceState = IntelligenceExtractionState()
 
-        // Dedupes local SearchResult IDs across the raw and refined passes so the
-        // refined pass doesn't re-emit places the user already saw from the raw pass.
-        actor LocalSeenIDs {
+        // Dedupes SearchResult IDs across passes so a later pass doesn't
+        // re-emit results the user already saw from an earlier one. One
+        // instance tracks the local raw/refined passes; a second tracks the
+        // Stage 1.5 targeted online pass.
+        actor SeenResultIDs {
             private var ids: Set<String> = []
             func filterAndTrack(_ results: [SearchResult]) -> [SearchResult] {
                 var fresh: [SearchResult] = []
@@ -218,7 +201,8 @@ public actor MetasearchCoordinator {
                 return fresh
             }
         }
-        let seenLocalIds = LocalSeenIDs()
+        let seenLocalIds = SeenResultIDs()
+        let seenOnlineIds = SeenResultIDs()
 
         // Stage 1: Phase 1 (web/product) AND the raw local pass run in parallel.
         // The local pass must not wait for intelligence extraction — that was the old
@@ -251,7 +235,7 @@ public actor MetasearchCoordinator {
                                 rawAccumulator.append(rawResults)
 
                                 // Process and yield results immediately
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: effectiveDenyList, scorer: effectiveScorer)
                                 filtered = self.resultAggregator.aggregate(results: filtered)
 
                                 if !filtered.isEmpty {
@@ -280,9 +264,13 @@ public actor MetasearchCoordinator {
                         switch sourceCategory {
                         case .book:
                             // Books stay authoritative: API book sources return
-                            // structured author metadata that we trust as-is.
+                            // structured author + ISBN metadata that we trust as-is.
                             if let author = accumulated.compactMap({ $0.metadata["author"] as? String }).first {
                                 await intelligenceState.setAuthor(author, force: true)
+                            }
+                            if let isbn = accumulated.compactMap({ $0.metadata["isbn"] as? String })
+                                .first(where: { Self.isValidISBN($0) }) {
+                                await intelligenceState.setISBN(isbn, force: true)
                             }
                         case .product:
                             // Product sources (especially the Open Facts
@@ -308,6 +296,37 @@ public actor MetasearchCoordinator {
                                let author = relatedForAuthor.metadata["author"] as? String {
                                 await intelligenceState.setAuthor(author, force: false)
                             }
+
+                            // W3: mine structured identifiers from the same
+                            // related product so Stage 1.5 can do an exact
+                            // ethical-online lookup. Every field is gated by
+                            // the relevance guard AND format-validated, so an
+                            // off-topic or malformed code can't poison the
+                            // authoritative exact-lookup endpoints.
+                            let relatedForIds = accumulated.first(where: {
+                                Self.productMetadataIsRelated($0, queryWords: queryWords, brand: $0.metadata["brand"] as? String)
+                            })
+                            if let isbn = relatedForIds?.metadata["isbn"] as? String, Self.isValidISBN(isbn) {
+                                await intelligenceState.setISBN(isbn, force: false)
+                            }
+                            if let upc = relatedForIds?.metadata["barcode"] as? String, Self.isValidUPC(upc) {
+                                await intelligenceState.setUPC(upc)
+                            }
+                            if let model = (relatedForIds?.metadata["model"] as? String)
+                                ?? (relatedForIds?.metadata["sku"] as? String) {
+                                await intelligenceState.setModel(model)
+                            }
+                            if let categoryHint = relatedForIds?.metadata["category"] as? String {
+                                await intelligenceState.setCategoryHint(categoryHint)
+                            }
+                            // W2: if this metadata came from a deny-listed mega
+                            // source, record the product title so the ethical
+                            // results we surface downstream can be tagged as
+                            // "alternative to <that product>".
+                            if Self.megaMetadataSourceIDs.contains(sourceIdentifier),
+                               let seed = relatedForIds?.title {
+                                await intelligenceState.setMegaSeed(seed)
+                            }
                         case .web, .local:
                             break
                         }
@@ -327,7 +346,7 @@ public actor MetasearchCoordinator {
                     do {
                         try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: query) { rawResults in
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: effectiveDenyList, scorer: effectiveScorer)
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 if !filtered.isEmpty {
                                     Task {
@@ -346,6 +365,61 @@ public actor MetasearchCoordinator {
             }
 
             await group.waitForAll()
+        }
+
+        // Stage 1.5: Targeted ethical-online refinement. When Phase 1 mined an
+        // exact identifier from the deny-listed scrapers / Open Facts, re-run
+        // the ethical online source that can use it — Open Library for an ISBN,
+        // the Open Facts siblings for a UPC/EAN — with an identifier-bearing
+        // query. This turns a brittle free-text guess into an exact lookup on
+        // values extracted "behind the scenes", the core mission payoff. Gated:
+        // it issues zero extra network calls when no identifier was extracted
+        // or no matching source survived the category gate.
+        let identifiers = await intelligenceState.snapshot()
+        // When the identifiers were seeded by a deny-listed mega source, the
+        // ethical results below are genuine alternatives to that product —
+        // tag them so the UI can say "ethical alternative to <X>".
+        let megaSeed = identifiers.megaSeedTitle
+        if identifiers.hasOnlineIdentifier {
+            let refinedOnlineQuery = query.withIdentifiers(
+                isbn: identifiers.isbn,
+                upcEan: identifiers.upcEan,
+                model: identifiers.model
+            )
+            let targetedSources = phase1Sources.filter { source in
+                (identifiers.isbn != nil && source.identifier == SourceIdentifier.openlibrary) ||
+                (identifiers.upcEan != nil && Self.openFactsSourceIDs.contains(source.identifier))
+            }
+            if !targetedSources.isEmpty {
+                await withTaskGroup(of: Void.self) { group in
+                    for source in targetedSources {
+                        let sourceIdentifier = source.identifier
+                        let sourceToRun = source
+                        let sourceBudget = min(sourceToRun.timeoutBudget, timeout)
+                        group.addTask {
+                            do {
+                                try await self.withTimeout(seconds: sourceBudget) {
+                                    try await sourceToRun.searchStreaming(query: refinedOnlineQuery) { rawResults in
+                                        var filtered = self.resultAggregator.filter(results: rawResults, denyList: effectiveDenyList, scorer: effectiveScorer)
+                                        filtered = self.resultAggregator.aggregate(results: filtered)
+                                        if !filtered.isEmpty {
+                                            Task {
+                                                let fresh = await seenOnlineIds.filterAndTrack(filtered)
+                                                if !fresh.isEmpty {
+                                                    onResults(sourceIdentifier, Self.tagAlternatives(fresh, seed: megaSeed))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch {
+                                // Ignore individual timeouts/errors
+                            }
+                        }
+                    }
+                    await group.waitForAll()
+                }
+            }
         }
 
         // Stage 2: Refined local pass — only worth running if Phase 1 extracted
@@ -393,13 +467,13 @@ public actor MetasearchCoordinator {
                     do {
                         try await self.withTimeout(seconds: sourceBudget) {
                             try await sourceToRun.searchStreaming(query: mapKitQuery) { rawResults in
-                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: self.getEffectiveDenyList(), scorer: self.getEthicsScorer())
+                                var filtered = self.resultAggregator.filter(results: rawResults, denyList: effectiveDenyList, scorer: effectiveScorer)
                                 filtered = self.resultAggregator.aggregate(results: filtered)
                                 if !filtered.isEmpty {
                                     Task {
                                         let fresh = await seenLocalIds.filterAndTrack(filtered)
                                         if !fresh.isEmpty {
-                                            onResults(sourceIdentifier, fresh)
+                                            onResults(sourceIdentifier, Self.tagAlternatives(fresh, seed: megaSeed))
                                         }
                                     }
                                 }
@@ -418,6 +492,7 @@ public actor MetasearchCoordinator {
         // going to emit synchronously into the buffer.
         await populateCache(key: cacheKey, useCache: useCache, buffer: emissionBuffer)
     }
+
 
     /// Writes the buffered streaming emissions to the cache. Skips empty
     /// snapshots so a transient outage doesn't poison the cache.
@@ -469,6 +544,54 @@ public actor MetasearchCoordinator {
         return false
     }
 
+    /// `true` if `raw` is a syntactically valid ISBN-10 or ISBN-13 once
+    /// hyphens/spaces are stripped (ISBN-10 may end in `X`). Gates ISBN
+    /// extraction so a malformed value can't drive the exact Open Library
+    /// `isbn:` lookup.
+    nonisolated static func isValidISBN(_ raw: String) -> Bool {
+        let stripped = raw.filter { $0.isNumber || $0 == "X" || $0 == "x" }
+        switch stripped.count {
+        case 10: return stripped.dropLast().allSatisfy(\.isNumber)
+        case 13: return stripped.allSatisfy(\.isNumber)
+        default: return false
+        }
+    }
+
+    /// `true` if `raw` is a plausible GTIN/UPC/EAN — all digits after
+    /// stripping spaces/hyphens, length in the GTIN family (8/12/13/14).
+    /// Gates UPC extraction so a malformed code can't drive the exact
+    /// Open Facts `/product/<code>.json` lookup.
+    nonisolated static func isValidUPC(_ raw: String) -> Bool {
+        let stripped = raw.filter { $0 != " " && $0 != "-" }
+        guard stripped.allSatisfy(\.isNumber) else { return false }
+        return [8, 12, 13, 14].contains(stripped.count)
+    }
+
+    /// Identifiers of the four Open Facts sibling sources — the UPC/EAN
+    /// exact-lookup targets for Stage 1.5.
+    nonisolated static let openFactsSourceIDs: Set<String> = [
+        SourceIdentifier.openfoodfacts,
+        SourceIdentifier.openbeautyfacts,
+        SourceIdentifier.openproductsfacts,
+        SourceIdentifier.openpetfoodfacts
+    ]
+
+    /// Deny-listed sources used only for behind-the-scenes metadata. When one
+    /// of these seeds the extraction, the ethical results the refined passes
+    /// surface are genuine "alternatives to" that mega product.
+    nonisolated static let megaMetadataSourceIDs: Set<String> = [
+        SourceIdentifier.amazon,
+        SourceIdentifier.bestbuy
+    ]
+
+    /// Tags each result with `ethicalAlternativeFor` when a mega seed exists,
+    /// so a card can render "ethical alternative to <product>". A nil seed
+    /// returns the results unchanged.
+    nonisolated static func tagAlternatives(_ results: [SearchResult], seed: String?) -> [SearchResult] {
+        guard let seed else { return results }
+        return results.map { $0.withMetadata(["ethicalAlternativeFor": seed]) }
+    }
+
     private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escaping @Sendable () async throws -> T) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask {
@@ -487,11 +610,6 @@ public actor MetasearchCoordinator {
             group.cancelAll()
             return result
         }
-    }
-    
-    public func updateDenyList(filter: DenyListFilter) {
-        // Note: This would need proper actor synchronization
-        // For now, deny list is set at initialization
     }
 }
 
@@ -513,6 +631,22 @@ actor IntelligenceExtractionState {
     var extractedBrand: String?
     var extractedAuthor: String?
     private var authorSetByBookSource = false
+
+    // W3: structured identifiers mined from Phase 1 results. ISBN follows
+    // the same book-source-authoritative latch as author (book APIs return
+    // structured ISBNs; scrapers don't). UPC/EAN and model are
+    // first-writer-wins — the first related, format-valid value sticks.
+    var extractedISBN: String?
+    var extractedUPC: String?
+    var extractedModel: String?
+    var extractedCategoryHint: String?
+    private var isbnSetByBookSource = false
+
+    /// Title of the deny-listed (mega) product whose metadata seeded this
+    /// extraction, if any. When set, the ethical results that the refined
+    /// passes surface are genuinely "alternatives to" this product, and get
+    /// tagged as such for the UI. First-writer-wins.
+    var megaSeedTitle: String?
 
     init() {}
 
@@ -536,6 +670,90 @@ actor IntelligenceExtractionState {
             extractedAuthor = author
         }
     }
+
+    /// Book sources latch the ISBN (`force: true`); product sources only
+    /// fill it if no book source has and no ISBN is set yet.
+    func setISBN(_ isbn: String?, force: Bool) {
+        guard let isbn else { return }
+        if force {
+            extractedISBN = isbn
+            isbnSetByBookSource = true
+        } else if extractedISBN == nil && !isbnSetByBookSource {
+            extractedISBN = isbn
+        }
+    }
+
+    func setUPC(_ upc: String?) {
+        guard let upc else { return }
+        if extractedUPC == nil { extractedUPC = upc }
+    }
+
+    func setModel(_ model: String?) {
+        guard let model else { return }
+        if extractedModel == nil { extractedModel = model }
+    }
+
+    func setCategoryHint(_ hint: String?) {
+        guard let hint else { return }
+        if extractedCategoryHint == nil { extractedCategoryHint = hint }
+    }
+
+    func setMegaSeed(_ title: String?) {
+        guard let title, !title.isEmpty else { return }
+        if megaSeedTitle == nil { megaSeedTitle = title }
+    }
+
+    /// Immutable view of everything extracted so far, for building the
+    /// Stage 1.5 identifier-bearing query.
+    func snapshot() -> ExtractedIdentifiers {
+        ExtractedIdentifiers(
+            brand: extractedBrand,
+            author: extractedAuthor,
+            isbn: extractedISBN,
+            upcEan: extractedUPC,
+            model: extractedModel,
+            categoryHint: extractedCategoryHint,
+            megaSeedTitle: megaSeedTitle
+        )
+    }
+}
+
+/// Snapshot of the identifiers mined during Phase 1, used to drive the
+/// targeted ethical-online lookup (Stage 1.5).
+public struct ExtractedIdentifiers: Sendable, Equatable {
+    public var brand: String?
+    public var author: String?
+    public var isbn: String?
+    public var upcEan: String?
+    public var model: String?
+    public var categoryHint: String?
+    /// Title of the mega product whose mined metadata produced these
+    /// identifiers, when the seed came from a deny-listed source. nil when
+    /// the metadata came only from ethical sources.
+    public var megaSeedTitle: String?
+
+    public init(
+        brand: String? = nil,
+        author: String? = nil,
+        isbn: String? = nil,
+        upcEan: String? = nil,
+        model: String? = nil,
+        categoryHint: String? = nil,
+        megaSeedTitle: String? = nil
+    ) {
+        self.brand = brand
+        self.author = author
+        self.isbn = isbn
+        self.upcEan = upcEan
+        self.model = model
+        self.categoryHint = categoryHint
+        self.megaSeedTitle = megaSeedTitle
+    }
+
+    /// `true` when at least one identifier supports an exact ethical-online
+    /// lookup (ISBN → Open Library, UPC → Open Facts). Model alone only
+    /// refines free-text local search, so it doesn't count here.
+    public var hasOnlineIdentifier: Bool { isbn != nil || upcEan != nil }
 }
 
 /// Lock-protected accumulator for `searchStreaming`'s emissions. Used by the

@@ -3,7 +3,16 @@ import MetasearchCore
 
 struct OnlineResultCard: View {
     let result: SearchResult
-    
+
+    @State private var showingWhy = false
+
+    /// Show the "Why this result?" affordance only when there's something to
+    /// explain — an ethics-ledger entry or an ethical-alternative relation.
+    private var canExplain: Bool {
+        result.metadata["ethics"] is EthicsEntry
+            || result.metadata["ethicalAlternativeFor"] is String
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 12) {
@@ -33,9 +42,18 @@ struct OnlineResultCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
+                    // Surfaced when this ethical result was found using metadata
+                    // mined behind the scenes from a deny-listed mega product.
+                    if let alternativeFor = result.metadata["ethicalAlternativeFor"] as? String {
+                        Label("Ethical alternative to \(alternativeFor)", systemImage: "leaf")
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                            .lineLimit(1)
+                    }
+
                     Text(result.title)
                         .font(.headline)
-                    
+
                     // Show price if available
                     if let price = result.metadata["price"] as? String {
                         Text(price)
@@ -53,6 +71,18 @@ struct OnlineResultCard: View {
 
                     if let ethics = result.metadata["ethics"] as? EthicsEntry {
                         EthicsBadgeView(entry: ethics)
+                    }
+
+                    if canExplain {
+                        Button {
+                            showingWhy = true
+                        } label: {
+                            Label("Why this result?", systemImage: "info.circle")
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Explains why this result is shown and looks up the brand's owner")
                     }
 
                     // Show URL as link for online results, otherwise show source label
@@ -96,6 +126,9 @@ struct OnlineResultCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(result.title)
         .accessibilityValue(buildAccessibilityValue())
+        .sheet(isPresented: $showingWhy) {
+            WhyThisResultView(result: result)
+        }
     }
     
     /// Checks if this result has shopping metadata

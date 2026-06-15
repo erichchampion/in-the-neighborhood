@@ -349,4 +349,64 @@ final class OpenFactsSearchSourceTests: XCTestCase {
         let collected: [SearchResult] = (try? await sut.search(query: query)) ?? []
         XCTAssertTrue(collected.isEmpty)
     }
+
+    // MARK: - W3: exact GTIN lookup
+
+    func test_buildProductURL_targetsExactProductEndpoint() {
+        let url = OpenFactsSearchSource.buildProductURL(host: "world.openfoodfacts.org", barcode: "5410228197867")
+        XCTAssertNotNil(url)
+        let decoded = url!.absoluteString.removingPercentEncoding ?? ""
+        XCTAssertTrue(decoded.hasPrefix("https://world.openfoodfacts.org/api/v2/product/5410228197867.json"),
+                      "Must hit the exact-GTIN product endpoint. Got: \(decoded)")
+        XCTAssertTrue(decoded.contains("fields="), "Must still request the field set")
+        XCTAssertFalse(decoded.contains("/search"), "Must not use the free-text search endpoint")
+    }
+
+    func test_buildProductURL_rejectsEmptyBarcode() {
+        XCTAssertNil(OpenFactsSearchSource.buildProductURL(host: "world.openfoodfacts.org", barcode: "   "))
+    }
+
+    func test_isValidUPC_acceptsGTINFamily_rejectsOthers() {
+        XCTAssertTrue(OpenFactsSearchSource.isValidUPC("036000291452"))     // UPC-12
+        XCTAssertTrue(OpenFactsSearchSource.isValidUPC("5410228197867"))    // EAN-13
+        XCTAssertTrue(OpenFactsSearchSource.isValidUPC("0 36000-29145 2"))  // separators stripped
+        XCTAssertFalse(OpenFactsSearchSource.isValidUPC("123"))
+        XCTAssertFalse(OpenFactsSearchSource.isValidUPC("12345abc6789"))
+    }
+
+    func test_parseProductResponse_mapsSingleProduct() {
+        // The exact-GTIN endpoint wraps one product under `product` with status 1.
+        let fixture = """
+        {
+          "status": 1,
+          "code": "5410228197867",
+          "product": {
+            "code": "5410228197867",
+            "product_name": "Alpro Oat Original",
+            "brands": "Alpro, Danone",
+            "nutriscore_grade": "b"
+          }
+        }
+        """.data(using: .utf8)!
+        let results = OpenFactsSearchSource.parseProductResponse(
+            data: fixture,
+            host: "world.openfoodfacts.org",
+            sourceId: SourceIdentifier.openfoodfacts
+        )
+        XCTAssertEqual(results.count, 1)
+        XCTAssertEqual(results.first?.title, "Alpro Oat Original")
+        XCTAssertEqual(results.first?.metadata["barcode"] as? String, "5410228197867")
+        XCTAssertEqual(results.first?.metadata["brand"] as? String, "Alpro")
+    }
+
+    func test_parseProductResponse_returnsEmptyWhenNotFound() {
+        // status 0 = barcode not in database.
+        let fixture = #"{"status":0,"code":"0000000000000","product":null}"#.data(using: .utf8)!
+        let results = OpenFactsSearchSource.parseProductResponse(
+            data: fixture,
+            host: "world.openfoodfacts.org",
+            sourceId: SourceIdentifier.openfoodfacts
+        )
+        XCTAssertTrue(results.isEmpty)
+    }
 }

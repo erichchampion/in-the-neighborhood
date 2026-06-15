@@ -36,11 +36,11 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
         // OpenLibrary runs based on the classifier output. If we got
         // here, this query is book-related.
         print("[OpenLibrarySearchSource] Searching for: \(query.original)")
-        try await searchBooks(query: query.original, onResults: onResults)
+        try await searchBooks(query: query.original, isbn: query.isbn, onResults: onResults)
     }
 
-    private func searchBooks(query: String, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
-        guard let url = Self.buildURL(query: query, maxResults: maxResults) else {
+    private func searchBooks(query: String, isbn: String?, onResults: @escaping @Sendable ([SearchResult]) -> Void) async throws {
+        guard let url = Self.buildURL(query: query, isbn: isbn, maxResults: maxResults) else {
             print("[OpenLibrarySearchSource] Failed to build URL")
             return
         }
@@ -69,17 +69,42 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
     /// the B4 additions (`has_fulltext`, `ia`, `subject`) that let the
     /// LibraryCard surface "Read free at Internet Archive" when a scan
     /// exists. Exposed as `internal static` so tests can pin the URL shape.
-    static func buildURL(query: String, maxResults: Int) -> URL? {
+    ///
+    /// When `isbn` is a valid 10/13-digit ISBN (extracted by the Phase 1
+    /// metadata loop), the `q` parameter becomes an exact `isbn:<isbn>`
+    /// lookup instead of a free-text search — far higher precision than
+    /// prepending a brand to the query. An invalid ISBN is ignored and the
+    /// free-text query is used, so a bad value can never poison the search.
+    static func buildURL(query: String, isbn: String? = nil, maxResults: Int) -> URL? {
         var components = URLComponents(string: "https://openlibrary.org/search.json")
+        let qValue: String
+        if let isbn, let normalized = Self.normalizedISBN(isbn) {
+            qValue = "isbn:\(normalized)"
+        } else {
+            qValue = query
+        }
         components?.queryItems = [
-            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "q", value: qValue),
             URLQueryItem(name: "limit", value: "\(maxResults)"),
             URLQueryItem(
                 name: "fields",
-                value: "key,title,author_name,first_publish_year,isbn,cover_i,publisher,number_of_pages_median,subject,has_fulltext,ia"
+                value: "key,title,author_name,first_publish_year,isbn,cover_i,publisher,number_of_pages_median,subject,has_fulltext,ia,ebook_access"
             )
         ]
         return components?.url
+    }
+
+    /// Returns the hyphen/space-stripped ISBN if it's a syntactically valid
+    /// ISBN-10 or ISBN-13 (digits, with a trailing `X` allowed on ISBN-10),
+    /// otherwise nil. Mirrors the validation used by the coordinator's
+    /// identifier extraction so both sides agree on what counts as an ISBN.
+    static func normalizedISBN(_ raw: String) -> String? {
+        let stripped = raw.filter { $0.isNumber || $0 == "X" || $0 == "x" }.uppercased()
+        switch stripped.count {
+        case 10: return stripped.dropLast().allSatisfy(\.isNumber) ? stripped : nil
+        case 13: return stripped.allSatisfy(\.isNumber) ? stripped : nil
+        default: return nil
+        }
     }
 
     private func mapDocToSearchResult(_ doc: OpenLibraryDoc) -> SearchResult? {
@@ -119,6 +144,12 @@ public final class OpenLibrarySearchSource: SearchSource, @unchecked Sendable {
             // only shows a handful at most.
             metadata["subject"] = Array(subjects.prefix(3))
         }
+        // Open Library's free lending signal: "public" (read free now),
+        // "borrowable" (controlled digital lending), "printdisabled", or
+        // "no_ebook". LibraryCard turns this into a borrow-availability badge.
+        if let ebookAccess = doc.ebookAccess, !ebookAccess.isEmpty {
+            metadata["ebook_access"] = ebookAccess
+        }
 
         return SearchResult(
             id: doc.key ?? UUID().uuidString,
@@ -155,6 +186,9 @@ private struct OpenLibraryDoc: Decodable {
     let subject: [String]?
     let hasFulltext: Bool?
     let ia: [String]?
+    // W4 Area 3: free borrow-availability signal — "public" / "borrowable" /
+    // "printdisabled" / "no_ebook".
+    let ebookAccess: String?
 
     enum CodingKeys: String, CodingKey {
         case key, title, isbn, publisher, subject, ia
@@ -163,5 +197,6 @@ private struct OpenLibraryDoc: Decodable {
         case coverI = "cover_i"
         case numberOfPagesMedian = "number_of_pages_median"
         case hasFulltext = "has_fulltext"
+        case ebookAccess = "ebook_access"
     }
 }

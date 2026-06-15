@@ -68,6 +68,18 @@ struct LibraryCard: View {
                     EthicsBadgeView(entry: ethics)
                 }
 
+                // W4 Area 3: free borrow-availability badge from Open Library's
+                // `ebook_access` signal.
+                if let badge = borrowStatusBadge {
+                    Label(badge.text, systemImage: badge.systemImage)
+                        .font(.caption)
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
                 if let isbn = result.metadata["isbn"] as? String, let firstISBN = isbn.components(separatedBy: ",").first {
                     Text("ISBN: \(firstISBN.trimmingCharacters(in: .whitespaces))")
                         .font(.caption)
@@ -163,6 +175,23 @@ struct LibraryCard: View {
             return URL(string: "https://archive.org/details/\(iaId)")
         }
         return nil
+    }
+
+    /// Maps Open Library's `ebook_access` value to a borrow-availability
+    /// badge. `nil` = no actionable borrow state (printdisabled / no_ebook /
+    /// absent). `nonisolated` + internal so tests can pin it without a
+    /// rendering harness, mirroring `mediaTypeLabel` / `readFreeURL`.
+    struct BorrowStatusBadge: Equatable {
+        let text: String
+        let systemImage: String
+    }
+    nonisolated var borrowStatusBadge: BorrowStatusBadge? {
+        guard let access = (result.metadata["ebook_access"] as? String)?.lowercased() else { return nil }
+        switch access {
+        case "public":     return BorrowStatusBadge(text: "Read free", systemImage: "book.pages")
+        case "borrowable": return BorrowStatusBadge(text: "Borrow now", systemImage: "arrow.left.arrow.right")
+        default:           return nil   // printdisabled / no_ebook → no actionable badge
+        }
     }
 
     nonisolated var extractAuthors: String? {

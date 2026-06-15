@@ -97,7 +97,77 @@ final class LibraryTabTests: XCTestCase {
         let r = mkResult(source: SourceIdentifier.openfoodfacts, sourceType: .online, category: .product)
         XCTAssertEqual(SearchViewModel.tab(for: r), .online)
     }
-    
+
+    // MARK: - W4 Area 1: borrow-tag routing
+
+    func test_classifier_borrowSignal_routesToBorrow() {
+        // An Overpass tool-library / library-of-things node carries
+        // `category_tag == "borrow"` and joins the digitized-book sources
+        // in the Borrow tab, even though its sourceType is `.local`.
+        let r = mkResult(
+            source: SourceIdentifier.overpass,
+            sourceType: .local,
+            category: .local,
+            metadata: ["category_tag": "borrow"]
+        )
+        XCTAssertEqual(SearchViewModel.tab(for: r), .borrow)
+    }
+
+    // MARK: - W4 Area 2: WhyThisResultView.detailLines (pure formatter)
+
+    func test_whyThisResult_detailLines_includesAlternativeEthicsAndBrand() {
+        let lines = WhyThisResultView.detailLines(
+            ethics: EthicsEntry(ownership: .bCorp, notes: "Certified B-Corp bakery."),
+            alternativeFor: "Amazon Basics Widget",
+            brand: "Acme"
+        )
+        XCTAssertTrue(lines.contains { $0.contains("Amazon Basics Widget") })
+        XCTAssertTrue(lines.contains { $0.contains("Certified B-Corp bakery.") })
+        XCTAssertTrue(lines.contains { $0.contains("Acme") })
+    }
+
+    func test_whyThisResult_detailLines_usesOwnershipLabelWhenNoNotes() {
+        let lines = WhyThisResultView.detailLines(
+            ethics: EthicsEntry(ownership: .coop),
+            alternativeFor: nil,
+            brand: nil
+        )
+        XCTAssertTrue(lines.contains { $0.lowercased().contains("cooperative") })
+    }
+
+    func test_whyThisResult_detailLines_fallsBackWhenEmpty() {
+        let lines = WhyThisResultView.detailLines(ethics: nil, alternativeFor: nil, brand: nil)
+        XCTAssertEqual(lines.count, 1)
+        XCTAssertTrue(lines[0].contains("open, non-monopolistic"))
+    }
+
+    // MARK: - W4 Area 3: LibraryCard borrow-availability badge
+
+    private func libraryCard(ebookAccess: String?) -> LibraryCard {
+        var metadata: [String: AnyHashable] = [:]
+        if let ebookAccess { metadata["ebook_access"] = ebookAccess }
+        return LibraryCard(result: mkResult(
+            source: SourceIdentifier.openlibrary,
+            sourceType: .online,
+            category: .book,
+            metadata: metadata
+        ))
+    }
+
+    func test_libraryCard_borrowStatusBadge_borrowable() {
+        XCTAssertEqual(libraryCard(ebookAccess: "borrowable").borrowStatusBadge?.text, "Borrow now")
+    }
+
+    func test_libraryCard_borrowStatusBadge_public() {
+        XCTAssertEqual(libraryCard(ebookAccess: "public").borrowStatusBadge?.text, "Read free")
+    }
+
+    func test_libraryCard_borrowStatusBadge_noEbookOrAbsent_isNil() {
+        XCTAssertNil(libraryCard(ebookAccess: "no_ebook").borrowStatusBadge)
+        XCTAssertNil(libraryCard(ebookAccess: "printdisabled").borrowStatusBadge)
+        XCTAssertNil(libraryCard(ebookAccess: nil).borrowStatusBadge)
+    }
+
     // MARK: - Library Source Detection Tests
     
     func testOpenLibraryResultsDetectedAsLibrarySource() {
