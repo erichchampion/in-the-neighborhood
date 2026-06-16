@@ -77,6 +77,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
     private let customBrand: String?
     private let customAuthor: String?
     private let customTitle: String?
+    private let customISBN: String?
+    private let customBarcode: String?
 
     var timeoutBudget: TimeInterval {
         if let customTimeoutBudget { return customTimeoutBudget }
@@ -95,6 +97,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         brand: String? = nil,
         author: String? = nil,
         title: String? = nil,
+        isbn: String? = nil,
+        barcode: String? = nil,
         categoryAffinity: Set<QueryCategory> = []
     ) {
         self.identifier = identifier
@@ -105,6 +109,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         self.customBrand = brand
         self.customAuthor = author
         self.customTitle = title
+        self.customISBN = isbn
+        self.customBarcode = barcode
     }
     
     func search(query: EnhancedQuery) async throws -> [SearchResult] {
@@ -149,6 +155,8 @@ final class MockSearchSource: SearchSource, @unchecked Sendable {
         var metadata: [String: AnyHashable] = [:]
         if let customBrand { metadata["brand"] = customBrand }
         if let customAuthor { metadata["author"] = customAuthor }
+        if let customISBN { metadata["isbn"] = customISBN }
+        if let customBarcode { metadata["barcode"] = customBarcode }
         onResults([
             SearchResult(
                 id: "mock-\(identifier)",

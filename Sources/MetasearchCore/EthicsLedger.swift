@@ -10,6 +10,9 @@ public struct EthicsEntry: Codable, Hashable, Sendable {
         case employeeOwned = "employee-owned"
         case coop
         case bCorp = "b-corp"
+        /// Large non-mega chain we tolerate but don't endorse — demoted
+        /// below uncategorized peers in ranking, but NOT blocked like `mega`.
+        case discouraged
         case mega
         case unknown
     }

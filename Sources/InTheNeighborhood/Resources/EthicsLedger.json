@@ -1,5 +1,5 @@
 {
-  "version": "2026-05-12",
+  "version": "2026-06-13",
   "entries": {
     "amazon.com":           { "ownership": "mega", "region": "global" },
     "amazon.ca":            { "ownership": "mega", "region": "global" },
@@ -30,6 +30,12 @@
     "newseasonsmarket.com": { "ownership": "b-corp",          "region": "regional", "certifications": ["b-corp"] },
     "mcnallyjackson.com":   { "ownership": "indie",           "region": "local",    "notes": "Independent bookstore in NYC." },
     "thestrand.com":        { "ownership": "indie",           "region": "local",    "certifications": ["unionized"], "notes": "Independent bookstore in NYC." },
-    "citylightsbooks.com":  { "ownership": "indie",           "region": "local",    "notes": "Independent bookstore in San Francisco." }
+    "citylightsbooks.com":  { "ownership": "indie",           "region": "local",    "notes": "Independent bookstore in San Francisco." },
+
+    "barnesandnoble.com":   { "ownership": "discouraged",     "region": "national", "notes": "Large national bookstore chain — tolerated but not endorsed; prefer local indies." },
+    "ebay.com":             { "ownership": "discouraged",     "region": "global",   "notes": "Large global marketplace." },
+    "staples.com":          { "ownership": "discouraged",     "region": "national", "notes": "Large national office-supply chain." },
+    "petsmart.com":         { "ownership": "discouraged",     "region": "national", "notes": "Large national pet-supply chain." },
+    "walgreens.com":        { "ownership": "discouraged",     "region": "national", "notes": "Large national pharmacy chain." }
   }
 }

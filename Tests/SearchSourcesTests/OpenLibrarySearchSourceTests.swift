@@ -39,4 +39,44 @@ final class OpenLibrarySearchSourceTests: XCTestCase {
         XCTAssertTrue(decoded.contains("author_name"))
         XCTAssertTrue(decoded.contains("cover_i"))
     }
+
+    // MARK: - W3: exact ISBN lookup
+
+    func test_buildURL_withValidISBN_usesExactIsbnQuery() {
+        let url = OpenLibrarySearchSource.buildURL(query: "the dispossessed", isbn: "978-0-06-105488-4", maxResults: 10)
+        XCTAssertNotNil(url)
+        let decoded = url!.absoluteString.removingPercentEncoding ?? ""
+        XCTAssertTrue(decoded.contains("q=isbn:9780061054884"),
+                      "A valid ISBN must produce an exact isbn: query with hyphens stripped. Got: \(decoded)")
+        XCTAssertFalse(decoded.contains("q=the dispossessed"),
+                       "Free-text query must be replaced by the exact ISBN lookup")
+    }
+
+    func test_buildURL_withInvalidISBN_fallsBackToFreeText() {
+        let url = OpenLibrarySearchSource.buildURL(query: "the dispossessed", isbn: "12345", maxResults: 10)
+        XCTAssertNotNil(url)
+        let decoded = url!.absoluteString.removingPercentEncoding ?? ""
+        XCTAssertTrue(decoded.contains("q=the dispossessed"),
+                      "A malformed ISBN must be ignored and the free-text query used. Got: \(decoded)")
+        XCTAssertFalse(decoded.contains("isbn:"))
+    }
+
+    func test_normalizedISBN_validatesAndStrips() {
+        XCTAssertEqual(OpenLibrarySearchSource.normalizedISBN("978-0-06-105488-4"), "9780061054884")
+        XCTAssertEqual(OpenLibrarySearchSource.normalizedISBN("030788748x"), "030788748X")
+        XCTAssertNil(OpenLibrarySearchSource.normalizedISBN("12345"))
+        XCTAssertNil(OpenLibrarySearchSource.normalizedISBN(""))
+    }
+
+    // MARK: - W4 Area 3: borrow-availability field
+
+    func test_buildURL_requestsEbookAccessField() {
+        // The "Borrow now"/"Read free" badge depends on Open Library returning
+        // `ebook_access`; it must be in the `fields=` parameter.
+        let url = OpenLibrarySearchSource.buildURL(query: "on tyranny", maxResults: 10)
+        XCTAssertNotNil(url)
+        let decoded = url!.absoluteString.removingPercentEncoding ?? ""
+        XCTAssertTrue(decoded.contains("ebook_access"),
+                      "URL must request ebook_access. Got: \(decoded)")
+    }
 }

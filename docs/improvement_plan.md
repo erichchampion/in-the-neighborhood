@@ -29,7 +29,7 @@ This plan is a **research/strategy plan** — a menu of ideas to evaluate, not a
 - **60-second per-source timeout** (`SearchToolExecutor.swift`): far too lenient for a search UX. Slow scrapers (Amazon, Bookshop HTML) drag the perceived latency up.
 - **No caching layer** anywhere — repeat searches re-hit every source from scratch. There is no `query → results` memo, no `hostname → ethical-metadata` lookup table.
 - **Amazon's HTML scraper is brittle**: DOM-based, no real fallback if Amazon's markup shifts. Recent commits (`8de1800`, debug logging in `AmazonProductScraper.swift`) suggest active troubleshooting. (BestBuy uses the official Products API at `api.bestbuy.com/v1` and isn't affected by this class of problem.)
-- **Categories don't drive routing**: a query for "screwdriver" hits the same sources as "wireless headphones" or "Moby Dick." No category-aware source selection beyond what the LLM agent plan does optionally.
+- ~~**Categories don't drive routing**~~ *(RESOLVED — C3)*: `QueryClassifier` + `categoryAffinity` now route "screwdriver" away from book sources and "Moby Dick" away from grocery sources. See Track C / C3.
 - **No use of Vision, NaturalLanguage, or Core ML** — three on-device frameworks that match the user's constraints perfectly and are sitting unused.
 - **No map view** despite MapKit being a primary local source. Results are list-only.
 
@@ -71,6 +71,7 @@ DONE:
 **B1. OpenStreetMap Overpass API** *(M effort, high impact)*
 Nominatim does geocoding; **Overpass** queries OSM by tag — `shop=hardware`, `shop=books`, `shop=bicycle`, `shop=greengrocer`, `amenity=library`, `amenity=tool_library`. This is the **single biggest unlock for local coverage** because OSM tags categorize specialty shops far better than MapKit's free-text. Free, open, no key.
 
+DONE:
 **B2. Open Food Facts (and siblings)** *(M effort, high impact for groceries)*
 Fully open, has product database with **ethical/environmental ratings** (Nutri-Score, Eco-Score, Nova). Same group: **Open Beauty Facts**, **Open Products Facts**, **Open Pet Food Facts**. For grocery/personal-care/pet queries, these slot in cleanly. No key required.
 
@@ -100,8 +101,9 @@ DONE:
 **C2. Barcode scan via Vision framework** *(M effort, high delight)*
 On-device, no API, fully free. User scans a UPC/EAN/ISBN on a product in a store; app does **"find this locally"** + **"find ethical alternative"** + **"is this on Open Food Facts?"** flows. Vision is already on every modern iOS device. This is the highest-leverage on-device-only feature still untapped.
 
+DONE:
 **C3. Category-aware routing via NaturalLanguage** *(S effort, moderate impact)*
-Use `NLTagger` / `NLLanguageRecognizer` (no LLM needed) to classify the query into book/grocery/hardware/electronics/clothing/media/general. Route each category to a tuned source set. Replaces the brittle "if includes('book') → bookshop" heuristic with something principled. Pairs well with the LLM agent for queries the classifier can't resolve.
+Done via `QueryClassifier` (NLEmbedding seed-word prototypes) + `SearchSource.categoryAffinity` gating in `MetasearchCoordinator`. Classifies queries into book/grocery/hardware/electronics/clothing/media/personalCare/petFood and drops specialty sources whose affinity doesn't match; empty-affinity sources (local, general web) always run, and an unclassified query runs everything. The affinity gate is shared by both the `search()` and `searchStreaming()` entry points (`MetasearchCoordinator.selectSources`).
 
 **C4. Map view tab** *(S effort, high delight)*
 MapKit is already a dependency. Show local results on a map with pins, distance circles, optional category filter. Currently `LocalBusinessCard` shows distance numerically — a map view is the natural next step.

@@ -67,6 +67,11 @@ public class SearchViewModel: ObservableObject {
         if result.metadata["category_tag"] as? String == "repair" {
             return .repair
         }
+        // Borrow-shaped local results (tool libraries, libraries of things,
+        // little free libraries) join the digitized-book sources in Borrow.
+        if result.metadata["category_tag"] as? String == "borrow" {
+            return .borrow
+        }
         // Anything else geo-tagged is Local.
         if result.sourceType == .local {
             return .local

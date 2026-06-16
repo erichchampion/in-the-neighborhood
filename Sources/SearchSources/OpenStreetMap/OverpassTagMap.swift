@@ -23,8 +23,8 @@ public enum OverpassTagMap {
         "music":        ["shop=music", "shop=musical_instrument"],
         "clothing":     ["shop=clothes", "shop=second_hand"],
         "repair":       repairTags,
-        "library":      ["amenity=library"],
-        "tool_library": ["amenity=library"]
+        "library":      ["amenity=library", "amenity=public_bookcase"],
+        "tool_library": ["amenity=library", "amenity=tool_library", "amenity=public_bookcase"]
     ]
 
     /// Soft synonyms for categories the query enhancer might produce
@@ -36,7 +36,13 @@ public enum OverpassTagMap {
         "cyclist":  "bicycle",
         "biking":   "bicycle",
         "ebike":    "bicycle",
-        "e-bike":   "bicycle"
+        "e-bike":   "bicycle",
+        // Borrow-intent synonyms resolve to the library tag set so a
+        // "tool library" / "library of things" query actually fetches the
+        // OSM nodes that `categoryTag` will then classify as "borrow".
+        "tool library":     "tool_library",
+        "library of things": "tool_library",
+        "borrow":           "library"
     ]
 
     /// Tag specs that identify a "repair" intent — used both to drive
@@ -49,6 +55,20 @@ public enum OverpassTagMap {
         "shop=computer_repair",
         "amenity=bicycle_repair_station",
         "amenity=repair_cafe"
+    ]
+
+    /// Tag specs that identify a "borrow" intent (borrow-instead-of-buy) —
+    /// tool libraries, libraries of things, little free libraries, and
+    /// public libraries. Used by `categoryTag(for:)` to route these OSM
+    /// nodes into the Borrow intent tab. Mission-aligned: surfaces places
+    /// where the user can borrow rather than purchase.
+    public static let borrowTags: [String] = [
+        "amenity=tool_library",
+        "amenity=public_bookcase",
+        "amenity=library",
+        "library:type=tool_library",
+        "library:type=lending",
+        "library:type=things"
     ]
 
     /// Used when no category matches — any shop at all in range.
@@ -102,23 +122,34 @@ public enum OverpassTagMap {
     }
 
     /// Inspects an Overpass element's `tags` dictionary and returns a
-    /// category tag (currently only `"repair"`) when the tags match a known
+    /// category tag (`"repair"` or `"borrow"`) when the tags match a known
     /// intent. Used by `OverpassSearchSource.parseResponse` to set
     /// `metadata["category_tag"]` so `SearchViewModel` can route results
-    /// to the right intent tab (C1).
+    /// to the right intent tab (C1). Repair takes precedence over borrow
+    /// when a node somehow matches both (e.g. a repair café inside a
+    /// library), since "get it fixed" is the more specific intent.
     public static func categoryTag(for tags: [String: String]) -> String? {
-        for spec in repairTags {
+        if matches(tags, anyOf: repairTags) { return "repair" }
+        if matches(tags, anyOf: borrowTags) { return "borrow" }
+        return nil
+    }
+
+    /// `true` if `tags` satisfies any spec in `specs`. A spec `"key=value"`
+    /// matches when `tags[key] == value`; a spec `"key=*"` (or bare `"key"`)
+    /// matches any value for that key.
+    static func matches(_ tags: [String: String], anyOf specs: [String]) -> Bool {
+        for spec in specs {
             let parts = spec.split(separator: "=", maxSplits: 1).map(String.init)
             guard let key = parts.first else { continue }
             let value: String? = parts.count == 2 && parts[1] != "*" ? parts[1] : nil
             if let actual = tags[key] {
                 if let value {
-                    if actual == value { return "repair" }
+                    if actual == value { return true }
                 } else {
-                    return "repair"  // wildcard match — any value for this key
+                    return true  // wildcard match — any value for this key
                 }
             }
         }
-        return nil
+        return false
     }
 }

@@ -681,4 +681,148 @@ final class MetasearchCoordinatorTests: XCTestCase {
 
         XCTAssertLessThan(elapsed, 1.0, "Global ceiling must override a source's higher budget")
     }
+
+    // MARK: - W3: identifier validation helpers
+
+    func test_isValidISBN_acceptsTenAndThirteenDigit_rejectsOthers() {
+        XCTAssertTrue(MetasearchCoordinator.isValidISBN("9780061054884"))     // ISBN-13
+        XCTAssertTrue(MetasearchCoordinator.isValidISBN("978-0-06-105488-4")) // hyphens stripped
+        XCTAssertTrue(MetasearchCoordinator.isValidISBN("030788748X"))        // ISBN-10 with X check
+        XCTAssertFalse(MetasearchCoordinator.isValidISBN("12345"))
+        XCTAssertFalse(MetasearchCoordinator.isValidISBN(""))
+        XCTAssertFalse(MetasearchCoordinator.isValidISBN("notanisbn"))
+    }
+
+    func test_isValidUPC_acceptsGTINLengths_rejectsOthers() {
+        XCTAssertTrue(MetasearchCoordinator.isValidUPC("036000291452"))    // UPC-12
+        XCTAssertTrue(MetasearchCoordinator.isValidUPC("0001300000176"))   // EAN-13
+        XCTAssertTrue(MetasearchCoordinator.isValidUPC("0 36000 29145 2")) // spaces stripped
+        XCTAssertFalse(MetasearchCoordinator.isValidUPC("123"))            // too short
+        XCTAssertFalse(MetasearchCoordinator.isValidUPC("12345abc6789"))   // non-numeric
+    }
+
+    // MARK: - W3: IntelligenceExtractionState identifier semantics
+
+    func test_intelligenceState_bookISBNIsAuthoritativeOverProduct() async {
+        let state = IntelligenceExtractionState()
+        await state.setISBN("PRODUCT-ISBN", force: false)
+        await state.setISBN("BOOK-ISBN", force: true)
+        let final = await state.extractedISBN
+        XCTAssertEqual(final, "BOOK-ISBN", "Book source must override an earlier product ISBN")
+    }
+
+    func test_intelligenceState_productISBNDoesNotOverrideBook() async {
+        let state = IntelligenceExtractionState()
+        await state.setISBN("BOOK-ISBN", force: true)
+        await state.setISBN("PRODUCT-ISBN", force: false)
+        let final = await state.extractedISBN
+        XCTAssertEqual(final, "BOOK-ISBN", "Book-set ISBN must be sticky against later product writes")
+    }
+
+    func test_intelligenceState_upcAndMegaSeedAreFirstWriterWins() async {
+        let state = IntelligenceExtractionState()
+        await state.setUPC("111")
+        await state.setUPC("222")
+        await state.setMegaSeed("First Product")
+        await state.setMegaSeed("Second Product")
+        let snap = await state.snapshot()
+        XCTAssertEqual(snap.upcEan, "111")
+        XCTAssertEqual(snap.megaSeedTitle, "First Product")
+        XCTAssertTrue(snap.hasOnlineIdentifier)
+    }
+
+    func test_extractedIdentifiers_hasOnlineIdentifier_isFalseForModelOnly() {
+        let modelOnly = ExtractedIdentifiers(model: "ABC123")
+        XCTAssertFalse(modelOnly.hasOnlineIdentifier, "Model alone can't drive an exact online lookup")
+        XCTAssertTrue(ExtractedIdentifiers(isbn: "9780061054884").hasOnlineIdentifier)
+        XCTAssertTrue(ExtractedIdentifiers(upcEan: "036000291452").hasOnlineIdentifier)
+    }
+
+    // MARK: - W3/W2: Stage 1.5 routes mined identifiers + tags alternatives
+
+    func test_Stage1_5_routesExtractedUPCToOpenFactsAndTagsAlternative() async {
+        // A deny-listed Amazon product result carries a barcode. Phase 1 mines
+        // it; Stage 1.5 must re-query the ethical Open Facts source with that
+        // exact UPC, and tag the surfaced result as an alternative to the
+        // Amazon product.
+        let amazon = MockSearchSource(
+            identifier: SourceIdentifier.amazon,
+            sourceType: .online,
+            category: .product,
+            title: "Heinz Ketchup",
+            barcode: "0001300000176"
+        )
+        let openFacts = MockSearchSource(
+            identifier: SourceIdentifier.openfoodfacts,
+            sourceType: .online,
+            category: .product,
+            categoryAffinity: [.grocery]
+        )
+        let coordinator = MetasearchCoordinator(
+            sources: [amazon, openFacts],
+            resultCache: nil
+        )
+        let query = EnhancedQuery(
+            original: "ketchup",
+            productType: nil,
+            categories: [],
+            priceMax: nil,
+            condition: nil,
+            queryCategory: .grocery
+        )
+
+        let tagged = OrderTracker()
+        await coordinator.searchStreaming(query: query) { identifier, results in
+            guard identifier == SourceIdentifier.openfoodfacts else { return }
+            for r in results {
+                if let alt = r.metadata["ethicalAlternativeFor"] as? String {
+                    tagged.append(alt)
+                }
+            }
+        }
+
+        // Let the Stage 1.5 emission Task flush.
+        try? await Task.sleep(nanoseconds: 400_000_000)
+
+        let lastQuery = await openFacts.state.lastQuery
+        XCTAssertEqual(
+            lastQuery?.upcEan, "0001300000176",
+            "Stage 1.5 must route the mined barcode to the Open Facts source as an exact lookup"
+        )
+        XCTAssertTrue(
+            tagged.snapshot().contains("Heinz Ketchup"),
+            "The ethical result found via the mined barcode must be tagged as an alternative to the mega product"
+        )
+    }
+
+    func test_Stage1_5_skippedWhenNoIdentifierExtracted() async {
+        // A product source with no barcode/isbn must not trigger any Stage 1.5
+        // re-query — the Open Facts source is invoked exactly once (Phase 1).
+        let product = MockSearchSource(
+            identifier: SourceIdentifier.amazon,
+            sourceType: .online,
+            category: .product,
+            title: "Heinz Ketchup" // related, but no identifier metadata
+        )
+        let openFacts = MockSearchSource(
+            identifier: SourceIdentifier.openfoodfacts,
+            sourceType: .online,
+            category: .product,
+            categoryAffinity: [.grocery]
+        )
+        let coordinator = MetasearchCoordinator(
+            sources: [product, openFacts],
+            resultCache: nil
+        )
+        let query = EnhancedQuery(
+            original: "ketchup", productType: nil, categories: [], priceMax: nil,
+            condition: nil, queryCategory: .grocery
+        )
+
+        await coordinator.searchStreaming(query: query) { _, _ in }
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        let invocations = await openFacts.state.invocationCount
+        XCTAssertEqual(invocations, 1, "No identifier → no Stage 1.5 → Open Facts runs once (Phase 1 only)")
+    }
 }
